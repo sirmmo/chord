@@ -14,6 +14,8 @@ export interface LayoutInput {
   sidebarWidth: number;
   panes: number;
   fullscreen?: boolean;
+  /** distance from the top of the window to the content; defaults to PAD */
+  topInset?: number;
 }
 
 export const PAD = 8;
@@ -25,11 +27,12 @@ export function computeLayout(i: LayoutInput): { content: Rect; panes: Rect[] } 
     return { content: full, panes: [full] };
   }
   const left = i.sidebarOpen ? i.sidebarWidth : PAD;
+  const top = i.topInset ?? PAD;
   const content: Rect = {
     x: left,
-    y: PAD,
+    y: top,
     width: Math.max(0, i.width - left - PAD),
-    height: Math.max(0, i.height - PAD * 2),
+    height: Math.max(0, i.height - top - PAD),
   };
   const n = Math.max(0, i.panes);
   const panes: Rect[] = [];

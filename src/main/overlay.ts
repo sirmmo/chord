@@ -4,6 +4,7 @@ import type { OverlayMessage } from '../shared/types.ts';
 import { computeLayout } from '../shared/layout.ts';
 import type { Controller } from './controller.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
+import { TOP_INSET } from './platform.ts';
 
 type ShowMessage = Extract<OverlayMessage, { kind: 'show' }>;
 
@@ -88,7 +89,7 @@ export class Overlay {
     if (!this.view || !this.mode || !win) return;
     const { width, height } = win.getContentBounds();
     const { settings } = this.c.state;
-    const { content } = computeLayout({ width, height, sidebarOpen: this.c.sidebarVisible(), sidebarWidth: settings.sidebarWidth, panes: 1 });
+    const { content } = computeLayout({ width, height, sidebarOpen: this.c.sidebarVisible(), sidebarWidth: settings.sidebarWidth, panes: 1, topInset: TOP_INSET });
     if (this.mode === 'palette' || this.mode === 'settings') {
       this.view.setBounds(content);
     } else {

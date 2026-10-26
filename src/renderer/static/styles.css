@@ -53,6 +53,13 @@ body {
   transition: background 0.35s;
 }
 
+/* Windows and Linux draw their window controls in a native strip at the top;
+   the content starts below it and the strip doubles as a drag handle. */
+#topbar { display: none; position: fixed; top: 0; right: 0; height: 36px; left: var(--sidebar-width); -webkit-app-region: drag; }
+.platform-win32 #topbar, .platform-linux #topbar { display: block; }
+body.sidebar-closed:not(.peeking) #topbar { left: 0; }
+.platform-win32 .titlebar, .platform-linux .titlebar { height: 36px; }
+
 /* collapsed sidebar: a hot edge and an expand button over the gutter */
 #edge { position: fixed; left: 0; top: 0; width: 8px; height: 100%; display: none; z-index: 3; }
 #edge::after { content: ""; position: absolute; left: 2px; top: 50%; width: 3px; height: 48px; margin-top: -24px; border-radius: 2px; background: color-mix(in srgb, var(--accent) 70%, transparent); opacity: 0.5; }

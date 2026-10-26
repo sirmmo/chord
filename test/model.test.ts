@@ -236,3 +236,9 @@ test('theme settings merge over defaults and clamp the tint', () => {
   assert.equal(h.settings.sidebarWidth, 300);
   assert.equal(h.settings.shields, true);
 });
+
+test('layout honours a top inset for platforms with a native window-controls strip', () => {
+  const { content } = computeLayout({ width: 800, height: 600, sidebarOpen: true, sidebarWidth: 240, panes: 1, topInset: 36 });
+  assert.equal(content.y, 36);
+  assert.equal(content.height, 600 - 36 - 8);
+});

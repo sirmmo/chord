@@ -13,8 +13,8 @@ import { Overlay } from './overlay.ts';
 import { setShields } from './session.ts';
 import { buildAppMenu, spaceContextMenu, tabContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
+import { isMac, TITLEBAR_HEIGHT } from './platform.ts';
 
-const isMac = process.platform === 'darwin';
 const CHROME_DARK = '#1b1b22';
 const CHROME_LIGHT = '#f4f4f7';
 const BROADCAST_INTERVAL_MS = 16;
@@ -70,7 +70,7 @@ export class Controller {
       backgroundColor: this.chromeColor(),
       titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
       trafficLightPosition: { x: 14, y: 15 },
-      titleBarOverlay: isMac ? undefined : { color: this.chromeColor(), symbolColor: '#dddde3', height: 40 },
+      titleBarOverlay: isMac ? undefined : this.titleBarOverlay(),
       webPreferences: { preload: PRELOAD, sandbox: true, contextIsolation: true },
     });
     this.win = win;
@@ -86,9 +86,7 @@ export class Controller {
     win.on('resize', relayout);
     win.on('enter-full-screen', relayout);
     win.on('leave-full-screen', relayout);
-    const onTheme = () => {
-      if (!win.isDestroyed()) win.setBackgroundColor(this.chromeColor());
-    };
+    const onTheme = () => this.applyChromeColors();
     nativeTheme.on('updated', onTheme);
     win.on('closed', () => nativeTheme.off('updated', onTheme));
     win.on('closed', () => {
@@ -108,6 +106,18 @@ export class Controller {
     const mode = this.state.settings.theme.mode;
     const dark = mode === 'dark' || (mode === 'system' && nativeTheme.shouldUseDarkColors);
     return dark ? CHROME_DARK : CHROME_LIGHT;
+  }
+
+  private titleBarOverlay(): { color: string; symbolColor: string; height: number } {
+    const dark = this.chromeColor() === CHROME_DARK;
+    return { color: this.chromeColor(), symbolColor: dark ? '#dddde3' : '#2a2a33', height: TITLEBAR_HEIGHT };
+  }
+
+  private applyChromeColors(): void {
+    const win = this.win;
+    if (!win || win.isDestroyed()) return;
+    win.setBackgroundColor(this.chromeColor());
+    if (!isMac) win.setTitleBarOverlay(this.titleBarOverlay());
   }
 
   private relayout(): void {
@@ -166,7 +176,7 @@ export class Controller {
     this.store.save(next);
     this.broadcast();
     if (prev.settings.shields !== next.settings.shields) void setShields(next.settings.shields);
-    if (prev.settings.theme.mode !== next.settings.theme.mode) this.win?.setBackgroundColor(this.chromeColor());
+    if (prev.settings.theme.mode !== next.settings.theme.mode) this.applyChromeColors();
     this.refreshMenu();
   }
 
