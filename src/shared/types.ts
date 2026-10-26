@@ -52,7 +52,25 @@ export interface ArchivedTab {
   archivedAt: number;
 }
 
+export type ThemeMode = 'system' | 'light' | 'dark';
+export type IconStyle = 'color' | 'mono';
+export type FontStyle = 'system' | 'rounded' | 'mono' | 'serif';
+
+/** Appearance: colours, icons and type. Space colour comes from the space itself. */
+export interface Theme {
+  mode: ThemeMode;
+  /** 0..100: how strongly the space colour tints the sidebar */
+  tint: number;
+  /** UI accent (selected tab, buttons); null follows the space colour */
+  accent: string | null;
+  iconStyle: IconStyle;
+  /** colour of monochrome icons and letter glyphs; null follows the text colour */
+  iconColor: string | null;
+  font: FontStyle;
+}
+
 export interface Settings {
+  theme: Theme;
   sidebarOpen: boolean;
   sidebarWidth: number;
   /** "Today" tabs that were not used for this long are archived */
@@ -104,7 +122,8 @@ export type Action =
   | { type: 'space.delete'; id: SpaceId }
   | { type: 'sidebar.toggle' }
   | { type: 'sidebar.resize'; width: number }
-  | { type: 'settings.update'; patch: Partial<Settings> }
+  | { type: 'settings.update'; patch: Partial<Omit<Settings, 'theme'>> }
+  | { type: 'theme.update'; patch: Partial<Theme> }
   | { type: 'archived.restore'; id: TabId }
   | { type: 'archived.clear' }
   | { type: 'closed.reopen' }
@@ -126,6 +145,8 @@ export type Command =
   | { type: 'nav.stop' }
   | { type: 'palette.open'; intent: 'new' | 'current' }
   | { type: 'palette.close' }
+  | { type: 'settings.open' }
+  | { type: 'sidebar.peek'; on: boolean }
   | { type: 'find.open' }
   | { type: 'find.query'; text: string; forward: boolean; findNext: boolean }
   | { type: 'find.close' }
@@ -142,7 +163,7 @@ export type Command =
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
-  'palette.open', 'palette.close', 'find.open', 'find.query', 'find.close',
+  'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'config.export', 'config.importFile',
 ]);
@@ -157,6 +178,7 @@ export function isCommand(m: Message): m is Command {
 export type OverlayMessage =
   | { kind: 'show'; mode: 'palette'; intent: 'new' | 'current'; query: string }
   | { kind: 'show'; mode: 'find' }
+  | { kind: 'show'; mode: 'settings' }
   | { kind: 'hide' }
   | { kind: 'find:result'; active: number; matches: number };
 

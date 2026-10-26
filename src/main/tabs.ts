@@ -89,7 +89,7 @@ export class TabManager {
     const { panes } = computeLayout({
       width,
       height,
-      sidebarOpen: state.settings.sidebarOpen,
+      sidebarOpen: this.c.sidebarVisible(),
       sidebarWidth: state.settings.sidebarWidth,
       panes: visible.length,
     });
@@ -150,6 +150,9 @@ export class TabManager {
     wc.on('did-stop-loading', () => patch({ loading: false, ...navState() }));
     wc.on('audio-state-changed', (e) => patch({ audible: e.audible }));
     wc.on('focus', () => this.c.apply({ type: 'pane.focus', id }));
+    wc.on('input-event', (_e, input) => {
+      if (this.c.peeking && (input.type === 'mouseDown' || input.type === 'mouseMove')) this.c.dispatch({ type: 'sidebar.peek', on: false });
+    });
     wc.on('enter-html-full-screen', () => {
       this.fullscreenTab = id;
       this.layout();

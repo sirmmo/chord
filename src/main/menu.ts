@@ -14,7 +14,26 @@ export function buildAppMenu(c: Controller): void {
   const spaces = c.state.spaces;
 
   const template: MenuItemConstructorOptions[] = [
-    ...(isMac ? [{ role: 'appMenu' } as MenuItemConstructorOptions] : []),
+    ...(isMac
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: 'about' },
+              sep,
+              { label: 'Settings…', accelerator: 'Command+,', click: d({ type: 'settings.open' }) },
+              sep,
+              { role: 'services' },
+              sep,
+              { role: 'hide' },
+              { role: 'hideOthers' },
+              { role: 'unhide' },
+              sep,
+              { role: 'quit' },
+            ],
+          } as MenuItemConstructorOptions,
+        ]
+      : []),
     {
       label: 'File',
       submenu: [
@@ -51,6 +70,7 @@ export function buildAppMenu(c: Controller): void {
       label: 'View',
       submenu: [
         { label: 'Toggle Sidebar', accelerator: 'CmdOrCtrl+S', click: d({ type: 'sidebar.toggle' }) },
+        { label: 'Appearance…', accelerator: isMac ? undefined : 'Ctrl+,', click: d({ type: 'settings.open' }) },
         sep,
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: d({ type: 'nav.reload' }) },
         { label: 'Back', accelerator: 'CmdOrCtrl+[', click: d({ type: 'nav.back' }) },
@@ -174,12 +194,16 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
     },
     {
       label: 'Color',
-      submenu: SPACE_COLORS.map((color, i) => ({
-        label: ['Indigo', 'Coral', 'Teal', 'Amber', 'Violet', 'Sky', 'Pink', 'Lime'][i] ?? color,
-        type: 'radio' as const,
-        checked: space.color.toLowerCase() === color.toLowerCase(),
-        click: d({ type: 'space.update', id, patch: { color } }),
-      })),
+      submenu: [
+        ...SPACE_COLORS.map((color, i) => ({
+          label: ['Indigo', 'Coral', 'Teal', 'Amber', 'Violet', 'Sky', 'Pink', 'Lime'][i] ?? color,
+          type: 'radio' as const,
+          checked: space.color.toLowerCase() === color.toLowerCase(),
+          click: d({ type: 'space.update', id, patch: { color } }),
+        })),
+        sep,
+        { label: 'Custom…', click: d({ type: 'settings.open' }) },
+      ],
     },
     sep,
     { label: 'Export Space…', click: d({ type: 'config.export', spaceId: id }) },

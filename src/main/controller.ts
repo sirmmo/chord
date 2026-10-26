@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell, type IpcMainInvokeEvent } from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
@@ -15,7 +15,9 @@ import { buildAppMenu, spaceContextMenu, tabContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
 
 const isMac = process.platform === 'darwin';
-const CHROME_BG = '#1b1b22';
+const CHROME_DARK = '#1b1b22';
+const CHROME_LIGHT = '#f4f4f7';
+const BROADCAST_INTERVAL_MS = 16;
 
 export class Controller {
   state!: State;
@@ -26,8 +28,10 @@ export class Controller {
 
   private applying = false;
   private queue: Action[] = [];
-  private broadcastPending = false;
+  private broadcastTimer: NodeJS.Timeout | null = null;
   private menuKey = '';
+  /** The sidebar is shown temporarily while the pointer hovers the left edge. */
+  peeking = false;
 
   constructor() {
     this.store = new Store<State>(join(app.getPath('userData'), 'state.json'));
@@ -63,10 +67,10 @@ export class Controller {
       minWidth: 640,
       minHeight: 420,
       show: false,
-      backgroundColor: CHROME_BG,
+      backgroundColor: this.chromeColor(),
       titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
       trafficLightPosition: { x: 14, y: 15 },
-      titleBarOverlay: isMac ? undefined : { color: CHROME_BG, symbolColor: '#dddde3', height: 40 },
+      titleBarOverlay: isMac ? undefined : { color: this.chromeColor(), symbolColor: '#dddde3', height: 40 },
       webPreferences: { preload: PRELOAD, sandbox: true, contextIsolation: true },
     });
     this.win = win;
@@ -78,19 +82,37 @@ export class Controller {
       this.broadcast();
     });
     win.webContents.on('did-finish-load', () => this.broadcast());
-    const relayout = () => {
-      this.tabs.layout();
-      this.overlay.layout();
-    };
+    const relayout = () => this.relayout();
     win.on('resize', relayout);
     win.on('enter-full-screen', relayout);
     win.on('leave-full-screen', relayout);
+    const onTheme = () => {
+      if (!win.isDestroyed()) win.setBackgroundColor(this.chromeColor());
+    };
+    nativeTheme.on('updated', onTheme);
+    win.on('closed', () => nativeTheme.off('updated', onTheme));
     win.on('closed', () => {
       this.win = null;
       this.tabs.reset();
       this.overlay.dispose();
       this.store.flush();
     });
+  }
+
+  /** Whether the sidebar currently takes up space in the layout. */
+  sidebarVisible(): boolean {
+    return this.state.settings.sidebarOpen || this.peeking;
+  }
+
+  private chromeColor(): string {
+    const mode = this.state.settings.theme.mode;
+    const dark = mode === 'dark' || (mode === 'system' && nativeTheme.shouldUseDarkColors);
+    return dark ? CHROME_DARK : CHROME_LIGHT;
+  }
+
+  private relayout(): void {
+    this.tabs.layout();
+    this.overlay.layout();
   }
 
   focusWindow(): void {
@@ -135,11 +157,16 @@ export class Controller {
     const next = reduce(prev, action, this.ctx());
     if (next === prev) return;
     this.state = next;
-    this.tabs.reconcile(next);
-    if (this.overlay.isShown()) this.overlay.layout();
+    // Title, favicon and loading updates arrive many times per second while pages
+    // load; they change nothing about which views exist or where they go.
+    if (viewSignature(prev) !== viewSignature(next)) {
+      this.tabs.reconcile(next);
+      if (this.overlay.isShown()) this.overlay.layout();
+    }
     this.store.save(next);
     this.broadcast();
     if (prev.settings.shields !== next.settings.shields) void setShields(next.settings.shields);
+    if (prev.settings.theme.mode !== next.settings.theme.mode) this.win?.setBackgroundColor(this.chromeColor());
     this.refreshMenu();
   }
 
@@ -150,14 +177,14 @@ export class Controller {
     buildAppMenu(this);
   }
 
+  /** Coalesces state pushes to the UI pages to at most one per frame. */
   broadcast(): void {
-    if (this.broadcastPending) return;
-    this.broadcastPending = true;
-    setImmediate(() => {
-      this.broadcastPending = false;
+    if (this.broadcastTimer) return;
+    this.broadcastTimer = setTimeout(() => {
+      this.broadcastTimer = null;
       const targets = [this.win?.webContents, this.overlay.webContents];
       for (const wc of targets) if (wc && !wc.isDestroyed()) wc.send('state', this.state);
-    });
+    }, BROADCAST_INTERVAL_MS);
   }
 
   sendSidebar(message: SidebarMessage): void {
@@ -228,6 +255,17 @@ export class Controller {
       }
       case 'palette.close':
         this.overlay.hide();
+        return;
+      case 'settings.open':
+        this.overlay.show({ kind: 'show', mode: 'settings' });
+        return;
+      case 'sidebar.peek':
+        if (this.peeking === cmd.on || this.state.settings.sidebarOpen) {
+          this.peeking = cmd.on && !this.state.settings.sidebarOpen;
+          return;
+        }
+        this.peeking = cmd.on;
+        this.relayout();
         return;
       case 'find.open':
         if (wc()) this.overlay.show({ kind: 'show', mode: 'find' });
@@ -345,6 +383,14 @@ export class Controller {
     if (live) live.webContents.loadURL(url).catch(() => {});
     this.apply({ type: 'tab.activate', id });
   }
+}
+
+/** Everything that decides which views exist, where they are and which one has focus. */
+function viewSignature(s: State): string {
+  const space = activeSpace(s);
+  const awake: string[] = [];
+  for (const t of Object.values(s.tabs)) if (t.awake) awake.push(t.id + (t.muted ? '!' : ''));
+  return [s.activeSpaceId, space.panes.join(','), space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
 }
 
 function isMessage(m: unknown): m is Message {

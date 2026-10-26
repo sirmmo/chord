@@ -222,3 +222,17 @@ test('layout splits the content area evenly', () => {
   assert.equal(closed.panes[0].x, 8);
   assert.equal(closed.panes[0].width, 984);
 });
+
+test('theme settings merge over defaults and clamp the tint', () => {
+  let s = run(fresh(), [{ type: 'theme.update', patch: { mode: 'dark', tint: 250 } }]);
+  assert.equal(s.settings.theme.mode, 'dark');
+  assert.equal(s.settings.theme.tint, 100);
+  assert.equal(s.settings.theme.iconStyle, 'color');
+  const raw = JSON.parse(JSON.stringify(s));
+  raw.settings = { sidebarWidth: 300, theme: { accent: '#ff0000' } };
+  const h = hydrate(raw, ctx());
+  assert.equal(h.settings.theme.accent, '#ff0000');
+  assert.equal(h.settings.theme.mode, 'system', 'missing theme fields fall back to defaults');
+  assert.equal(h.settings.sidebarWidth, 300);
+  assert.equal(h.settings.shields, true);
+});

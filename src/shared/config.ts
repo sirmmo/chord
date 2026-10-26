@@ -2,8 +2,8 @@
 // favorites and settings. No internal ids, so a file can be hand-edited,
 // shared, or imported into another Chord.
 
-import type { Settings, SpaceId, State, Tab, TabId } from './types.ts';
-import { SPACE_COLORS, MAX_ARCHIVED, makeSpace, spaceById, type Ctx } from './model.ts';
+import type { Settings, SpaceId, State, Tab, TabId, Theme } from './types.ts';
+import { SPACE_COLORS, MAX_ARCHIVED, clampTint, makeSpace, spaceById, type Ctx } from './model.ts';
 import { titleFor } from './url.ts';
 
 export const CONFIG_FORMAT = 'chord-config';
@@ -34,7 +34,7 @@ export interface ChordConfig {
 
 export type ImportMode = 'merge' | 'replace';
 
-const SETTING_KEYS: (keyof Settings)[] = ['sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
+const SETTING_KEYS: (keyof Settings)[] = ['theme', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
 
 function tabToConfig(tab: Tab): ConfigTab {
   const out: ConfigTab = { url: tab.homeUrl ?? tab.url };
@@ -117,6 +117,17 @@ export function parseConfig(text: string): ParseResult {
       if (typeof r.searchEngine === 'string' && ['duckduckgo', 'google', 'brave', 'kagi', 'startpage'].includes(r.searchEngine)) {
         settings.searchEngine = r.searchEngine as Settings['searchEngine'];
       }
+      if (isRecord(r.theme)) {
+        const t = r.theme;
+        const theme: Partial<Theme> = {};
+        if (t.mode === 'system' || t.mode === 'light' || t.mode === 'dark') theme.mode = t.mode;
+        if (typeof t.tint === 'number') theme.tint = clampTint(t.tint);
+        if (isHex(t.accent) || t.accent === null) theme.accent = t.accent;
+        if (t.iconStyle === 'color' || t.iconStyle === 'mono') theme.iconStyle = t.iconStyle;
+        if (isHex(t.iconColor) || t.iconColor === null) theme.iconColor = t.iconColor;
+        if (t.font === 'system' || t.font === 'rounded' || t.font === 'mono' || t.font === 'serif') theme.font = t.font;
+        if (Object.keys(theme).length) settings.theme = theme as Theme;
+      }
     }
     const config: ChordConfig = {
       format: CONFIG_FORMAT,
@@ -174,7 +185,9 @@ export function importConfig(s: State, config: ChordConfig, mode: ImportMode, ct
     if (config.settings) {
       for (const key of SETTING_KEYS) {
         const v = config.settings[key];
-        if (v !== undefined) Object.assign(s.settings, { [key]: v });
+        if (v === undefined) continue;
+        if (key === 'theme') Object.assign(s.settings.theme, v);
+        else Object.assign(s.settings, { [key]: v });
       }
     }
   }

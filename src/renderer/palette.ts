@@ -1,7 +1,8 @@
 // The overlay page: command bar (⌘T / ⌘L) and find bar (⌘F).
 
 import type { Message, State, Tab } from '../shared/types.ts';
-import { activeSpace, focusedTab } from '../shared/model.ts';
+import { activeSpace, focusedTab, SPACE_COLORS } from '../shared/model.ts';
+import { applyTheme } from './theme.ts';
 import { hostOf, searchUrl, SEARCH_ENGINES, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
 
@@ -25,7 +26,7 @@ const findInput = $<HTMLInputElement>('#find-input');
 const findCount = $('#find-count');
 
 let state: State | null = null;
-let mode: 'palette' | 'find' | null = null;
+let mode: 'palette' | 'find' | 'settings' | null = null;
 let intent: 'new' | 'current' = 'new';
 let items: Item[] = [];
 let selected = 0;
@@ -35,15 +36,21 @@ $('#input-icon').append(svg(ICONS.command, 18));
 
 api.onState((s) => {
   state = s;
+  applyTheme(s.settings.theme, activeSpace(s));
   if (mode === 'palette') update();
+  if (mode === 'settings') fillSettings();
 });
 api.getState().then((s) => {
-  if (s) state = s;
+  if (s) {
+    state = s;
+    applyTheme(s.settings.theme, activeSpace(s));
+  }
 });
 api.onOverlay((m) => {
   switch (m.kind) {
     case 'show':
       if (m.mode === 'palette') showPalette(m.intent, m.query);
+      else if (m.mode === 'settings') showSettings();
       else showFind();
       break;
     case 'hide':
@@ -224,6 +231,7 @@ function compute(raw: string): Item[] {
     { title: 'Export Configuration', keywords: 'export json backup spaces', subtitle: 'Save spaces, tabs and settings to a JSON file', run: () => dispatch({ type: 'config.export' }) },
     { title: `Export Space: ${space.name}`, keywords: 'export json space', run: () => dispatch({ type: 'config.export', spaceId: space.id }) },
     { title: 'Import Configuration', keywords: 'import json restore spaces', subtitle: 'Merge or replace from a JSON file', run: () => dispatch({ type: 'config.importFile' }) },
+    { title: 'Appearance…', keywords: 'settings theme colour color icons font preferences', subtitle: 'Theme, colours, icons, font', run: () => dispatch({ type: 'settings.open' }) },
     { title: 'Set Chord as Default Browser', keywords: 'default', run: () => dispatch({ type: 'app.setDefaultBrowser' }) },
     { title: 'Toggle Developer Tools', keywords: 'devtools inspect', when: !!current, run: () => dispatch({ type: 'devtools.toggle' }) },
   ];
@@ -269,3 +277,88 @@ findInput.addEventListener('keydown', (e) => {
 $('#find-prev').onclick = () => sendFind(false, true);
 $('#find-next').onclick = () => sendFind(true, true);
 $('#find-close').onclick = () => dispatch({ type: 'find.close' });
+
+// ---- appearance panel ----
+
+const sMode = $('#s-mode');
+const sIcons = $('#s-icons');
+const sSwatches = $('#s-swatches');
+const sSpaceColor = $<HTMLInputElement>('#s-space-color');
+const sTint = $<HTMLInputElement>('#s-tint');
+const sTintVal = $('#s-tint-val');
+const sAccentFollow = $<HTMLInputElement>('#s-accent-follow');
+const sAccent = $<HTMLInputElement>('#s-accent');
+const sIconFollow = $<HTMLInputElement>('#s-icon-follow');
+const sIconColor = $<HTMLInputElement>('#s-icon-color');
+const sFont = $<HTMLSelectElement>('#s-font');
+const sArchive = $<HTMLSelectElement>('#s-archive');
+const sEngine = $<HTMLSelectElement>('#s-engine');
+const sShields = $<HTMLInputElement>('#s-shields');
+
+for (const [key, e] of Object.entries(SEARCH_ENGINES)) sEngine.append(h('option', { value: key }, e.name));
+for (const color of SPACE_COLORS) {
+  sSwatches.append(h('button', { style: `--c: ${color}`, title: color, onclick: () => state && dispatch({ type: 'space.update', id: state.activeSpaceId, patch: { color } }) }));
+}
+const segment = (el: HTMLElement, onPick: (v: string) => void) => {
+  el.querySelectorAll('button').forEach((b) => (b.onclick = () => onPick(b.dataset.v ?? '')));
+};
+segment(sMode, (v) => dispatch({ type: 'theme.update', patch: { mode: v as 'system' | 'light' | 'dark' } }));
+segment(sIcons, (v) => dispatch({ type: 'theme.update', patch: { iconStyle: v as 'color' | 'mono' } }));
+sSpaceColor.oninput = () => state && dispatch({ type: 'space.update', id: state.activeSpaceId, patch: { color: sSpaceColor.value } });
+sTint.oninput = () => {
+  sTintVal.textContent = `${sTint.value}%`;
+  dispatch({ type: 'theme.update', patch: { tint: Number(sTint.value) } });
+};
+sAccentFollow.onchange = () => dispatch({ type: 'theme.update', patch: { accent: sAccentFollow.checked ? null : sAccent.value } });
+sAccent.oninput = () => dispatch({ type: 'theme.update', patch: { accent: sAccent.value } });
+sIconFollow.onchange = () => dispatch({ type: 'theme.update', patch: { iconColor: sIconFollow.checked ? null : sIconColor.value } });
+sIconColor.oninput = () => dispatch({ type: 'theme.update', patch: { iconColor: sIconColor.value } });
+sFont.onchange = () => dispatch({ type: 'theme.update', patch: { font: sFont.value as 'system' | 'rounded' | 'mono' | 'serif' } });
+sArchive.onchange = () => dispatch({ type: 'settings.update', patch: { archiveAfterHours: Number(sArchive.value) } });
+sEngine.onchange = () => dispatch({ type: 'settings.update', patch: { searchEngine: sEngine.value as keyof typeof SEARCH_ENGINES } });
+sShields.onchange = () => dispatch({ type: 'settings.update', patch: { shields: sShields.checked } });
+$('#settings-close').onclick = () => dispatch({ type: 'palette.close' });
+$('#settings-backdrop').addEventListener('mousedown', (e) => {
+  if (e.target === e.currentTarget) dispatch({ type: 'palette.close' });
+});
+window.addEventListener('keydown', (e) => {
+  if (mode === 'settings' && e.key === 'Escape') dispatch({ type: 'palette.close' });
+});
+
+function textColorHex(): string {
+  const dark = document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+  return dark ? '#ececf1' : '#1c1c24';
+}
+
+function fillSettings(): void {
+  const s = state;
+  if (!s) return;
+  const t = s.settings.theme;
+  const space = activeSpace(s);
+  const active = document.activeElement;
+  const pick = (el: HTMLElement, v: string) => el.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
+  pick(sMode, t.mode);
+  pick(sIcons, t.iconStyle);
+  $('#s-space-name').textContent = `“${space.name}”`;
+  sSwatches.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.title.toLowerCase() === space.color.toLowerCase()));
+  if (active !== sSpaceColor) sSpaceColor.value = space.color;
+  if (active !== sTint) sTint.value = String(t.tint);
+  sTintVal.textContent = `${t.tint}%`;
+  sAccentFollow.checked = t.accent === null;
+  sAccent.disabled = t.accent === null;
+  if (active !== sAccent) sAccent.value = t.accent ?? space.color;
+  sIconFollow.checked = t.iconColor === null;
+  sIconColor.disabled = t.iconColor === null;
+  if (active !== sIconColor) sIconColor.value = t.iconColor ?? textColorHex();
+  sFont.value = t.font;
+  sArchive.value = String(s.settings.archiveAfterHours);
+  sEngine.value = s.settings.searchEngine;
+  sShields.checked = s.settings.shields;
+}
+
+function showSettings(): void {
+  mode = 'settings';
+  document.body.className = 'mode-settings';
+  fillSettings();
+  $('#settings-close').focus();
+}

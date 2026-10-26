@@ -14,7 +14,8 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
 ## Features
 
 - **Sidebar** with the page's navigation controls, a URL pill, and the tab lists.
-  `⌘S` hides it. Drag its right edge to resize.
+  Collapse it with the button in its corner or `⌘S`; while collapsed, hovering the
+  left edge peeks it. Drag its right edge to resize.
 - **Spaces**: each has its own colour, icon, pinned and today tabs. `⌘⌥←/→` or
   `Ctrl+1…9` switch, `⌘⇧N` creates one. Right-click a space for icon, colour, rename
   or delete.
@@ -32,6 +33,10 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   engine). Toggle from the command bar.
 - **Find in page** `⌘F`, tab sleep, mute, reopen closed tab `⌘⇧T`, per-site
   permission prompts, OAuth-style popups opened as tabs.
+- **Appearance** (`⌘,`): light, dark or system theme, any colour per space (presets
+  or a colour picker), tint strength, a separate accent colour, colour or monochrome
+  icons with their own colour, and the UI font. Appearance travels with the exported
+  configuration.
 - **Export and import** the whole setup, or a single space, as a JSON file
   (File menu, space context menu, or the command bar). See below.
 
@@ -62,7 +67,12 @@ URL strings or objects with `url`, `title` and `favicon`:
       "today": ["https://news.ycombinator.com"]
     }
   ],
-  "settings": { "searchEngine": "duckduckgo", "archiveAfterHours": 24, "shields": true }
+  "settings": {
+    "searchEngine": "duckduckgo",
+    "archiveAfterHours": 24,
+    "shields": true,
+    "theme": { "mode": "dark", "tint": 40, "accent": "#ffb347", "iconStyle": "mono", "iconColor": null, "font": "rounded" }
+  }
 }
 ```
 
@@ -72,7 +82,8 @@ URL strings or objects with `url`, `title` and `favicon`:
 | --- | --- |
 | `⌘T` / `⌘L` | Command bar: new tab / edit current URL |
 | `⌘W` · `⌘⇧T` | Close tab · reopen closed tab |
-| `⌘S` | Toggle sidebar |
+| `⌘S` | Collapse / expand sidebar (hover the left edge to peek) |
+| `⌘,` | Appearance and settings |
 | `⌘D` | Pin / unpin tab |
 | `⌘⇧D` · `⌘⌥W` | Add to split view · remove from split view |
 | `Ctrl+Tab` · `Ctrl+⇧Tab` | Next / previous tab |

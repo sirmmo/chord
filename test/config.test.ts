@@ -128,3 +128,19 @@ test('export file names are safe and dated', () => {
   assert.equal(exportFileName(Date.UTC(2026, 9, 26), 'Side projects / 2026'), 'Chord-space-Side_projects_2026-2026-10-26.json');
   assert.equal(exportFileName(Date.UTC(2026, 9, 26)), 'Chord-config-2026-10-26.json');
 });
+
+test('theme travels through export and import, invalid fields are dropped', () => {
+  let s = sample();
+  s = reduce(s, { type: 'theme.update', patch: { mode: 'light', accent: '#123456', iconStyle: 'mono' } }, ctx());
+  const parsed = parseConfig(JSON.stringify(exportConfig(s, 1_000)));
+  assert.ok(parsed.ok);
+  if (!parsed.ok) return;
+  assert.equal(parsed.config.settings?.theme?.accent, '#123456');
+  const next = reduce(initialState(ctx()), { type: 'config.import', config: parsed.config, mode: 'replace' }, ctx());
+  assert.equal(next.settings.theme.mode, 'light');
+  assert.equal(next.settings.theme.iconStyle, 'mono');
+  assert.equal(next.settings.theme.font, 'system');
+  const sloppy = parseConfig('{"format":"chord-config","version":1,"spaces":[],"settings":{"theme":{"mode":"neon","tint":"lots","accent":"red","font":"mono"}}}');
+  assert.ok(sloppy.ok);
+  if (sloppy.ok) assert.deepEqual(sloppy.config.settings?.theme, { font: 'mono' });
+});

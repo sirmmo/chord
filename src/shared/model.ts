@@ -1,7 +1,7 @@
 // Pure state model: no Electron, no side effects. Every transition takes a
 // State and returns a new State, so it can be unit-tested in plain Node.
 
-import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabId } from './types.ts';
+import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabId, Theme } from './types.ts';
 import { titleFor } from './url.ts';
 import { importConfig } from './config.ts';
 
@@ -17,8 +17,25 @@ export interface Ctx {
   newId: () => string;
 }
 
+export function defaultTheme(): Theme {
+  return { mode: 'system', tint: 30, accent: null, iconStyle: 'color', iconColor: null, font: 'system' };
+}
+
 export function defaultSettings(): Settings {
-  return { sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
+  return { theme: defaultTheme(), sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
+}
+
+/** Deep-ish merge of persisted settings over the defaults. */
+export function mergeSettings(raw: unknown): Settings {
+  const r = (raw ?? {}) as Partial<Settings>;
+  const theme = { ...defaultTheme(), ...((r.theme ?? {}) as Partial<Theme>) };
+  theme.tint = clampTint(theme.tint);
+  return { ...defaultSettings(), ...r, theme };
+}
+
+export function clampTint(v: unknown): number {
+  const n = typeof v === 'number' && Number.isFinite(v) ? v : 30;
+  return Math.round(Math.max(0, Math.min(100, n)));
 }
 
 export function makeSpace(index: number, ctx: Ctx, name?: string, color?: string, icon?: string): Space {
@@ -62,7 +79,7 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     favorites: r.favorites ?? [],
     archived: r.archived ?? [],
     recentlyClosed: r.recentlyClosed ?? [],
-    settings: { ...defaultSettings(), ...(r.settings ?? {}) },
+    settings: mergeSettings(r.settings),
   };
   const exists = (id: TabId) => id in s.tabs;
   s.favorites = s.favorites.filter(exists);
@@ -437,6 +454,11 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
     case 'settings.update': {
       Object.assign(s.settings, a.patch);
       s.settings.sidebarWidth = clampSidebar(s.settings.sidebarWidth);
+      return s;
+    }
+    case 'theme.update': {
+      Object.assign(s.settings.theme, a.patch);
+      s.settings.theme.tint = clampTint(s.settings.theme.tint);
       return s;
     }
     case 'archived.restore': {
