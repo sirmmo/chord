@@ -6,7 +6,7 @@ split view, auto-archiving, and built-in ad and tracker blocking.
 
 A *chord* is the straight line between two points on an arc.
 
-Website: https://sirmmo.github.io/chord/ · Downloads: https://github.com/sirmmo/chord/releases/latest
+Website: https://ingmmo.com/chord/ · Downloads: https://github.com/sirmmo/chord/releases/latest
 
 Chord is built on Electron, so pages render with Chromium exactly as in Arc, Chrome
 or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the roadmap.
