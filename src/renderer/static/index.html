@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; style-src 'self' 'unsafe-inline'">
+  <title>Chord</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="titlebar">
+      <button class="icon-btn" id="back" title="Back (⌘[)"></button>
+      <button class="icon-btn" id="forward" title="Forward (⌘])"></button>
+      <button class="icon-btn" id="reload" title="Reload (⌘R)"></button>
+    </div>
+    <button class="urlbar placeholder" id="urlbar" title="Edit URL (⌘L)">
+      <span class="lock"></span><span class="host">Search or enter URL</span>
+    </button>
+    <div id="favorites" class="list grid"></div>
+    <div class="space-header">
+      <span class="space-icon" id="space-icon"></span>
+      <span class="name" id="space-name"></span>
+      <button class="icon-btn small" id="space-menu" title="Space options"></button>
+    </div>
+    <div class="lists">
+      <div id="pinned" class="list"></div>
+      <div class="divider" id="pinned-divider"></div>
+      <div class="section-header"><span>Today</span><button id="clear-today" title="Archive all of today’s tabs">Clear</button></div>
+      <div id="today" class="list"></div>
+      <button class="new-tab" id="new-tab"><span class="plus"></span>New Tab</button>
+    </div>
+    <footer>
+      <div id="spaces"></div>
+      <button class="icon-btn" id="add-space" title="New space (⌘⇧N)"></button>
+    </footer>
+    <div class="resizer" id="resizer"></div>
+  </aside>
+  <main id="stage">
+    <div class="empty-msg">
+      <div class="big">Nothing open</div>
+      <div>Press <kbd>⌘T</kbd> to search or open a page</div>
+    </div>
+  </main>
+  <script src="sidebar.js"></script>
+</body>
+</html>

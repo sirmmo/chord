@@ -1,0 +1,78 @@
+{
+  "name": "chord-browser",
+  "productName": "Chord",
+  "version": "0.1.0",
+  "description": "An open-source browser inspired by Arc: sidebar tabs, spaces, command bar, split view.",
+  "license": "MIT",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "start": "npm run build && electron .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "electron": "^45",
+    "electron-builder": "^26",
+    "esbuild": "^0.28",
+    "typescript": "^5.9"
+  },
+  "build": {
+    "appId": "org.chordbrowser.app",
+    "productName": "Chord",
+    "files": [
+      "dist/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Network",
+      "maintainer": "sirmmo"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "artifactName": "Chord-${version}-${os}-${arch}.${ext}",
+    "publish": null
+  },
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.20.1"
+  },
+  "allowScripts": {
+    "electron": true,
+    "esbuild": true,
+    "electron-winstaller": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sirmmo/chord.git"
+  },
+  "homepage": "https://sirmmo.github.io/chord/"
+}
