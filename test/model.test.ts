@@ -242,3 +242,25 @@ test('layout honours a top inset for platforms with a native window-controls str
   assert.equal(content.y, 36);
   assert.equal(content.height, 600 - 36 - 8);
 });
+
+test('extensions are added once, toggled, annotated and removed', () => {
+  let s = run(fresh(), [
+    { type: 'extension.add', path: '/ext/a' },
+    { type: 'extension.add', path: '/ext/a' },
+    { type: 'extension.add', path: '/ext/b', name: 'B', version: '1.0' },
+    { type: 'extension.toggle', path: '/ext/a', enabled: false },
+    { type: 'extension.info', path: '/ext/a', name: 'A', version: '2.0' },
+  ]);
+  assert.deepEqual(s.settings.extensions, [
+    { path: '/ext/a', enabled: false, name: 'A', version: '2.0' },
+    { path: '/ext/b', enabled: true, name: 'B', version: '1.0' },
+  ]);
+  const same = reduce(s, { type: 'extension.remove', path: '/nope' }, ctx());
+  assert.equal(same, s);
+  s = reduce(s, { type: 'extension.remove', path: '/ext/a' }, ctx());
+  assert.equal(s.settings.extensions.length, 1);
+  const raw = JSON.parse(JSON.stringify(s));
+  raw.settings.extensions = [{ path: '/ext/b', enabled: true }, 'junk', { enabled: true }];
+  assert.equal(hydrate(raw, ctx()).settings.extensions.length, 1);
+  assert.equal(hydrate(raw, ctx()).settings.addressBar, false);
+});

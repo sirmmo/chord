@@ -69,8 +69,23 @@ export interface Theme {
   font: FontStyle;
 }
 
+/** An unpacked Chrome extension the user added from a folder. */
+export interface ExtensionEntry {
+  path: string;
+  enabled: boolean;
+  /** cached from the manifest the last time it loaded */
+  name?: string;
+  version?: string;
+}
+
+/** Runtime status of extensions, sent by main (not persisted). */
+export type ExtensionsStatus = Record<string, { loaded: boolean; error?: string }>;
+
 export interface Settings {
   theme: Theme;
+  /** editable address bar across the top of the page */
+  addressBar: boolean;
+  extensions: ExtensionEntry[];
   sidebarOpen: boolean;
   sidebarWidth: number;
   /** "Today" tabs that were not used for this long are archived */
@@ -122,7 +137,11 @@ export type Action =
   | { type: 'space.delete'; id: SpaceId }
   | { type: 'sidebar.toggle' }
   | { type: 'sidebar.resize'; width: number }
-  | { type: 'settings.update'; patch: Partial<Omit<Settings, 'theme'>> }
+  | { type: 'settings.update'; patch: Partial<Omit<Settings, 'theme' | 'extensions'>> }
+  | { type: 'extension.add'; path: string; name?: string; version?: string }
+  | { type: 'extension.remove'; path: string }
+  | { type: 'extension.toggle'; path: string; enabled: boolean }
+  | { type: 'extension.info'; path: string; name: string; version: string }
   | { type: 'theme.update'; patch: Partial<Theme> }
   | { type: 'archived.restore'; id: TabId }
   | { type: 'archived.clear' }
@@ -157,6 +176,7 @@ export type Command =
   | { type: 'zoom.reset' }
   | { type: 'open.external'; url: string }
   | { type: 'app.setDefaultBrowser' }
+  | { type: 'extension.pickFolder' }
   | { type: 'config.export'; spaceId?: SpaceId }
   | { type: 'config.importFile' };
 
@@ -165,7 +185,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'config.export', 'config.importFile',
+  'extension.pickFolder', 'config.export', 'config.importFile',
 ]);
 
 export type Message = Action | Command;
@@ -193,4 +213,6 @@ export interface ChordApi {
   onState(cb: (state: State) => void): () => void;
   onOverlay(cb: (message: OverlayMessage) => void): () => void;
   onSidebar(cb: (message: SidebarMessage) => void): () => void;
+  onExtensions(cb: (status: ExtensionsStatus) => void): () => void;
+  getExtensions(): Promise<ExtensionsStatus>;
 }

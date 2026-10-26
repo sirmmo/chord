@@ -122,3 +122,28 @@ input[type="range"] { flex: 1; accent-color: var(--accent); }
 .check input { accent-color: var(--accent); }
 select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hover); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; }
 .s-foot { margin: 14px 0 0; font-size: 12px; color: var(--muted); }
+
+/* settings tabs and pages */
+.tabs { display: inline-flex; gap: 2px; background: var(--hover); border-radius: 9px; padding: 3px; }
+.tabs button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 7px; }
+.tabs button.on { background: var(--panel); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.s-page { display: none; }
+.s-page.on { display: block; }
+.s-page h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 8px; }
+.s-page h3:first-child { margin-top: 4px; }
+.btn { font: inherit; font-size: 13px; color: var(--fg); background: var(--hover); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; }
+.btn:hover { background: var(--selected); }
+.btn.danger:hover { background: color-mix(in srgb, #ff5f57 30%, transparent); }
+.kbd { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+.addin { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; }
+.addin-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.addin-text span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.addin-text .err { color: #ff8a80; white-space: normal; }
+.addin .btn { padding: 4px 9px; font-size: 12px; }
+.switch { position: relative; width: 36px; height: 22px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch i { position: absolute; inset: 0; border-radius: 11px; background: var(--line); transition: background .15s; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.switch input:checked + i { background: var(--accent); }
+.switch input:checked + i::after { transform: translateX(14px); }
+#s-extensions:empty::before { content: "No extensions added yet."; font-size: 13px; color: var(--muted); display: block; padding: 4px 0 8px; }

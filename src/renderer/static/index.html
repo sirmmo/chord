@@ -40,9 +40,17 @@
   <div id="edge" title="Show sidebar (⌘S)"></div>
   <div id="topbar"></div>
   <main id="stage">
-    <div class="empty-msg">
-      <div class="big">Nothing open</div>
-      <div>Press <kbd>⌘T</kbd> to search or open a page</div>
+    <div id="addressbar">
+      <button class="icon-btn" id="ab-back" title="Back"></button>
+      <button class="icon-btn" id="ab-forward" title="Forward"></button>
+      <button class="icon-btn" id="ab-reload" title="Reload"></button>
+      <div class="field"><span class="lock" id="ab-lock"></span><input id="address" type="text" placeholder="Search or enter URL" autocomplete="off" spellcheck="false"></div>
+    </div>
+    <div class="stage-body">
+      <div class="empty-msg">
+        <div class="big">Nothing open</div>
+        <div>Press <kbd>⌘T</kbd> to search or open a page</div>
+      </div>
     </div>
   </main>
   <script src="sidebar.js"></script>

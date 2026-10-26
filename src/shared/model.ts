@@ -22,7 +22,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
+  return { theme: defaultTheme(), addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -30,7 +30,10 @@ export function mergeSettings(raw: unknown): Settings {
   const r = (raw ?? {}) as Partial<Settings>;
   const theme = { ...defaultTheme(), ...((r.theme ?? {}) as Partial<Theme>) };
   theme.tint = clampTint(theme.tint);
-  return { ...defaultSettings(), ...r, theme };
+  const extensions = Array.isArray(r.extensions)
+    ? r.extensions.filter((e): e is Settings['extensions'][number] => typeof e === 'object' && e !== null && typeof e.path === 'string')
+    : [];
+  return { ...defaultSettings(), ...r, theme, extensions };
 }
 
 export function clampTint(v: unknown): number {
@@ -454,6 +457,29 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
     case 'settings.update': {
       Object.assign(s.settings, a.patch);
       s.settings.sidebarWidth = clampSidebar(s.settings.sidebarWidth);
+      return s;
+    }
+    case 'extension.add': {
+      if (s.settings.extensions.some((e) => e.path === a.path)) return prev;
+      s.settings.extensions.push({ path: a.path, enabled: true, name: a.name, version: a.version });
+      return s;
+    }
+    case 'extension.remove': {
+      const before = s.settings.extensions.length;
+      s.settings.extensions = s.settings.extensions.filter((e) => e.path !== a.path);
+      return s.settings.extensions.length === before ? prev : s;
+    }
+    case 'extension.toggle': {
+      const e = s.settings.extensions.find((x) => x.path === a.path);
+      if (!e || e.enabled === a.enabled) return prev;
+      e.enabled = a.enabled;
+      return s;
+    }
+    case 'extension.info': {
+      const e = s.settings.extensions.find((x) => x.path === a.path);
+      if (!e || (e.name === a.name && e.version === a.version)) return prev;
+      e.name = a.name;
+      e.version = a.version;
       return s;
     }
     case 'theme.update': {

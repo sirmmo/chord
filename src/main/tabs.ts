@@ -4,7 +4,6 @@ import type { State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace } from '../shared/model.ts';
 import { computeLayout } from '../shared/layout.ts';
 import { PARTITION } from './session.ts';
-import { TOP_INSET } from './platform.ts';
 import { pageContextMenu } from './menu.ts';
 import type { Controller } from './controller.ts';
 
@@ -93,7 +92,7 @@ export class TabManager {
       sidebarOpen: this.c.sidebarVisible(),
       sidebarWidth: state.settings.sidebarWidth,
       panes: visible.length,
-      topInset: TOP_INSET,
+      topInset: this.c.topInset(),
     });
     visible.forEach((id, k) => this.views.get(id)!.setBounds(panes[k]));
   }

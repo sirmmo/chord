@@ -1,6 +1,6 @@
 // The overlay page: command bar (⌘T / ⌘L) and find bar (⌘F).
 
-import type { Message, State, Tab } from '../shared/types.ts';
+import type { ExtensionsStatus, Message, State, Tab } from '../shared/types.ts';
 import { activeSpace, focusedTab, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { hostOf, searchUrl, SEARCH_ENGINES, toUrl } from '../shared/url.ts';
@@ -231,7 +231,9 @@ function compute(raw: string): Item[] {
     { title: 'Export Configuration', keywords: 'export json backup spaces', subtitle: 'Save spaces, tabs and settings to a JSON file', run: () => dispatch({ type: 'config.export' }) },
     { title: `Export Space: ${space.name}`, keywords: 'export json space', run: () => dispatch({ type: 'config.export', spaceId: space.id }) },
     { title: 'Import Configuration', keywords: 'import json restore spaces', subtitle: 'Merge or replace from a JSON file', run: () => dispatch({ type: 'config.importFile' }) },
-    { title: 'Appearance…', keywords: 'settings theme colour color icons font preferences', subtitle: 'Theme, colours, icons, font', run: () => dispatch({ type: 'settings.open' }) },
+    { title: 'Settings…', keywords: 'settings preferences appearance theme add-ins extensions address bar', subtitle: 'General, appearance, add-ins', run: () => dispatch({ type: 'settings.open' }) },
+    { title: s.settings.addressBar ? 'Hide Address Bar' : 'Show Address Bar', keywords: 'address bar url toggle', subtitle: '⌘⇧L', run: () => dispatch({ type: 'settings.update', patch: { addressBar: !s.settings.addressBar } }) },
+    { title: 'Add Unpacked Extension…', keywords: 'extension add-in addin chrome', run: () => dispatch({ type: 'extension.pickFolder' }) },
     { title: 'Set Chord as Default Browser', keywords: 'default', run: () => dispatch({ type: 'app.setDefaultBrowser' }) },
     { title: 'Toggle Developer Tools', keywords: 'devtools inspect', when: !!current, run: () => dispatch({ type: 'devtools.toggle' }) },
   ];
@@ -294,6 +296,59 @@ const sFont = $<HTMLSelectElement>('#s-font');
 const sArchive = $<HTMLSelectElement>('#s-archive');
 const sEngine = $<HTMLSelectElement>('#s-engine');
 const sShields = $<HTMLInputElement>('#s-shields');
+const sAddressBar = $<HTMLInputElement>('#s-addressbar');
+const sExtensions = $('#s-extensions');
+let settingsPage = 'general';
+let extStatus: ExtensionsStatus = {};
+
+const showPage = (page: string) => {
+  settingsPage = page;
+  $('#s-tabs').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === page));
+  document.querySelectorAll<HTMLElement>('.s-page').forEach((p) => p.classList.toggle('on', p.dataset.page === page));
+};
+$('#s-tabs').querySelectorAll('button').forEach((b) => (b.onclick = () => showPage(b.dataset.v ?? 'general')));
+sAddressBar.onchange = () => dispatch({ type: 'settings.update', patch: { addressBar: sAddressBar.checked } });
+$('#s-default').onclick = () => dispatch({ type: 'app.setDefaultBrowser' });
+$('#s-export').onclick = () => dispatch({ type: 'config.export' });
+$('#s-import').onclick = () => {
+  dispatch({ type: 'palette.close' });
+  dispatch({ type: 'config.importFile' });
+};
+$('#s-ext-add').onclick = () => dispatch({ type: 'extension.pickFolder' });
+api.onExtensions((st) => {
+  extStatus = st;
+  if (mode === 'settings') renderExtensions();
+});
+api.getExtensions().then((st) => {
+  extStatus = st;
+});
+
+function renderExtensions(): void {
+  const s = state;
+  if (!s) return;
+  sExtensions.replaceChildren(
+    ...s.settings.extensions.map((e) => {
+      const st = extStatus[e.path];
+      const status = !e.enabled ? 'Off' : st?.loaded ? 'Loaded' : st?.error ? '' : 'Loading…';
+      const toggle = h('input', { type: 'checkbox' }) as HTMLInputElement;
+      toggle.checked = e.enabled;
+      toggle.onchange = () => dispatch({ type: 'extension.toggle', path: e.path, enabled: toggle.checked });
+      return h(
+        'div',
+        { class: 'addin' },
+        h(
+          'div',
+          { class: 'addin-text' },
+          h('strong', {}, (e.name ?? e.path.split(/[\\/]/).filter(Boolean).pop() ?? e.path) + (e.version ? ` ${e.version}` : '')),
+          h('span', { title: e.path }, `${status}${status ? ' · ' : ''}${e.path}`),
+          st?.error && e.enabled ? h('span', { class: 'err' }, st.error) : null,
+        ),
+        h('label', { class: 'switch' }, toggle, h('i')),
+        h('button', { class: 'btn danger', onclick: () => dispatch({ type: 'extension.remove', path: e.path }) }, 'Remove'),
+      );
+    }),
+  );
+}
 
 for (const [key, e] of Object.entries(SEARCH_ENGINES)) sEngine.append(h('option', { value: key }, e.name));
 for (const color of SPACE_COLORS) {
@@ -354,11 +409,14 @@ function fillSettings(): void {
   sArchive.value = String(s.settings.archiveAfterHours);
   sEngine.value = s.settings.searchEngine;
   sShields.checked = s.settings.shields;
+  sAddressBar.checked = s.settings.addressBar;
+  renderExtensions();
 }
 
 function showSettings(): void {
   mode = 'settings';
   document.body.className = 'mode-settings';
+  showPage(settingsPage);
   fillSettings();
   $('#settings-close').focus();
 }

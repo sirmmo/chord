@@ -34,7 +34,7 @@ export interface ChordConfig {
 
 export type ImportMode = 'merge' | 'replace';
 
-const SETTING_KEYS: (keyof Settings)[] = ['theme', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
+const SETTING_KEYS: (keyof Settings)[] = ['theme', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
 
 function tabToConfig(tab: Tab): ConfigTab {
   const out: ConfigTab = { url: tab.homeUrl ?? tab.url };
@@ -63,7 +63,10 @@ export function exportConfig(s: State, now: number, spaceId?: SpaceId): ChordCon
       today: tabsToConfig(s, sp.today),
     })),
   };
-  if (!spaceId) config.settings = { ...s.settings };
+  if (!spaceId) {
+    const { extensions: _extensions, ...rest } = s.settings;
+    config.settings = rest;
+  }
   return config;
 }
 
@@ -114,6 +117,7 @@ export function parseConfig(text: string): ParseResult {
       if (typeof r.sidebarWidth === 'number') settings.sidebarWidth = r.sidebarWidth;
       if (typeof r.archiveAfterHours === 'number' && r.archiveAfterHours >= 0) settings.archiveAfterHours = r.archiveAfterHours;
       if (typeof r.shields === 'boolean') settings.shields = r.shields;
+      if (typeof r.addressBar === 'boolean') settings.addressBar = r.addressBar;
       if (typeof r.searchEngine === 'string' && ['duckduckgo', 'google', 'brave', 'kagi', 'startpage'].includes(r.searchEngine)) {
         settings.searchEngine = r.searchEngine as Settings['searchEngine'];
       }

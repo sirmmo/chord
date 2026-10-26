@@ -4,7 +4,7 @@
 
 import type { ListName, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace } from '../shared/model.ts';
-import { hostOf, isSecure } from '../shared/url.ts';
+import { hostOf, isSecure, searchUrl, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
 import { applyTheme } from './theme.ts';
 
@@ -45,7 +45,32 @@ $('#clear-today').onclick = () => dispatch({ type: 'today.clear' });
 $('#add-space').onclick = () => dispatch({ type: 'space.create' });
 $('#space-menu').onclick = () => state && dispatch({ type: 'space.contextmenu', id: state.activeSpaceId });
 $('#space-name').ondblclick = () => state && startRename(state.activeSpaceId);
-$('#stage').ondblclick = () => dispatch({ type: 'palette.open', intent: 'new' });
+$('.stage-body').ondblclick = () => dispatch({ type: 'palette.open', intent: 'new' });
+
+// Address bar (optional, across the top of the page).
+const abBack = $<HTMLButtonElement>('#ab-back');
+const abForward = $<HTMLButtonElement>('#ab-forward');
+const abReload = $<HTMLButtonElement>('#ab-reload');
+const abLock = $('#ab-lock');
+const address = $<HTMLInputElement>('#address');
+abBack.append(svg(ICONS.back));
+abForward.append(svg(ICONS.forward));
+abBack.onclick = () => dispatch({ type: 'nav.back' });
+abForward.onclick = () => dispatch({ type: 'nav.forward' });
+abReload.onclick = () => dispatch(focused()?.loading ? { type: 'nav.stop' } : { type: 'nav.reload' });
+address.addEventListener('focus', () => address.select());
+address.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const q = address.value.trim();
+    if (!q || !state) return;
+    const url = toUrl(q) ?? searchUrl(state.settings.searchEngine, q);
+    dispatch(focused() ? { type: 'tab.navigate', url } : { type: 'tab.new', url, activate: true });
+    address.blur();
+  } else if (e.key === 'Escape') {
+    address.value = focused()?.url ?? '';
+    address.blur();
+  }
+});
 
 // Peek: hovering the left edge while the sidebar is collapsed shows it until the
 // pointer leaves it again (or the page is clicked; the main process handles that).
@@ -137,7 +162,22 @@ function render(): void {
   reload.disabled = !tab;
   urlbar.classList.toggle('placeholder', !tab);
   setText(urlHost, tab ? hostOf(tab.url) || tab.url : 'Search or enter URL');
-  setIconKey(urlLock, tab ? (isSecure(tab.url) ? 'lock' : 'globe') : 'search', () => svg(tab ? (isSecure(tab.url) ? ICONS.lock : ICONS.globe) : ICONS.search));
+  const lockKey = tab ? (isSecure(tab.url) ? 'lock' : 'globe') : 'search';
+  const lockIcon = () => svg(tab ? (isSecure(tab.url) ? ICONS.lock : ICONS.globe) : ICONS.search);
+  setIconKey(urlLock, lockKey, lockIcon);
+
+  document.body.classList.toggle('addressbar', s.settings.addressBar);
+  if (s.settings.addressBar) {
+    abBack.disabled = !tab?.canGoBack;
+    abForward.disabled = !tab?.canGoForward;
+    abReload.disabled = !tab;
+    setIconKey(abReload, tab?.loading ? 'stop' : 'reload', () => svg(tab?.loading ? ICONS.stop : ICONS.reload));
+    setIconKey(abLock, lockKey, lockIcon);
+    if (document.activeElement !== address) {
+      const url = tab?.url ?? '';
+      if (address.value !== url) address.value = url;
+    }
+  }
 
   syncChildren($('#favorites'), s.favorites.map((id) => s.tabs[id]).filter(Boolean), (t) => t.id, makeFavorite, (el, t) => updateFavorite(el, t, space));
   setText($('#space-icon'), space.icon ?? '');

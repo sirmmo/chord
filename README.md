@@ -33,7 +33,16 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   engine). Toggle from the command bar.
 - **Find in page** `⌘F`, tab sleep, mute, reopen closed tab `⌘⇧T`, per-site
   permission prompts, OAuth-style popups opened as tabs.
-- **Appearance** (`⌘,`): light, dark or system theme, any colour per space (presets
+- **Settings panel** (`⌘,`) with three pages: General (address bar, archiving,
+  search engine, default browser, export and import), Appearance, and Add-ins.
+- **Address bar**: an optional editable URL field across the top of the page,
+  toggled with `⌘⇧L`, from Settings, or from the View menu. Type a URL or a search
+  and press Enter.
+- **Add-ins**: built-in Shields, plus unpacked Chrome extensions. Pick the folder
+  that contains an extension's `manifest.json`; each one can be switched on and off
+  or removed. Electron runs content scripts, storage and most page-level APIs, but
+  does not show toolbar popups.
+- **Appearance**: light, dark or system theme, any colour per space (presets
   or a colour picker), tint strength, a separate accent colour, colour or monochrome
   icons with their own colour, and the UI font. Appearance travels with the exported
   configuration.
@@ -83,7 +92,7 @@ URL strings or objects with `url`, `title` and `favicon`:
 | `⌘T` / `⌘L` | Command bar: new tab / edit current URL |
 | `⌘W` · `⌘⇧T` | Close tab · reopen closed tab |
 | `⌘S` | Collapse / expand sidebar (hover the left edge to peek) |
-| `⌘,` | Appearance and settings |
+| `⌘,` · `⌘⇧L` | Settings · show or hide the address bar |
 | `⌘D` | Pin / unpin tab |
 | `⌘⇧D` · `⌘⌥W` | Add to split view · remove from split view |
 | `Ctrl+Tab` · `Ctrl+⇧Tab` | Next / previous tab |

@@ -13,7 +13,8 @@ import { Overlay } from './overlay.ts';
 import { setShields } from './session.ts';
 import { buildAppMenu, spaceContextMenu, tabContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
-import { isMac, TITLEBAR_HEIGHT } from './platform.ts';
+import { isMac, TITLEBAR_HEIGHT, TOP_INSET, ADDRESS_BAR_HEIGHT } from './platform.ts';
+import { ExtensionManager } from './extensions.ts';
 
 const CHROME_DARK = '#1b1b22';
 const CHROME_LIGHT = '#f4f4f7';
@@ -25,6 +26,10 @@ export class Controller {
   readonly store: Store<State>;
   readonly tabs = new TabManager(this);
   readonly overlay = new Overlay(this);
+  readonly extensions = new ExtensionManager({
+    apply: (a) => this.apply(a),
+    onStatus: (status) => this.sendAll('extensions', status),
+  });
 
   private applying = false;
   private queue: Action[] = [];
@@ -50,8 +55,10 @@ export class Controller {
       this.dispatch(message);
     });
     ipcMain.handle('state', (event) => (this.trusted(event) ? this.state : null));
+    ipcMain.handle('extensions', (event) => (this.trusted(event) ? this.extensions.getStatus() : {}));
 
     void setShields(this.state.settings.shields);
+    void this.extensions.sync(this.state);
     this.refreshMenu();
   }
 
@@ -100,6 +107,11 @@ export class Controller {
   /** Whether the sidebar currently takes up space in the layout. */
   sidebarVisible(): boolean {
     return this.state.settings.sidebarOpen || this.peeking;
+  }
+
+  /** Distance from the top of the window to the page: window controls plus the address bar. */
+  topInset(): number {
+    return TOP_INSET + (this.state.settings.addressBar ? ADDRESS_BAR_HEIGHT : 0);
   }
 
   private chromeColor(): string {
@@ -177,11 +189,14 @@ export class Controller {
     this.broadcast();
     if (prev.settings.shields !== next.settings.shields) void setShields(next.settings.shields);
     if (prev.settings.theme.mode !== next.settings.theme.mode) this.applyChromeColors();
+    if (prev.settings.extensions !== next.settings.extensions && JSON.stringify(prev.settings.extensions) !== JSON.stringify(next.settings.extensions)) {
+      void this.extensions.sync(next);
+    }
     this.refreshMenu();
   }
 
   private refreshMenu(): void {
-    const key = this.state.spaces.map((sp) => `${sp.id}:${sp.icon ?? ''}${sp.name}`).join('|');
+    const key = this.state.spaces.map((sp) => `${sp.id}:${sp.icon ?? ''}${sp.name}`).join('|') + `|ab=${this.state.settings.addressBar}`;
     if (key === this.menuKey) return;
     this.menuKey = key;
     buildAppMenu(this);
@@ -199,6 +214,10 @@ export class Controller {
 
   sendSidebar(message: SidebarMessage): void {
     this.win?.webContents.send('sidebar', message);
+  }
+
+  private sendAll(channel: string, payload: unknown): void {
+    for (const wc of [this.win?.webContents, this.overlay.webContents]) if (wc && !wc.isDestroyed()) wc.send(channel, payload);
   }
 
   dispatch(message: Message): void {
@@ -318,6 +337,9 @@ export class Controller {
       case 'app.setDefaultBrowser':
         app.setAsDefaultProtocolClient('http');
         app.setAsDefaultProtocolClient('https');
+        return;
+      case 'extension.pickFolder':
+        if (this.win) void this.extensions.pickFolder(this.win);
         return;
       case 'config.export':
         void this.exportConfig(cmd.spaceId);

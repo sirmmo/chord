@@ -144,3 +144,18 @@ test('theme travels through export and import, invalid fields are dropped', () =
   assert.ok(sloppy.ok);
   if (sloppy.ok) assert.deepEqual(sloppy.config.settings?.theme, { font: 'mono' });
 });
+
+test('export carries the address bar setting but never extension paths', () => {
+  let s = sample();
+  s = run(s, [{ type: 'settings.update', patch: { addressBar: true } }, { type: 'extension.add', path: '/Users/me/ext' }]);
+  const cfg = exportConfig(s, 1_000);
+  assert.equal(cfg.settings?.addressBar, true);
+  assert.equal('extensions' in (cfg.settings ?? {}), false);
+  const parsed = parseConfig(JSON.stringify(cfg));
+  assert.ok(parsed.ok);
+  if (parsed.ok) {
+    const next = reduce(initialState(ctx()), { type: 'config.import', config: parsed.config, mode: 'replace' }, ctx());
+    assert.equal(next.settings.addressBar, true);
+    assert.deepEqual(next.settings.extensions, []);
+  }
+});

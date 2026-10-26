@@ -70,7 +70,8 @@ export function buildAppMenu(c: Controller): void {
       label: 'View',
       submenu: [
         { label: 'Toggle Sidebar', accelerator: 'CmdOrCtrl+S', click: d({ type: 'sidebar.toggle' }) },
-        { label: 'Appearance…', accelerator: isMac ? undefined : 'Ctrl+,', click: d({ type: 'settings.open' }) },
+        { label: 'Show Address Bar', type: 'checkbox', checked: c.state.settings.addressBar, accelerator: 'CmdOrCtrl+Shift+L', click: () => c.apply({ type: 'settings.update', patch: { addressBar: !c.state.settings.addressBar } }) },
+        { label: 'Settings…', accelerator: isMac ? undefined : 'Ctrl+,', click: d({ type: 'settings.open' }) },
         sep,
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: d({ type: 'nav.reload' }) },
         { label: 'Back', accelerator: 'CmdOrCtrl+[', click: d({ type: 'nav.back' }) },

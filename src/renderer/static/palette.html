@@ -18,38 +18,66 @@
     </div>
   </div>
   <div id="settings-backdrop">
-    <div id="settings" role="dialog" aria-label="Appearance">
-      <div class="s-head"><h2>Appearance</h2><button id="settings-close" title="Close (Esc)">×</button></div>
-      <div class="s-grid">
-        <label>Theme</label>
-        <div class="seg" id="s-mode"><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div>
+    <div id="settings" role="dialog" aria-label="Settings">
+      <div class="s-head">
+        <div class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="addins">Add-ins</button></div>
+        <button id="settings-close" title="Close (Esc)">×</button>
+      </div>
 
-        <label>Colour of <span id="s-space-name">this space</span></label>
-        <div class="row"><div class="swatches" id="s-swatches"></div><input type="color" id="s-space-color" title="Custom colour"></div>
+      <div class="s-page" data-page="general">
+        <div class="s-grid">
+          <label>Address bar</label>
+          <label class="check"><input type="checkbox" id="s-addressbar"> Show an editable address bar above the page <span class="kbd">⌘⇧L</span></label>
 
-        <label>Tint strength</label>
-        <div class="row"><input type="range" min="0" max="100" id="s-tint"><span class="val" id="s-tint-val"></span></div>
+          <label>Archive tabs after</label>
+          <select id="s-archive"><option value="12">12 hours</option><option value="24">24 hours</option><option value="168">7 days</option><option value="720">30 days</option><option value="0">Never</option></select>
 
-        <label>Accent</label>
-        <div class="row"><label class="check"><input type="checkbox" id="s-accent-follow"> Follow space colour</label><input type="color" id="s-accent"></div>
+          <label>Search engine</label>
+          <select id="s-engine"></select>
 
-        <label>Icons</label>
-        <div class="seg" id="s-icons"><button data-v="color">Colour</button><button data-v="mono">Monochrome</button></div>
+          <label>Default browser</label>
+          <div><button class="btn" id="s-default">Set Chord as default browser</button></div>
 
-        <label>Icon colour</label>
-        <div class="row"><label class="check"><input type="checkbox" id="s-icon-follow"> Follow text colour</label><input type="color" id="s-icon-color"></div>
+          <label>Configuration</label>
+          <div class="row"><button class="btn" id="s-export">Export…</button><button class="btn" id="s-import">Import…</button></div>
+        </div>
+      </div>
 
-        <label>Font</label>
-        <select id="s-font"><option value="system">System</option><option value="rounded">Rounded</option><option value="mono">Monospace</option><option value="serif">Serif</option></select>
+      <div class="s-page" data-page="appearance">
+        <div class="s-grid">
+          <label>Theme</label>
+          <div class="seg" id="s-mode"><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div>
 
-        <label>Archive tabs after</label>
-        <select id="s-archive"><option value="12">12 hours</option><option value="24">24 hours</option><option value="168">7 days</option><option value="720">30 days</option><option value="0">Never</option></select>
+          <label>Colour of <span id="s-space-name">this space</span></label>
+          <div class="row"><div class="swatches" id="s-swatches"></div><input type="color" id="s-space-color" title="Custom colour"></div>
 
-        <label>Search engine</label>
-        <select id="s-engine"></select>
+          <label>Tint strength</label>
+          <div class="row"><input type="range" min="0" max="100" id="s-tint"><span class="val" id="s-tint-val"></span></div>
 
-        <label>Shields</label>
-        <label class="check"><input type="checkbox" id="s-shields"> Block ads and trackers</label>
+          <label>Accent</label>
+          <div class="row"><label class="check"><input type="checkbox" id="s-accent-follow"> Follow space colour</label><input type="color" id="s-accent"></div>
+
+          <label>Icons</label>
+          <div class="seg" id="s-icons"><button data-v="color">Colour</button><button data-v="mono">Monochrome</button></div>
+
+          <label>Icon colour</label>
+          <div class="row"><label class="check"><input type="checkbox" id="s-icon-follow"> Follow text colour</label><input type="color" id="s-icon-color"></div>
+
+          <label>Font</label>
+          <select id="s-font"><option value="system">System</option><option value="rounded">Rounded</option><option value="mono">Monospace</option><option value="serif">Serif</option></select>
+        </div>
+      </div>
+
+      <div class="s-page" data-page="addins">
+        <h3>Built in</h3>
+        <div class="addin">
+          <div class="addin-text"><strong>Shields</strong><span>Blocks ads and trackers with EasyList and EasyPrivacy.</span></div>
+          <label class="switch"><input type="checkbox" id="s-shields"><i></i></label>
+        </div>
+        <h3>Chrome extensions</h3>
+        <div id="s-extensions"></div>
+        <div class="row"><button class="btn" id="s-ext-add">Add unpacked extension…</button></div>
+        <p class="s-foot">Chord loads unpacked extensions: a folder with a <code>manifest.json</code>. Download the extension’s source or unzip its <code>.crx</code>, then pick that folder. Content scripts, storage and most page-level APIs work; toolbar popups are not shown.</p>
       </div>
       <p class="s-foot">Changes apply immediately and are saved with your configuration.</p>
     </div>
