@@ -46,7 +46,7 @@ export function buildAppMenu(c: Controller): void {
         sep,
         { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: d({ type: 'tab.closeActive' }) },
         { label: 'Close Window', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
-        ...(isMac ? [] : [sep, { role: 'quit' } as MenuItemConstructorOptions]),
+        ...(isMac ? [] : [sep, { role: 'quit', accelerator: 'Ctrl+Q' } as MenuItemConstructorOptions]),
       ],
     },
     {

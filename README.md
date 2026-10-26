@@ -111,6 +111,12 @@ Installers for macOS (Apple Silicon and Intel), Windows and Linux are attached t
 notarised yet: on macOS run `xattr -cr /Applications/Chord.app` once if the app refuses
 to open; on Windows choose "More info → Run anyway" in SmartScreen.
 
+Windows comes in two flavours: `Chord-<version>-win-x64-setup.exe` installs per user, and
+`Chord-<version>-win-x64-portable.exe` runs from wherever you put it and keeps profile,
+cookies and settings in a `ChordData` folder next to the executable, so it can live on a
+USB stick. Quit with `Ctrl+Q` or the window's close button; Chord never stays running in
+the background.
+
 ## Run it from source
 
 Requires Node 22 or newer.

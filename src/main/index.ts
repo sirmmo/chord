@@ -1,8 +1,27 @@
 import { app } from 'electron';
+import { join } from 'node:path';
 import { Controller } from './controller.ts';
 import { configureSession } from './session.ts';
 
 app.setName('Chord');
+
+// The Windows portable build (electron-builder "portable" target) sets this to the
+// folder holding the .exe. Keep profile, cookies and settings next to it so the
+// whole browser can live on a USB stick and leaves nothing behind in %APPDATA%.
+const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+if (portableDir) {
+  app.setPath('userData', join(portableDir, 'ChordData'));
+}
+
+/**
+ * Make sure the process really ends once quitting starts. A page that stalls in
+ * beforeunload, or a view that is slow to tear down, must never leave an
+ * invisible Chord.exe behind: on Windows that is what makes the installer and
+ * the uninstaller report "Chord cannot be closed".
+ */
+function armExitWatchdog(): void {
+  setTimeout(() => app.exit(0), 3000).unref();
+}
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -33,7 +52,12 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('activate', () => controller?.focusWindow());
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
+    if (process.platform === 'darwin') return;
+    armExitWatchdog();
+    app.quit();
   });
-  app.on('before-quit', () => controller?.flush());
+  app.on('before-quit', () => {
+    armExitWatchdog();
+    controller?.flush();
+  });
 }

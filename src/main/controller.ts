@@ -96,10 +96,12 @@ export class Controller {
     const onTheme = () => this.applyChromeColors();
     nativeTheme.on('updated', onTheme);
     win.on('closed', () => nativeTheme.off('updated', onTheme));
-    win.on('closed', () => {
-      this.win = null;
+    // Tear the page views down while the window still exists: child views that
+    // outlive their window keep the process alive on Windows.
+    win.on('close', () => {
       this.tabs.reset();
       this.overlay.dispose();
+      this.win = null; // nothing may reconcile views onto a closing window
       this.store.flush();
     });
   }
