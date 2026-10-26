@@ -22,6 +22,9 @@ export function buildAppMenu(c: Controller): void {
         { label: 'New Space', accelerator: 'CmdOrCtrl+Shift+N', click: d({ type: 'space.create' }) },
         { label: 'Reopen Closed Tab', accelerator: 'CmdOrCtrl+Shift+T', click: d({ type: 'closed.reopen' }) },
         sep,
+        { label: 'Import Configuration…', click: d({ type: 'config.importFile' }) },
+        { label: 'Export Configuration…', click: d({ type: 'config.export' }) },
+        sep,
         { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: d({ type: 'tab.closeActive' }) },
         { label: 'Close Window', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
         ...(isMac ? [] : [sep, { role: 'quit' } as MenuItemConstructorOptions]),
@@ -179,6 +182,7 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
       })),
     },
     sep,
+    { label: 'Export Space…', click: d({ type: 'config.export', spaceId: id }) },
     { label: 'New Space', click: d({ type: 'space.create' }) },
     {
       label: 'Delete Space…',

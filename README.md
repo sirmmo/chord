@@ -32,6 +32,39 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   engine). Toggle from the command bar.
 - **Find in page** `⌘F`, tab sleep, mute, reopen closed tab `⌘⇧T`, per-site
   permission prompts, OAuth-style popups opened as tabs.
+- **Export and import** the whole setup, or a single space, as a JSON file
+  (File menu, space context menu, or the command bar). See below.
+
+## Configuration files
+
+*File → Export Configuration…* writes everything you set up to a JSON file: spaces with
+their pinned and today tabs, favorites, and settings. Right-click a space for
+*Export Space…*. *File → Import Configuration…* reads such a file and asks whether to
+**merge** (spaces with the same name receive the tabs they are missing, other spaces
+are created, settings are untouched) or **replace** (spaces, favorites and settings
+are rebuilt from the file; your current tabs are moved to the archive, nothing is
+lost). Imported tabs stay asleep until you click them.
+
+The format has no internal ids, so it is easy to write by hand. Tabs can be plain
+URL strings or objects with `url`, `title` and `favicon`:
+
+```json
+{
+  "format": "chord-config",
+  "version": 1,
+  "favorites": ["https://mail.example.com", { "url": "https://calendar.example.com", "title": "Calendar" }],
+  "spaces": [
+    {
+      "name": "Work",
+      "color": "#ff6b6b",
+      "icon": "💼",
+      "pinned": [{ "url": "https://github.com/sirmmo/chord", "title": "Chord" }],
+      "today": ["https://news.ycombinator.com"]
+    }
+  ],
+  "settings": { "searchEngine": "duckduckgo", "archiveAfterHours": 24, "shields": true }
+}
+```
 
 ## Shortcuts
 

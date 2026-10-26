@@ -3,6 +3,7 @@
 
 import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabId } from './types.ts';
 import { titleFor } from './url.ts';
+import { importConfig } from './config.ts';
 
 export const SPACE_COLORS = ['#5B6CFF', '#FF6B6B', '#2EC4B6', '#FFB347', '#B388FF', '#4CC9F0', '#F72585', '#8AC926'];
 export const MAX_PANES = 4;
@@ -459,6 +460,10 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       const tab = newTab(s, ctx, entry.url, target.id, { activate: true });
       tab.title = entry.title;
       tab.favicon = entry.favicon;
+      return s;
+    }
+    case 'config.import': {
+      importConfig(s, a.config, a.mode, ctx);
       return s;
     }
     case 'tick': {

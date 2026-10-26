@@ -1,10 +1,12 @@
-import { app, BrowserWindow, clipboard, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
+import { readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { Action, Command, Message, SidebarMessage, State, TabId } from '../shared/types.ts';
 import { isCommand } from '../shared/types.ts';
 import { activeSpace, focusedTab, hydrate, reduce, type Ctx } from '../shared/model.ts';
 import { titleFor } from '../shared/url.ts';
+import { exportConfig, exportFileName, parseConfig } from '../shared/config.ts';
 import { Store } from './store.ts';
 import { TabManager } from './tabs.ts';
 import { Overlay } from './overlay.ts';
@@ -269,7 +271,70 @@ export class Controller {
         app.setAsDefaultProtocolClient('http');
         app.setAsDefaultProtocolClient('https');
         return;
+      case 'config.export':
+        void this.exportConfig(cmd.spaceId);
+        return;
+      case 'config.importFile':
+        void this.importConfig();
+        return;
     }
+  }
+
+  // ---- configuration files ----
+
+  private async exportConfig(spaceId?: string): Promise<void> {
+    if (!this.win) return;
+    const now = Date.now();
+    const space = spaceId ? this.state.spaces.find((sp) => sp.id === spaceId) : undefined;
+    if (spaceId && !space) return;
+    const { canceled, filePath } = await dialog.showSaveDialog(this.win, {
+      title: space ? `Export space “${space.name}”` : 'Export Chord configuration',
+      defaultPath: join(app.getPath('documents'), exportFileName(now, space?.name)),
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (canceled || !filePath) return;
+    const config = exportConfig(this.state, now, space?.id);
+    try {
+      await writeFile(filePath, JSON.stringify(config, null, 2) + '\n', 'utf8');
+    } catch (err) {
+      dialog.showErrorBox('Export failed', err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  private async importConfig(): Promise<void> {
+    if (!this.win) return;
+    const { canceled, filePaths } = await dialog.showOpenDialog(this.win, {
+      title: 'Import Chord configuration',
+      properties: ['openFile'],
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (canceled || !filePaths[0]) return;
+    let text: string;
+    try {
+      text = await readFile(filePaths[0], 'utf8');
+    } catch (err) {
+      dialog.showErrorBox('Import failed', err instanceof Error ? err.message : String(err));
+      return;
+    }
+    const parsed = parseConfig(text);
+    if (!parsed.ok) {
+      dialog.showErrorBox('Import failed', `This is not a valid Chord configuration: ${parsed.error}.`);
+      return;
+    }
+    const { config } = parsed;
+    const tabCount = config.favorites.length + config.spaces.reduce((n, sp) => n + sp.pinned.length + sp.today.length, 0);
+    const { response } = await dialog.showMessageBox(this.win, {
+      type: 'question',
+      buttons: ['Merge', 'Replace', 'Cancel'],
+      defaultId: 0,
+      cancelId: 2,
+      message: `Import ${config.spaces.length} space${config.spaces.length === 1 ? '' : 's'} and ${tabCount} tab${tabCount === 1 ? '' : 's'}?`,
+      detail:
+        'Merge adds what is missing: spaces with the same name receive new tabs, other spaces are created.\n\n' +
+        'Replace rebuilds spaces, favorites and settings from the file; your current tabs are moved to the archive.',
+    });
+    if (response === 2) return;
+    this.apply({ type: 'config.import', config, mode: response === 0 ? 'merge' : 'replace' });
   }
 
   private navigate(id: TabId, url: string): void {

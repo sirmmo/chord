@@ -118,6 +118,7 @@
         <a href="#features">Features</a>
         <a href="#shortcuts">Shortcuts</a>
         <a href="#install">Install</a>
+        <a href="#config">Config files</a>
         <a href="#architecture">How it works</a>
         <a href="#contribute">Contribute</a>
         <a href="https://github.com/sirmmo/chord">GitHub</a>
@@ -170,6 +171,7 @@
         <div class="card"><span class="k">⌘T · ⌘L</span><h3>Command bar</h3><p>One box for URLs, search, open tabs, archived tabs and commands. Hold ⌘ on Enter to force a new tab.</p></div>
         <div class="card"><span class="k">⌘⇧D</span><h3>Split view</h3><p>Up to four pages side by side. Add from the keyboard, a tab's context menu, or a link's context menu.</p></div>
         <div class="card"><span class="k">EasyList · EasyPrivacy</span><h3>Shields</h3><p>Ad and tracker blocking through the Ghostery engine, on by default, one command to toggle.</p></div>
+        <div class="card"><span class="k">JSON</span><h3>Export and import</h3><p>Save all your Spaces, tabs, favorites and settings to a JSON file, or a single Space. Import it elsewhere, merging into what is there or replacing it.</p></div>
         <div class="card"><span class="k">Chromium</span><h3>Renders like Chrome</h3><p>Pages behave exactly as in Chrome, Brave or Arc. Per-site permission prompts, OAuth popups opened as tabs, find in page, sleep and mute.</p></div>
       </div>
     </div>
@@ -226,6 +228,35 @@ npm start          # build and launch
 npm test           # model unit tests
 npm run dist:mac   # .dmg in release/</code></pre>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="config">
+    <div class="wrap">
+      <h2>Configuration files</h2>
+      <p class="sub"><em>File → Export Configuration…</em> writes your setup to JSON; <em>Import Configuration…</em> reads one back, merging or replacing. Right-click a Space to export just that one.</p>
+      <div class="two">
+        <div>
+          <p><strong>Merge</strong> adds what is missing: Spaces with the same name receive the tabs they do not have yet, other Spaces are created, favorites are added, settings are left alone.</p>
+          <p><strong>Replace</strong> rebuilds Spaces, favorites and settings from the file. Your current tabs are moved to the archive, so nothing is lost.</p>
+          <p>The format has no internal ids and is meant to be written by hand too. A tab is a URL string or an object with <code>url</code>, <code>title</code> and <code>favicon</code>. Imported tabs stay asleep until you open them.</p>
+        </div>
+<pre><code>{
+  "format": "chord-config",
+  "version": 1,
+  "favorites": ["https://mail.example.com"],
+  "spaces": [
+    {
+      "name": "Work",
+      "color": "#ff6b6b",
+      "icon": "💼",
+      "pinned": [{ "url": "https://github.com/sirmmo/chord", "title": "Chord" }],
+      "today": ["https://news.ycombinator.com"]
+    }
+  ],
+  "settings": { "searchEngine": "duckduckgo", "archiveAfterHours": 24 }
+}</code></pre>
       </div>
     </div>
   </section>

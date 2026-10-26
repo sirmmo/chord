@@ -1,5 +1,7 @@
 // Shared types between the main process, the preload bridge and the UI pages.
 
+import type { ChordConfig, ImportMode } from './config.ts';
+
 export type TabId = string;
 export type SpaceId = string;
 export type TabKind = 'favorite' | 'pinned' | 'today';
@@ -106,6 +108,7 @@ export type Action =
   | { type: 'archived.restore'; id: TabId }
   | { type: 'archived.clear' }
   | { type: 'closed.reopen' }
+  | { type: 'config.import'; config: ChordConfig; mode: ImportMode }
   | { type: 'tick' };
 
 /** Side-effecting commands handled by the main-process controller */
@@ -132,13 +135,16 @@ export type Command =
   | { type: 'zoom.out' }
   | { type: 'zoom.reset' }
   | { type: 'open.external'; url: string }
-  | { type: 'app.setDefaultBrowser' };
+  | { type: 'app.setDefaultBrowser' }
+  | { type: 'config.export'; spaceId?: SpaceId }
+  | { type: 'config.importFile' };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
+  'config.export', 'config.importFile',
 ]);
 
 export type Message = Action | Command;

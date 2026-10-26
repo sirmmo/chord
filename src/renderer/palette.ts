@@ -221,6 +221,9 @@ function compute(raw: string): Item[] {
       run: () => dispatch({ type: 'settings.update', patch: { searchEngine: key as keyof typeof SEARCH_ENGINES } }),
     })),
     { title: 'Clear Archive', keywords: 'archive delete', when: s.archived.length > 0, run: () => dispatch({ type: 'archived.clear' }) },
+    { title: 'Export Configuration', keywords: 'export json backup spaces', subtitle: 'Save spaces, tabs and settings to a JSON file', run: () => dispatch({ type: 'config.export' }) },
+    { title: `Export Space: ${space.name}`, keywords: 'export json space', run: () => dispatch({ type: 'config.export', spaceId: space.id }) },
+    { title: 'Import Configuration', keywords: 'import json restore spaces', subtitle: 'Merge or replace from a JSON file', run: () => dispatch({ type: 'config.importFile' }) },
     { title: 'Set Chord as Default Browser', keywords: 'default', run: () => dispatch({ type: 'app.setDefaultBrowser' }) },
     { title: 'Toggle Developer Tools', keywords: 'devtools inspect', when: !!current, run: () => dispatch({ type: 'devtools.toggle' }) },
   ];
