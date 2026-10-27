@@ -2,7 +2,7 @@
 // around the tab views (native children painted above it). Rendering is
 // keyed: existing elements are updated in place, never rebuilt.
 
-import type { DownloadsStatus, ListName, MediaAction, MediaInfo, MediaStatus, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
+import type { CallAction, CallInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TimerInfo, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace } from '../shared/model.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
@@ -141,7 +141,7 @@ api.onSidebar((m) => {
 });
 
 let lastSpaceKey = '';
-let media: MediaStatus = {};
+let smart: SmartStatus = {};
 let downloads: DownloadsStatus = { items: [], active: 0 };
 
 // ---- downloads: ring in the title bar, a row above the player while something is in flight ----
@@ -203,16 +203,16 @@ function renderDownloads(): void {
   }
 }
 
-// ---- smart pages: the current player, across spaces ----
+// ---- smart pages: players, calls, timers, unread and notifications, across spaces ----
 
-api.onMedia((m) => {
-  media = m;
-  renderMedia();
+api.onSmart((m) => {
+  smart = m;
+  renderSmart();
 });
-api.getMedia().then((m) => {
+api.getSmart().then((m) => {
   if (m) {
-    media = m;
-    renderMedia();
+    smart = m;
+    renderSmart();
   }
 });
 
@@ -235,7 +235,7 @@ const openPlayer = () => {
   if (playerTab) dispatch({ type: 'tab.activate', id: playerTab });
 };
 const togglePlay = () => {
-  const info = playerTab ? media[playerTab] : undefined;
+  const info = playerTab ? smart[playerTab]?.media : undefined;
   if (info) mediaAction(info.playing ? 'pause' : 'play')();
 };
 $('#now-open').onclick = openPlayer;
@@ -247,18 +247,95 @@ for (const m of minis) {
   m.pp.onclick = togglePlay;
 }
 
+const callEl = $('#call');
+const callTitle = $('#call-title');
+const callSub = $('#call-sub');
+const callMute = $<HTMLButtonElement>('#call-mute');
+const callCam = $<HTMLButtonElement>('#call-cam');
+const callLeave = $<HTMLButtonElement>('#call-leave');
+let callTab: TabId | null = null;
+let callTick = 0;
+const callAction = (action: CallAction) => () => {
+  if (callTab) dispatch({ type: 'call.action', id: callTab, action });
+};
+$('#call-open').onclick = () => {
+  if (callTab) dispatch({ type: 'tab.activate', id: callTab });
+};
+callMute.onclick = callAction('mute');
+callCam.onclick = callAction('camera');
+callLeave.onclick = callAction('leave');
+
+const chip = $<HTMLButtonElement>('#chip');
+const chipIcon = chip.querySelector('.chip-icon') as HTMLElement;
+const chipText = chip.querySelector('.t') as HTMLElement;
+let chipTab: TabId | null = null;
+chip.onclick = () => {
+  if (chipTab) dispatch({ type: 'tab.activate', id: chipTab });
+};
+
+function entries(): [TabId, SmartInfo][] {
+  if (!state || !state.settings.smartPages) return [];
+  const tabs = state.tabs;
+  return Object.entries(smart).filter(([id]) => tabs[id]);
+}
+
 /** The player to show: a playing one first, then the most recently updated. */
 function currentPlayer(): [TabId, MediaInfo] | null {
-  if (!state || !state.settings.smartPages) return null;
   let best: [TabId, MediaInfo] | null = null;
-  for (const [id, info] of Object.entries(media)) {
-    if (!state.tabs[id]) continue;
+  for (const [id, s] of entries()) {
+    const info = s.media;
+    if (!info) continue;
     if (!best || (info.playing && !best[1].playing) || (info.playing === best[1].playing && info.updatedAt > best[1].updatedAt)) best = [id, info];
   }
   return best;
 }
 
-function renderMedia(): void {
+function currentCall(): [TabId, CallInfo] | null {
+  let best: [TabId, CallInfo] | null = null;
+  for (const [id, s] of entries()) if (s.call && (!best || s.call.since < best[1].since)) best = [id, s.call];
+  return best;
+}
+
+function currentTimer(): [TabId, TimerInfo] | null {
+  let best: [TabId, SmartInfo] | null = null;
+  for (const [id, s] of entries()) if (s.timer && (!best || s.updatedAt > best[1].updatedAt)) best = [id, s];
+  return best ? [best[0], best[1].timer!] : null;
+}
+
+function notificationsTotal(): { count: number; tab: TabId | null } {
+  let count = 0;
+  let latest: [TabId, number] | null = null;
+  for (const [id, s] of entries()) {
+    count += s.notifications;
+    const at = s.lastNotification?.at ?? 0;
+    if (s.notifications && (!latest || at > latest[1])) latest = [id, at];
+  }
+  return { count, tab: latest ? latest[0] : null };
+}
+
+/** Unread count from the title, or notifications since the tab was last looked at. */
+function badgeOf(id: TabId): number {
+  const s = smart[id];
+  if (!s || !state?.settings.smartPages) return 0;
+  return s.unread ?? s.notifications;
+}
+
+function fmtDuration(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function renderSmart(): void {
+  renderPlayer();
+  renderCall();
+  renderChip();
+  renderBadges();
+}
+
+function renderPlayer(): void {
   const player = currentPlayer();
   playerTab = player ? player[0] : null;
   now.classList.toggle('hidden', !player);
@@ -276,7 +353,8 @@ function renderMedia(): void {
   const artKey = info.artwork ? `img:${info.artwork}` : 'icon';
   const makeArt = () => (info.artwork ? document.createTextNode('') : svg(ICONS.music));
   setIconKey(nowArt, artKey, makeArt);
-  if (nowArt.style.backgroundImage !== (info.artwork ? `url("${info.artwork}")` : '')) nowArt.style.backgroundImage = info.artwork ? `url("${info.artwork}")` : '';
+  const bg = info.artwork ? `url("${info.artwork}")` : '';
+  if (nowArt.style.backgroundImage !== bg) nowArt.style.backgroundImage = bg;
   setClass(now, 'playing', info.playing);
   const can = (a: MediaAction) => info.actions.length === 0 || info.actions.includes(a);
   nowPrev.disabled = !info.actions.includes('previoustrack');
@@ -289,11 +367,90 @@ function renderMedia(): void {
   for (const m of minis) {
     const art = m.pill.querySelector('.art') as HTMLElement;
     setIconKey(art, artKey, makeArt);
-    if (art.style.backgroundImage !== nowArt.style.backgroundImage) art.style.backgroundImage = nowArt.style.backgroundImage;
+    if (art.style.backgroundImage !== bg) art.style.backgroundImage = bg;
     setText(m.pill.querySelector('.t') as HTMLElement, title);
     m.pill.title = `${title}${sub ? ` — ${sub}` : ''}`;
     setIconKey(m.pp, ppKey, () => svg(info.playing ? ICONS.pause : ICONS.play));
     m.pp.disabled = nowPP.disabled;
+  }
+}
+
+function renderCall(): void {
+  const call = currentCall();
+  callTab = call ? call[0] : null;
+  callEl.classList.toggle('hidden', !call);
+  window.clearInterval(callTick);
+  if (!call || !state) return;
+  const [id, info] = call;
+  const where = info.site || state.tabs[id].title;
+  setText(callTitle, `In a call${info.sharing ? ' · sharing screen' : ''}`);
+  const tick = () => {
+    setText(callSub, `${fmtDuration(Date.now() - info.since)} · ${where}`);
+    if (chipTab === id && chip.classList.contains('call')) setText(chipText, fmtDuration(Date.now() - info.since));
+  };
+  tick();
+  callTick = window.setInterval(tick, 1000);
+  setClass(callEl, 'muted', info.muted === true);
+  setIconKey(callMute, info.muted ? 'micOff' : 'mic', () => svg(info.muted ? ICONS.micOff : ICONS.mic));
+  callMute.title = info.muted ? 'Unmute' : 'Mute';
+  setClass(callMute, 'off', info.muted === true);
+  setIconKey(callCam, info.cameraOff ? 'camOff' : 'cam', () => svg(info.cameraOff ? ICONS.cameraOff : ICONS.camera));
+  callCam.title = info.cameraOff ? 'Turn camera on' : 'Turn camera off';
+  setClass(callCam, 'off', info.cameraOff === true);
+  setIconKey(callLeave, 'leave', () => svg(ICONS.phoneOff));
+}
+
+/** One chip in the title bar: the call, else a running timer, else unseen notifications. */
+function renderChip(): void {
+  const call = currentCall();
+  const timer = call ? null : currentTimer();
+  const notes = call || timer ? null : notificationsTotal();
+  chip.className = 'chip';
+  if (call) {
+    chipTab = call[0];
+    chip.classList.add('call');
+    setClass(chip, 'muted', call[1].muted === true);
+    setIconKey(chipIcon, 'dot', () => document.createTextNode(''));
+    setText(chipText, fmtDuration(Date.now() - call[1].since));
+    chip.title = `In a call on ${call[1].site} — click to go there`;
+  } else if (timer) {
+    chipTab = timer[0];
+    chip.classList.add('timer');
+    setIconKey(chipIcon, 'clock', () => svg(ICONS.clock));
+    setText(chipText, timer[1].text);
+    chip.title = `${state?.tabs[timer[0]].title ?? ''} — click to go there`;
+  } else if (notes && notes.count > 0) {
+    chipTab = notes.tab;
+    chip.classList.add('notif');
+    setIconKey(chipIcon, 'bell', () => svg(ICONS.bell));
+    setText(chipText, String(notes.count));
+    const last = notes.tab ? smart[notes.tab]?.lastNotification : undefined;
+    chip.title = last ? `${last.title}${last.body ? `\n${last.body}` : ''}` : 'Notifications';
+  } else {
+    chipTab = null;
+    chip.classList.add('hidden');
+  }
+}
+
+/** Unread / notification counts on tab rows and space dots. */
+function renderBadges(): void {
+  if (!state) return;
+  for (const el of document.querySelectorAll<HTMLElement>('.tab[data-id]')) {
+    const n = badgeOf(el.dataset.id as TabId);
+    setClass(el, 'has-badge', n > 0);
+    if (n > 0) setText(el.querySelector('.badge') as HTMLElement, n > 99 ? '99+' : String(n));
+  }
+  for (const sp of state.spaces) {
+    const el = document.querySelector<HTMLElement>(`.space-dot[data-id="${sp.id}"]`);
+    if (!el) continue;
+    const n = [...sp.pinned, ...sp.today].reduce((sum, id) => sum + badgeOf(id), 0);
+    let badge = el.querySelector<HTMLElement>('.badge');
+    if (!badge) {
+      badge = h('span', { class: 'badge' });
+      el.append(badge);
+    }
+    setClass(el, 'has-badge', n > 0);
+    if (n > 0) setText(badge, n > 99 ? '99+' : String(n));
   }
 }
 
@@ -348,7 +505,7 @@ function render(): void {
     syncChildren($('#spaces'), s.spaces, (sp) => sp.id, makeSpaceDot, (el, sp) => updateSpaceDot(el, sp, s));
   }
   $('#stage').classList.toggle('empty', space.panes.length === 0);
-  renderMedia();
+  renderSmart();
 }
 
 /** Keyed child reconciliation: reuse elements by key, reorder, drop the rest. */
@@ -480,6 +637,7 @@ function makeTab(tab: Tab): HTMLElement {
     { class: 'tab', 'data-id': tab.id },
     h('span', { class: 'icon-slot' }),
     h('span', { class: 'title' }),
+    h('span', { class: 'badge' }),
     h('button', { class: 'audio', onclick: () => dispatch({ type: 'tab.mute', id: tab.id }) }),
     h('button', { class: 'close', onclick: () => dispatch({ type: 'tab.close', id: tab.id }) }, svg(ICONS.close)),
   );

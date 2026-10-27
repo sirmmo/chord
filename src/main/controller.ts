@@ -16,7 +16,8 @@ import { PRELOAD, RENDERER_DIR } from './paths.ts';
 import { isMac, TITLEBAR_HEIGHT, TOP_INSET, ADDRESS_BAR_HEIGHT } from './platform.ts';
 import { ExtensionManager } from './extensions.ts';
 import { copyDiagnostics, startLagMonitor } from './diagnostics.ts';
-import { MediaManager } from './media.ts';
+import { SmartManager } from './smart.ts';
+import { TrayManager } from './tray.ts';
 import { confirmImport, importFromBrowser } from './importers.ts';
 import { DownloadManager } from './downloads.ts';
 import { browsingSession } from './session.ts';
@@ -32,7 +33,10 @@ export class Controller {
   readonly store: Store<State>;
   readonly tabs = new TabManager(this);
   readonly overlay = new Overlay(this);
-  readonly media = new MediaManager(this);
+  readonly smart = new SmartManager(this);
+  readonly tray = new TrayManager(this);
+  /** set once the app is really quitting, so close-to-tray does not swallow the window close */
+  quitting = false;
   readonly downloads = new DownloadManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
@@ -58,7 +62,8 @@ export class Controller {
     this.state = hydrate(this.store.load(), this.ctx());
     setInterval(() => this.apply({ type: 'tick' }), 60_000).unref();
     startLagMonitor();
-    this.media.init();
+    this.smart.init();
+    this.tray.sync(this.state.settings.closeToTray);
     this.downloads.init(browsingSession());
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
@@ -67,6 +72,7 @@ export class Controller {
     });
     ipcMain.handle('state', (event) => (this.trusted(event) ? this.state : null));
     ipcMain.handle('extensions', (event) => (this.trusted(event) ? this.extensions.getStatus() : {}));
+    ipcMain.handle('smart', (event) => (this.trusted(event) ? this.smart.getStatus() : {}));
     ipcMain.handle('downloads', (event) => (this.trusted(event) ? this.downloads.status() : { items: [], active: 0 }));
 
     void setShields(this.state.settings.shields);
@@ -112,7 +118,12 @@ export class Controller {
     win.on('closed', () => nativeTheme.off('updated', onTheme));
     // Tear the page views down while the window still exists: child views that
     // outlive their window keep the process alive on Windows.
-    win.on('close', () => {
+    win.on('close', (e) => {
+      if (this.state.settings.closeToTray && !this.quitting) {
+        e.preventDefault();
+        win.hide();
+        return;
+      }
       this.tabs.reset();
       this.overlay.dispose();
       this.win = null; // nothing may reconcile views onto a closing window
@@ -156,9 +167,15 @@ export class Controller {
   focusWindow(): void {
     if (!this.win) this.createWindow();
     else {
+      if (!this.win.isVisible()) this.win.show();
       if (this.win.isMinimized()) this.win.restore();
       this.win.focus();
     }
+  }
+
+  openInternalFromTray(url: string): void {
+    this.focusWindow();
+    this.openInternal(url);
   }
 
   openUrl(url: string): void {
@@ -205,7 +222,10 @@ export class Controller {
     this.store.save(next);
     this.broadcast();
     if (prev.settings.shields !== next.settings.shields) void setShields(next.settings.shields);
-    if (prev.settings.smartPages && !next.settings.smartPages) this.media.clearAll();
+    if (prev.settings.smartPages && !next.settings.smartPages) this.smart.clearAll();
+    if (prev.settings.closeToTray !== next.settings.closeToTray) this.tray.sync(next.settings.closeToTray);
+    const focusedNow = activeSpace(next).focused;
+    if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.settings.theme.mode !== next.settings.theme.mode) this.applyChromeColors();
     if (prev.settings.extensions !== next.settings.extensions && JSON.stringify(prev.settings.extensions) !== JSON.stringify(next.settings.extensions)) {
       void this.extensions.sync(next);
@@ -369,7 +389,10 @@ export class Controller {
         void copyDiagnostics(this);
         return;
       case 'media.action':
-        this.media.act(cmd.id, cmd.action);
+        this.smart.mediaAction(cmd.id, cmd.action);
+        return;
+      case 'call.action':
+        this.smart.callAction(cmd.id, cmd.action);
         return;
       case 'import.browser':
         void importFromBrowser(this);

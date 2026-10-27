@@ -29,10 +29,20 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   open tabs, archived tabs, and commands. `⌘↩` forces a new tab.
 - **Split view**: `⌘⇧D` adds the next tab beside the current one (up to four),
   or use "Open in Split View" from a tab's or a link's context menu.
-- **Smart pages**: a page that exposes a Media Session (YouTube Music, Spotify, Amazon
-  Music, most players) gets a now-playing card above the spaces strip and a pill in the
-  title bar, visible from every space, with play/pause, previous and next. Click the
-  title to jump to the tab. Toggle in Settings → General.
+- **Smart pages**: what a tab gives away is shown from every space, and you can act on it.
+  - Players (YouTube Music, Spotify, Amazon Music, anything with a Media Session or a
+    plain audio/video element): a now-playing card above the spaces strip and a pill in
+    the title bar, with play/pause, previous and next.
+  - Calls (Meet, Zoom, Jitsi, anything using the microphone or camera): a card with the
+    call duration, mute, camera and leave, and a pulsing chip in the title bar.
+  - Timers and progress read from the title (`24:59 - Pomofocus`, `Uploading 45%`): a
+    chip in the title bar that jumps to the tab.
+  - Unread counts from the title (`(3) Inbox`, `[2] Slack`) and notifications the page
+    fires: a badge on the tab, a total on each space's dot, a bell in the title bar.
+  Toggle in Settings → General.
+- **Keep running in the menu bar / tray**: with Settings → "Closing the window", the
+  window hides instead of closing, music and calls go on, and the tray menu offers
+  show, play/pause, next, mute, leave, downloads and quit.
 - **Downloads** (`⌘⇧J`): files go straight to your Downloads folder (or ask every time,
   from Settings). The title bar shows a progress ring and a count while anything is in
   flight, a row above the player shows the current file, and the `chord://downloads`

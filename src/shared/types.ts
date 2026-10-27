@@ -87,6 +87,8 @@ export interface Settings {
   smartPages: boolean;
   /** show a save dialog for every download instead of saving to the Downloads folder */
   askDownloadPath: boolean;
+  /** closing the window hides it; Chord keeps running in the menu bar / tray */
+  closeToTray: boolean;
   /** editable address bar across the top of the page */
   addressBar: boolean;
   extensions: ExtensionEntry[];
@@ -185,6 +187,7 @@ export type Command =
   | { type: 'config.importFile' }
   | { type: 'diagnostics.copy' }
   | { type: 'media.action'; id: TabId; action: MediaAction }
+  | { type: 'call.action'; id: TabId; action: CallAction }
   | { type: 'import.browser' }
   | { type: 'download.pause'; id: string }
   | { type: 'download.resume'; id: string }
@@ -202,7 +205,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'import.browser',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.open',
 ]);
@@ -240,7 +243,33 @@ export interface MediaInfo {
   host: string;
   updatedAt: number;
 }
-export type MediaStatus = Record<TabId, MediaInfo>;
+export type CallAction = 'mute' | 'camera' | 'leave';
+export interface CallInfo {
+  since: number;
+  muted: boolean | null;
+  cameraOff: boolean | null;
+  sharing: boolean;
+  canLeave: boolean;
+  site: string;
+}
+export interface TimerInfo {
+  /** "12:34" or "45%" as it appears in the title */
+  text: string;
+  /** 0–1 when the title carries a percentage */
+  progress: number | null;
+}
+/** Everything a tab gives away that is worth showing across spaces. */
+export interface SmartInfo {
+  media?: MediaInfo;
+  call?: CallInfo;
+  timer?: TimerInfo;
+  unread?: number;
+  /** notifications the page created since it was last looked at */
+  notifications: number;
+  lastNotification?: { title: string; body: string; at: number };
+  updatedAt: number;
+}
+export type SmartStatus = Record<TabId, SmartInfo>;
 
 export type DownloadState = 'progressing' | 'completed' | 'cancelled' | 'interrupted';
 export interface DownloadEntry {
@@ -274,8 +303,8 @@ export interface ChordApi {
   onSidebar(cb: (message: SidebarMessage) => void): () => void;
   onExtensions(cb: (status: ExtensionsStatus) => void): () => void;
   getExtensions(): Promise<ExtensionsStatus>;
-  onMedia(cb: (status: MediaStatus) => void): () => void;
-  getMedia(): Promise<MediaStatus>;
+  onSmart(cb: (status: SmartStatus) => void): () => void;
+  getSmart(): Promise<SmartStatus>;
   onDownloads(cb: (status: DownloadsStatus) => void): () => void;
   getDownloads(): Promise<DownloadsStatus>;
 }

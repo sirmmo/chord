@@ -146,7 +146,7 @@ export class TabManager {
     const view = this.views.get(id);
     if (!view) return;
     this.views.delete(id);
-    this.c.media.clear(id);
+    this.c.smart.clear(id);
     if (this.fullscreenTab === id) this.fullscreenTab = null;
     if (this.lastFocused === id) this.lastFocused = null;
     const win = this.c.win;
@@ -161,7 +161,10 @@ export class TabManager {
       canGoForward: wc.navigationHistory.canGoForward(),
     });
 
-    wc.on('page-title-updated', (_e, title) => patch({ title }));
+    wc.on('page-title-updated', (_e, title) => {
+      patch({ title });
+      this.c.smart.title(id, title);
+    });
     wc.on('page-favicon-updated', (_e, favicons) => {
       if (favicons[0]) patch({ favicon: favicons[0] });
     });
@@ -177,7 +180,7 @@ export class TabManager {
     wc.on('did-start-navigation', (details) => {
       if (details.isMainFrame && !details.isSameDocument) {
         navStarted(id, details.url);
-        this.c.media.clear(id);
+        this.c.smart.clear(id);
       }
     });
     wc.on('dom-ready', () => navDomReady(id));
@@ -203,7 +206,7 @@ export class TabManager {
       this.c.apply({ type: 'tab.sleep', id });
     });
     wc.on('destroyed', () => {
-      this.c.media.clear(id);
+      this.c.smart.clear(id);
       if (!this.views.has(id)) return; // we closed it ourselves
       this.views.delete(id);
       if (this.c.state.tabs[id]?.awake) this.c.apply({ type: 'tab.sleep', id });

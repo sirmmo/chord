@@ -61,6 +61,7 @@ if (!app.requestSingleInstanceLock()) {
     app.quit();
   });
   app.on('before-quit', () => {
+    if (controller) controller.quitting = true;
     armExitWatchdog();
     controller?.flush();
   });

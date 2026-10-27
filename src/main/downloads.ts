@@ -110,6 +110,7 @@ export class DownloadManager {
     this.timer = setTimeout(() => {
       this.timer = null;
       this.c.sendAll('downloads', this.status());
+      this.c.tray.refresh();
     }, BROADCAST_MS);
   }
 

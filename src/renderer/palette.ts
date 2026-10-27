@@ -302,6 +302,7 @@ const sShields = $<HTMLInputElement>('#s-shields');
 const sAddressBar = $<HTMLInputElement>('#s-addressbar');
 const sSmart = $<HTMLInputElement>('#s-smart');
 const sAskDl = $<HTMLInputElement>('#s-askdl');
+const sTray = $<HTMLInputElement>('#s-tray');
 const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = {};
@@ -315,6 +316,7 @@ $('#s-tabs').querySelectorAll('button').forEach((b) => (b.onclick = () => showPa
 sAddressBar.onchange = () => dispatch({ type: 'settings.update', patch: { addressBar: sAddressBar.checked } });
 sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages: sSmart.checked } });
 sAskDl.onchange = () => dispatch({ type: 'settings.update', patch: { askDownloadPath: sAskDl.checked } });
+sTray.onchange = () => dispatch({ type: 'settings.update', patch: { closeToTray: sTray.checked } });
 $('#s-default').onclick = () => dispatch({ type: 'app.setDefaultBrowser' });
 $('#s-export').onclick = () => dispatch({ type: 'config.export' });
 $('#s-import').onclick = () => {
@@ -423,6 +425,7 @@ function fillSettings(): void {
   sAddressBar.checked = s.settings.addressBar;
   sSmart.checked = s.settings.smartPages;
   sAskDl.checked = s.settings.askDownloadPath;
+  sTray.checked = s.settings.closeToTray;
   renderExtensions();
 }
 
