@@ -17,7 +17,7 @@ export class Overlay {
   private ready = false;
   private queue: OverlayMessage[] = [];
   private attached = false;
-  mode: 'palette' | 'find' | 'settings' | null = null;
+  mode: 'palette' | 'find' | null = null;
 
   private readonly c: Controller;
 
@@ -90,7 +90,7 @@ export class Overlay {
     const { width, height } = win.getContentBounds();
     const { settings } = this.c.state;
     const { content } = computeLayout({ width, height, sidebarOpen: this.c.sidebarVisible(), sidebarWidth: settings.sidebarWidth, panes: 1, topInset: this.c.topInset() });
-    if (this.mode === 'palette' || this.mode === 'settings') {
+    if (this.mode === 'palette') {
       this.view.setBounds(content);
     } else {
       const w = Math.min(360, content.width);

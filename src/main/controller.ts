@@ -326,7 +326,7 @@ export class Controller {
         this.overlay.hide();
         return;
       case 'settings.open':
-        this.overlay.show({ kind: 'show', mode: 'settings' });
+        this.openInternal('chord://settings/');
         return;
       case 'sidebar.peek':
         if (this.peeking === cmd.on || this.state.settings.sidebarOpen) {

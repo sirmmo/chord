@@ -56,8 +56,9 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   engine). Toggle from the command bar.
 - **Find in page** `⌘F`, tab sleep, mute, reopen closed tab `⌘⇧T`, per-site
   permission prompts, OAuth-style popups opened as tabs.
-- **Settings panel** (`⌘,`) with three pages: General (address bar, archiving,
-  search engine, default browser, export and import), Appearance, and Add-ins.
+- **Settings page** at `chord://settings` (`⌘,`), a tab like any other: General
+  (smart pages, tray, downloads, address bar, archiving, search engine, default browser,
+  import and export), Appearance, Layouts, and Add-ins.
 - **Address bar**: an optional editable URL field across the top of the page,
   toggled with `⌘⇧L`, from Settings, or from the View menu. Type a URL or a search
   and press Enter.

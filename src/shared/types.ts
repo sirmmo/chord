@@ -226,7 +226,6 @@ export function isCommand(m: Message): m is Command {
 export type OverlayMessage =
   | { kind: 'show'; mode: 'palette'; intent: 'new' | 'current'; query: string }
   | { kind: 'show'; mode: 'find' }
-  | { kind: 'show'; mode: 'settings' }
   | { kind: 'hide' }
   | { kind: 'find:result'; active: number; matches: number };
 
