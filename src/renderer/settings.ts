@@ -1,7 +1,7 @@
 // chord://settings — the settings page.
 
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
-import type { Boost, ExtensionsStatus, Message, PasswordsStatus, State } from '../shared/types.ts';
+import type { AiStatus, Boost, ExtensionsStatus, Message, PasswordsStatus, State } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { SEARCH_ENGINES } from '../shared/url.ts';
@@ -53,7 +53,7 @@ const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = {};
 
-const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'passwords', 'about'];
+const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'passwords', 'ai', 'about'];
 const showPage = (raw: string) => {
   const [page, arg] = raw.split(':');
   if (page === 'boosts' && arg) prefillBoost(decodeURIComponent(arg));
@@ -172,6 +172,7 @@ function fillSettings(): void {
   sTray.checked = s.settings.closeToTray;
   sAutoPip.checked = s.settings.autoPip;
   renderBoosts();
+  renderAiSettings();
   sDlDir.textContent = s.settings.downloadDir ?? 'System Downloads folder';
   sDlDirReset.hidden = s.settings.downloadDir === null;
   renderExtensions();
@@ -431,3 +432,54 @@ function renderPasswords(): void {
     ...passwords.never.map((host) => h('div', { class: 'pw' }, h('div', { class: 'host' }, host), h('span'), h('div', { class: 'btns' }, h('button', { class: 'btn', onclick: () => dispatch({ type: 'password.allowAgain', host }) }, 'Allow again')))),
   );
 }
+
+// ---- ai page ----
+
+const aiProvider = $<HTMLSelectElement>('#s-ai-provider');
+const aiBase = $<HTMLInputElement>('#s-ai-base');
+const aiModel = $<HTMLInputElement>('#s-ai-model');
+const aiKey = $<HTMLInputElement>('#s-ai-key');
+const aiState = $('#s-ai-state');
+let aiStatus: AiStatus | null = null;
+
+const saveAi = () => {
+  if (!state) return;
+  dispatch({ type: 'settings.update', patch: { ai: { provider: aiProvider.value as 'anthropic' | 'openai', baseUrl: aiBase.value.trim(), model: aiModel.value.trim() } } });
+};
+aiProvider.onchange = () => {
+  if (aiProvider.value === 'anthropic' && (!aiModel.value || aiModel.value === 'llama3.1')) aiModel.value = 'claude-opus-5-5';
+  if (aiProvider.value === 'openai' && aiModel.value === 'claude-opus-5-5') aiModel.value = 'llama3.1';
+  saveAi();
+};
+aiBase.onchange = saveAi;
+aiModel.onchange = saveAi;
+$('#s-ai-key-save').onclick = () => {
+  dispatch({ type: 'ai.setKey', key: aiKey.value });
+  aiKey.value = '';
+};
+$('#s-ai-key-clear').onclick = () => dispatch({ type: 'ai.setKey', key: '' });
+$('#s-ai-test').onclick = () => {
+  aiState.textContent = 'Testing…';
+  dispatch({ type: 'ai.test' });
+};
+api.onAi((a) => {
+  aiStatus = a;
+  renderAiSettings();
+});
+function renderAiSettings(): void {
+  const s = state;
+  if (!s) return;
+  const active = document.activeElement;
+  aiProvider.value = s.settings.ai.provider;
+  if (active !== aiBase) aiBase.value = s.settings.ai.baseUrl;
+  if (active !== aiModel) aiModel.value = s.settings.ai.model;
+  aiBase.disabled = s.settings.ai.provider === 'anthropic';
+  aiKey.placeholder = aiStatus?.hasKey ? 'A key is saved (enter a new one to replace it)' : s.settings.ai.provider === 'anthropic' ? 'sk-ant-…' : 'Optional for local models';
+  if (aiStatus?.error) aiState.textContent = aiStatus.error;
+}
+void api.getState().then((s) => {
+  if (s) void api.getAi(s.activeSpaceId).then((a) => {
+    aiStatus = a;
+    renderAiSettings();
+  });
+});

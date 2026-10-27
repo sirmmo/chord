@@ -3,7 +3,8 @@
 // keyed: existing elements are updated in place, never rebuilt.
 
 import type { CallAction, CallInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TimerInfo, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
-import { activeSpace, isLocked, visiblePanes } from '../shared/model.ts';
+import { activeSpace, isLocked, panelVisible, visiblePanes } from '../shared/model.ts';
+import { clampPanel } from '../shared/modes.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
 import { applyTheme } from './theme.ts';
@@ -128,6 +129,11 @@ function focused(): Tab | undefined {
 }
 
 $('#locked .lock-icon').append(svg(ICONS.lock, 28));
+const modesBtn = $<HTMLButtonElement>('#space-modes');
+modesBtn.replaceChildren(svg(ICONS.sparkle));
+modesBtn.onclick = () => {
+  if (state) dispatch({ type: 'space.modesMenu', id: state.activeSpaceId });
+};
 $('#unlock').onclick = () => {
   if (state) dispatch({ type: 'space.passwordPrompt', id: state.activeSpaceId, purpose: 'unlock' });
 };
@@ -521,6 +527,7 @@ function render(): void {
   if (s.settings.sidebarOpen && peeking) setPeek(false);
 
   document.body.classList.toggle('space-locked', isLocked(space));
+  setClass(modesBtn, 'on', (space.modes?.length ?? 0) > 0);
   const tab = focused();
   back.disabled = !tab?.canGoBack;
   forward.disabled = !tab?.canGoForward;
@@ -845,12 +852,17 @@ function effectiveTiling(space: Space): Tiling {
 function renderGutters(s: State, space: Space): void {
   if (draggingGutter) return;
   const n = visiblePanes(space).length;
-  if (n < 2) {
+  if (n < 2 && !panelVisible(s)) {
     if (gutters.childElementCount) gutters.replaceChildren();
     return;
   }
+  if (n < 2) {
+    const { content, panel } = computeLayout({ width: window.innerWidth, height: window.innerHeight, sidebarOpen: s.settings.sidebarOpen || peeking, sidebarWidth: s.settings.sidebarWidth, panes: 1, topInset: topInsetFor(api.platform, s.settings.addressBar), panelWidth: s.settings.panelWidth });
+    gutters.replaceChildren(panel ? panelGutter(content, panel) : '');
+    return;
+  }
   const tiling = effectiveTiling(space);
-  const { content, panes } = computeLayout({
+  const { content, panes, panel } = computeLayout({
     width: window.innerWidth,
     height: window.innerHeight,
     sidebarOpen: s.settings.sidebarOpen || peeking,
@@ -858,8 +870,10 @@ function renderGutters(s: State, space: Space): void {
     panes: n,
     topInset: topInsetFor(api.platform, s.settings.addressBar),
     tiling,
+    panelWidth: panelVisible(s) ? s.settings.panelWidth : 0,
   });
   const els: HTMLElement[] = [];
+  if (panel) els.push(panelGutter(content, panel));
   let k = 0;
   tiling.rows.forEach((row, r) => {
     const first = panes[k];
@@ -901,6 +915,39 @@ function gutter(kind: 'v' | 'h', rect: { x: number; y: number; width: number; he
       draggingGutter = false;
       cancelAnimationFrame(frame);
       dispatch({ type: 'space.tiling', spec: formatTiling(current) });
+      if (state) renderGutters(state, activeSpace(state));
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  });
+  return el;
+}
+
+/** The gap between the content and the side panel: drag to resize the panel. */
+function panelGutter(content: { x: number; y: number; width: number; height: number }, panel: { x: number; y: number; width: number; height: number }): HTMLElement {
+  const el = h('div', { class: 'gutter v panel-gutter' });
+  el.style.left = `${content.x + content.width - 2}px`;
+  el.style.top = `${panel.y}px`;
+  el.style.width = `${panel.x - (content.x + content.width) + 4}px`;
+  el.style.height = `${panel.height}px`;
+  el.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    draggingGutter = true;
+    el.classList.add('dragging');
+    const right = panel.x + panel.width;
+    let frame = 0;
+    let width = panel.width;
+    const move = (ev: MouseEvent) => {
+      width = clampPanel(right - ev.clientX);
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => dispatch({ type: 'panel.resize', width }));
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      draggingGutter = false;
+      cancelAnimationFrame(frame);
+      dispatch({ type: 'panel.resize', width });
       if (state) renderGutters(state, activeSpace(state));
     };
     window.addEventListener('mousemove', move);

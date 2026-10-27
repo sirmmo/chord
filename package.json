@@ -1,7 +1,7 @@
 {
   "name": "chord-browser",
   "productName": "Chord",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "An open-source browser inspired by Arc: sidebar tabs, spaces, command bar, split view.",
   "license": "MIT",
   "main": "dist/main.js",
@@ -73,6 +73,7 @@
     }
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
     "@ghostery/adblocker-electron": "^2.20.1"
   },
   "allowScripts": {

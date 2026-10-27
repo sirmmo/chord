@@ -2,7 +2,8 @@
 // favorites and settings. No internal ids, so a file can be hand-edited,
 // shared, or imported into another Chord.
 
-import type { Settings, SpaceId, State, Tab, TabId, Theme } from './types.ts';
+import type { ModeId, Settings, SpaceId, State, Tab, TabId, Theme } from './types.ts';
+import { isModeId } from './modes.ts';
 import { SPACE_COLORS, MAX_ARCHIVED, clampTint, makeSpace, spaceById, type Ctx } from './model.ts';
 import { titleFor } from './url.ts';
 import { isBoost } from './boosts.ts';
@@ -20,6 +21,7 @@ export interface ConfigSpace {
   name: string;
   color?: string;
   icon?: string;
+  modes?: ModeId[];
   pinned: ConfigTab[];
   today: ConfigTab[];
 }
@@ -35,7 +37,7 @@ export interface ChordConfig {
 
 export type ImportMode = 'merge' | 'replace';
 
-const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'boosts', 'autoPip', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
+const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'boosts', 'autoPip', 'ai', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
 
 function tabToConfig(tab: Tab): ConfigTab {
   const out: ConfigTab = { url: tab.homeUrl ?? tab.url };
@@ -60,6 +62,7 @@ export function exportConfig(s: State, now: number, spaceId?: SpaceId): ChordCon
       name: sp.name,
       color: sp.color,
       icon: sp.icon,
+      modes: sp.modes && sp.modes.length ? sp.modes : undefined,
       pinned: tabsToConfig(s, sp.pinned),
       today: tabsToConfig(s, sp.today),
     })),
@@ -107,6 +110,7 @@ export function parseConfig(text: string): ParseResult {
         name: sp.name.trim(),
         color: isHex(sp.color) ? sp.color : undefined,
         icon: typeof sp.icon === 'string' && sp.icon ? sp.icon.slice(0, 4) : undefined,
+        modes: Array.isArray(sp.modes) ? sp.modes.filter(isModeId) : undefined,
         pinned: parseTabs(sp.pinned, `spaces[${i}].pinned`),
         today: parseTabs(sp.today, `spaces[${i}].today`),
       };
@@ -125,6 +129,7 @@ export function parseConfig(text: string): ParseResult {
       if (typeof r.closeToTray === 'boolean') settings.closeToTray = r.closeToTray;
       if (Array.isArray(r.boosts)) settings.boosts = r.boosts.filter(isBoost);
       if (typeof r.autoPip === 'boolean') settings.autoPip = r.autoPip;
+      if (isRecord(r.ai) && (r.ai.provider === 'anthropic' || r.ai.provider === 'openai')) settings.ai = { provider: r.ai.provider, baseUrl: typeof r.ai.baseUrl === 'string' ? r.ai.baseUrl : '', model: typeof r.ai.model === 'string' ? r.ai.model : '' };
       if (Array.isArray(r.tilings)) settings.tilings = r.tilings.filter((t): t is { name: string; spec: string } => typeof t === 'object' && t !== null && typeof (t as { name?: unknown }).name === 'string' && typeof (t as { spec?: unknown }).spec === 'string');
       if (typeof r.searchEngine === 'string' && ['duckduckgo', 'google', 'brave', 'kagi', 'startpage'].includes(r.searchEngine)) {
         settings.searchEngine = r.searchEngine as Settings['searchEngine'];
@@ -221,6 +226,10 @@ export function importConfig(s: State, config: ChordConfig, mode: ImportMode, ct
     } else {
       if (cs.color) space.color = cs.color;
       if (cs.icon) space.icon = cs.icon;
+    }
+    if (cs.modes && cs.modes.length) {
+      space.modes = [...new Set([...(space.modes ?? []), ...cs.modes])];
+      if (!space.panelMode) space.panelMode = space.modes[0];
     }
     const have = urlsIn(s, [...space.pinned, ...space.today]);
     for (const c of cs.pinned) {

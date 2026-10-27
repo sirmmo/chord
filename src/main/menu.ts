@@ -1,4 +1,5 @@
 import { presetsFor } from '../shared/tiling.ts';
+import { MODES } from '../shared/modes.ts';
 import { app, clipboard, dialog, Menu, shell, type ContextMenuParams, type MenuItemConstructorOptions, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { Message, SpaceId, TabId } from '../shared/types.ts';
@@ -78,6 +79,7 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Downloads', accelerator: 'CmdOrCtrl+Shift+J', click: d({ type: 'downloads.open' }) },
         { label: 'History', accelerator: 'CmdOrCtrl+Y', click: d({ type: 'history.open' }) },
         { label: 'Picture in Picture', accelerator: 'CmdOrCtrl+Alt+P', click: d({ type: 'media.pip' }) },
+        { label: 'Side Panel', accelerator: 'CmdOrCtrl+Shift+U', type: 'checkbox', checked: c.state.settings.panelOpen, click: d({ type: 'panel.toggle' }) },
         sep,
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: d({ type: 'nav.reload' }) },
         { label: 'Back', accelerator: 'CmdOrCtrl+[', click: d({ type: 'nav.back' }) },
@@ -217,6 +219,7 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
       ],
     },
     sep,
+    { label: 'Modes', submenu: modeItems(c, id) },
     {
       label: 'Private',
       submenu: space.lock
@@ -310,6 +313,11 @@ export function pageContextMenu(c: Controller, tabId: TabId, wc: WebContents, p:
   if (!app.isPackaged) items.push({ label: 'Copy Page URL', click: () => clipboard.writeText(p.pageURL) });
   const d = (m: Message) => () => c.dispatch(m);
   if (p.mediaType === 'video') items.push({ label: 'Picture in Picture', click: d({ type: 'media.pip', id: tabId }) }, sep);
+  const sp = activeSpace(c.state);
+  if (p.selectionText && (sp.modes ?? []).includes('research')) items.push({ label: 'Clip to Research', click: d({ type: 'research.clip', text: p.selectionText, url: p.pageURL, title: wc.getTitle() }) });
+  if ((sp.modes ?? []).includes('research')) items.push({ label: 'Save Page to Zotero', click: d({ type: 'research.zotero', tabId }) }, { label: 'Add Page to Sources', click: d({ type: 'research.source', url: p.pageURL, title: wc.getTitle() }) });
+  if (p.selectionText && (sp.modes ?? []).includes('ai')) items.push({ label: 'Ask AI About Selection', click: d({ type: 'ai.send', spaceId: sp.id, text: `About this passage from ${hostOf(p.pageURL)}:\n\n“${p.selectionText.slice(0, 2000)}”\n\nExplain it briefly.` }) });
+  if ((sp.modes ?? []).length) items.push(sep);
   items.push({ label: `Boost ${hostOf(p.pageURL) || 'this site'}…`, click: d({ type: 'settings.open', page: `boosts:${hostOf(p.pageURL)}` }) });
   Menu.buildFromTemplate(items).popup({ window: c.win });
 }
@@ -326,4 +334,26 @@ function layoutMenu(c: Controller): MenuItemConstructorOptions[] {
   ];
   if (space.panes.length < 2) items.push({ type: 'separator' }, { label: 'Add a second pane with ⌘⇧D to choose a layout', enabled: false });
   return items;
+}
+
+function modeItems(c: Controller, id: SpaceId): MenuItemConstructorOptions[] {
+  const space = c.state.spaces.find((sp) => sp.id === id);
+  const current = space?.modes ?? [];
+  return [
+    ...MODES.map((m) => ({
+      label: m.name,
+      type: 'checkbox' as const,
+      checked: current.includes(m.id),
+      click: () => c.dispatch({ type: 'space.modes', id, modes: current.includes(m.id) ? current.filter((x) => x !== m.id) : [...current, m.id] }),
+    })),
+    { type: 'separator' },
+    { label: 'Show Side Panel', type: 'checkbox', checked: c.state.settings.panelOpen, enabled: current.length > 0, click: () => c.dispatch({ type: 'panel.toggle' }) },
+    { label: 'Modes add a panel on the right: research notes and Zotero, or an AI that works on this space’s tabs.', enabled: false },
+  ];
+}
+
+/** The modes button in the space header. */
+export function modesMenu(c: Controller, id: SpaceId): void {
+  if (!c.win) return;
+  Menu.buildFromTemplate(modeItems(c, id)).popup({ window: c.win });
 }

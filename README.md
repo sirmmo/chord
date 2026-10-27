@@ -33,6 +33,19 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   across the bottom; `2:50/50 | 1:100` makes the top row twice as tall). Drag the gap
   between two panes to adjust the layout live. Each space remembers its layout.
   or use "Open in Split View" from a tab's or a link's context menu.
+- **Modes**: composable capabilities per space, each with a view in a side panel on the
+  right (⌘⇧U, resizable by dragging its edge). Switch them on from the ✦ button in the
+  space header or the space's menu.
+  - *Research*: notes per space, clipped passages (select text → right-click → Clip to
+    Research, or the panel button), a list of sources, and "Save page to Zotero", which
+    talks to the running Zotero desktop app through its connector port (localhost:23119).
+    Research data stays local and is not exported.
+  - *AI*: a chat with the model of your choice, configured in Settings → AI: any
+    OpenAI-compatible endpoint (Ollama, LM Studio, OpenRouter, OpenAI…) or Anthropic
+    through the official SDK. The assistant can list and read the space's tabs, open and
+    navigate them, fetch URLs, and call tools that pages expose through WebMCP
+    (`navigator.modelContext.registerTool`); Chord supplies that API when Chromium does
+    not. Keys are stored with the OS keychain; nothing is sent until you write.
 - **Boosts**: per-site CSS and JavaScript of yours. Right-click a page → "Boost this
   site…" or Settings → Boosts. Site lists like `youtube.com, *.google.com`; CSS applies
   live, JavaScript at page load. Part of the exported configuration.

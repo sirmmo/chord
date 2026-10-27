@@ -104,3 +104,6 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 .pw .btns { display: flex; gap: 4px; }
 .pw .btn { padding: 3px 8px; font-size: 12px; }
 .pw-list:empty::before { content: "Nothing here."; font-size: 13px; color: var(--muted); }
+
+.s-grid input.wide { font: inherit; font-size: 13px; color: var(--fg); background: var(--hover); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; min-width: 0; width: 100%; box-sizing: border-box; }
+.row input.wide { flex: 1; width: auto; }

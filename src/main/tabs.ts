@@ -117,6 +117,7 @@ export class TabManager {
       panes: visible.length,
       topInset: this.c.topInset(),
       tiling: space.tiling ? parseTiling(space.tiling) : null,
+      panelWidth: this.c.panel.width(),
     });
     visible.forEach((id, k) => this.views.get(id)!.setBounds(panes[k]));
   }

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; style-src 'self' 'unsafe-inline'">
+  <title>Side panel</title>
+  <link rel="stylesheet" href="internal.css">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header class="strip">
+    <nav id="modes"></nav>
+    <button class="icon" id="close" title="Hide side panel (⌘⇧U)">×</button>
+  </header>
+
+  <section class="view" id="view-research">
+    <div class="toolbar">
+      <button class="btn" id="r-zotero" title="Save the current page to Zotero as a web page with a snapshot">Save page to Zotero</button>
+      <button class="btn" id="r-source" title="Remember the current page as a source">Add source</button>
+      <button class="btn" id="r-clip" title="Clip the selected text of the current page">Clip selection</button>
+    </div>
+    <p class="hint" id="r-zotero-state"></p>
+    <h3>Notes</h3>
+    <textarea id="r-notes" placeholder="Notes for this space…" spellcheck="true"></textarea>
+    <h3>Clips</h3>
+    <div id="r-clips" class="list"></div>
+    <h3>Sources</h3>
+    <div id="r-sources" class="list"></div>
+  </section>
+
+  <section class="view" id="view-ai">
+    <div class="ai-head"><span id="ai-model"></span><span class="spacer"></span><button class="btn small" id="ai-settings">Settings</button><button class="btn small" id="ai-clear">Clear</button></div>
+    <div id="ai-messages"></div>
+    <p class="hint" id="ai-error"></p>
+    <div class="ai-input">
+      <textarea id="ai-text" rows="2" placeholder="Ask about this space’s tabs… (Enter to send, Shift+Enter for a new line)"></textarea>
+      <button class="btn" id="ai-send">Send</button>
+      <button class="btn danger" id="ai-stop" hidden>Stop</button>
+    </div>
+  </section>
+
+  <section class="view" id="view-none"><p class="hint">This space has no modes. Add one from the space’s menu.</p></section>
+  <script src="panel.js"></script>
+</body>
+</html>

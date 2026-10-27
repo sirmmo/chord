@@ -47,3 +47,14 @@ test('presets and resizing', () => {
   const rows = resizeRow(parseTiling('100 | 100')!, 0, 0.25);
   assert.deepEqual(rows.rows.map((r) => r.height), [0.25, 0.75]);
 });
+
+test('a side panel takes its width from the content area', () => {
+  const base = { width: 1000, height: 600, sidebarOpen: false, sidebarWidth: 0, topInset: 8, panes: 1 };
+  const without = computeLayout(base);
+  const withPanel = computeLayout({ ...base, panelWidth: 300 });
+  assert.equal(without.panel, null);
+  assert.ok(withPanel.panel);
+  assert.equal(withPanel.panel!.width, 300);
+  assert.equal(withPanel.content.width, without.content.width - 300 - 6);
+  assert.equal(withPanel.panel!.x + withPanel.panel!.width, 1000 - 8, 'panel ends at the right padding');
+});

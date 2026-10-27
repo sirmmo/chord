@@ -89,7 +89,7 @@ export class Overlay {
     if (!this.view || !this.mode || !win) return;
     const { width, height } = win.getContentBounds();
     const { settings } = this.c.state;
-    const { content } = computeLayout({ width, height, sidebarOpen: this.c.sidebarVisible(), sidebarWidth: settings.sidebarWidth, panes: 1, topInset: this.c.topInset() });
+    const { content } = computeLayout({ width, height, sidebarOpen: this.c.sidebarVisible(), sidebarWidth: settings.sidebarWidth, panes: 1, topInset: this.c.topInset(), panelWidth: this.c.panel.width() });
     if (this.mode === 'palette' || this.mode === 'password' || this.mode === 'downloads') {
       this.view.setBounds(content);
     } else {

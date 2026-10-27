@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { Action, AppInfo, Command, Message, SidebarMessage, State, TabId } from '../shared/types.ts';
 import { isCommand } from '../shared/types.ts';
-import { activeSpace, focusedTab, hydrate, isLocked, reduce, visiblePanes, type Ctx } from '../shared/model.ts';
+import { activeSpace, focusedTab, hydrate, isLocked, panelVisible, reduce, visiblePanes, type Ctx } from '../shared/model.ts';
 import { makeLock, verifyLock } from './locks.ts';
 import { titleFor } from '../shared/url.ts';
 import { exportConfig, exportFileName, parseConfig } from '../shared/config.ts';
@@ -26,6 +26,10 @@ import { BoostManager } from './boosts.ts';
 import { PasswordManager } from './passwords.ts';
 import { PIP_JS } from './pip.ts';
 import { installSpace } from './installer.ts';
+import { PanelManager } from './panel.ts';
+import { ResearchManager } from './research.ts';
+import { AiManager } from './ai.ts';
+import { modesMenu } from './menu.ts';
 import { installUrlFrom } from '../shared/installer.ts';
 import { browsingSession } from './session.ts';
 import { isInternal } from '../shared/url.ts';
@@ -48,6 +52,9 @@ export class Controller {
   readonly history = new HistoryManager(this);
   readonly boosts = new BoostManager(this);
   readonly passwords = new PasswordManager(this);
+  readonly panel = new PanelManager(this);
+  readonly research = new ResearchManager(this);
+  readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
     onStatus: (status) => this.sendAll('extensions', status),
@@ -77,6 +84,8 @@ export class Controller {
     this.downloads.init(browsingSession());
     this.history.init();
     this.passwords.init();
+    this.research.init();
+    this.ai.init();
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -98,7 +107,7 @@ export class Controller {
   }
 
   private trusted(event: IpcMainInvokeEvent): boolean {
-    if (event.sender === this.win?.webContents || event.sender === this.overlay.webContents) return true;
+    if (event.sender === this.win?.webContents || event.sender === this.overlay.webContents || event.sender === this.panel.webContents) return true;
     // One of Chord's own pages in a tab view: only while it shows a chord:// document.
     return this.tabs.tabIdOf(event.sender) !== undefined && isInternal(event.senderFrame?.url ?? '');
   }
@@ -124,6 +133,7 @@ export class Controller {
     win.once('ready-to-show', () => {
       win.show();
       this.tabs.reconcile(this.state);
+      this.panel.sync();
       this.broadcast();
     });
     win.webContents.on('did-finish-load', () => this.broadcast());
@@ -145,6 +155,7 @@ export class Controller {
       }
       this.tabs.reset();
       this.overlay.dispose();
+      this.panel.dispose();
       this.win = null; // nothing may reconcile views onto a closing window
       this.store.flush();
     });
@@ -180,6 +191,7 @@ export class Controller {
 
   private relayout(): void {
     this.tabs.layout();
+    this.panel.layout();
     this.overlay.layout();
   }
 
@@ -211,6 +223,8 @@ export class Controller {
     this.downloads.flush();
     this.history.flush();
     this.passwords.flush();
+    this.research.flush();
+    this.ai.flush();
     this.store.save(this.state);
     this.store.flush();
   }
@@ -243,6 +257,7 @@ export class Controller {
     // load; they change nothing about which views exist or where they go.
     if (viewSignature(prev) !== viewSignature(next)) {
       this.tabs.reconcile(next);
+      this.panel.sync();
       if (this.overlay.isShown()) this.overlay.layout();
     }
     this.store.save(next);
@@ -274,7 +289,7 @@ export class Controller {
     if (this.broadcastTimer) return;
     this.broadcastTimer = setTimeout(() => {
       this.broadcastTimer = null;
-      const targets = [this.win?.webContents, this.overlay.webContents, ...this.tabs.internalWebContents()];
+      const targets = [this.win?.webContents, this.overlay.webContents, this.panel.webContents, ...this.tabs.internalWebContents()];
       for (const wc of targets) if (wc && !wc.isDestroyed()) wc.send('state', this.state);
     }, BROADCAST_INTERVAL_MS);
   }
@@ -284,7 +299,7 @@ export class Controller {
   }
 
   sendAll(channel: string, payload: unknown): void {
-    for (const wc of [this.win?.webContents, this.overlay.webContents, ...this.tabs.internalWebContents()]) if (wc && !wc.isDestroyed()) wc.send(channel, payload);
+    for (const wc of [this.win?.webContents, this.overlay.webContents, this.panel.webContents, ...this.tabs.internalWebContents()]) if (wc && !wc.isDestroyed()) wc.send(channel, payload);
   }
 
   dispatch(message: Message): void {
@@ -480,6 +495,41 @@ export class Controller {
       case 'space.install':
         void installSpace(this, cmd.url);
         return;
+      case 'space.modesMenu':
+        modesMenu(this, cmd.id);
+        return;
+      case 'research.note':
+        this.research.note(cmd.spaceId, cmd.text);
+        return;
+      case 'research.clip':
+        void this.research.clip(cmd.spaceId, cmd.text, cmd.url, cmd.title);
+        return;
+      case 'research.remove':
+        this.research.remove(cmd.spaceId, cmd.kind, cmd.id);
+        return;
+      case 'research.source':
+        this.research.source(cmd.spaceId, cmd.url, cmd.title);
+        return;
+      case 'research.zotero':
+        void this.research.zoteroSave(cmd.spaceId, cmd.tabId).then((r) => {
+          if (!r.ok) dialog.showErrorBox('Zotero', r.error ?? 'could not save');
+        });
+        return;
+      case 'ai.send':
+        void this.ai.send(cmd.spaceId, cmd.text);
+        return;
+      case 'ai.stop':
+        this.ai.stop(cmd.spaceId);
+        return;
+      case 'ai.clear':
+        this.ai.clear(cmd.spaceId);
+        return;
+      case 'ai.setKey':
+        this.ai.setKey(cmd.key);
+        return;
+      case 'ai.test':
+        void this.ai.test();
+        return;
       case 'space.passwordPrompt': {
         const sp = this.state.spaces.find((x) => x.id === cmd.id);
         if (!sp) return;
@@ -646,7 +696,7 @@ function viewSignature(s: State): string {
   const space = activeSpace(s);
   const awake: string[] = [];
   for (const t of Object.values(s.tabs)) if (t.awake) awake.push(t.id + (t.muted ? '!' : ''));
-  return [s.activeSpaceId, visiblePanes(space).join(','), isLocked(space), space.tiling ?? '', space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
+  return [s.activeSpaceId, visiblePanes(space).join(','), isLocked(space), panelVisible(s) ? s.settings.panelWidth : 0, space.tiling ?? '', space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
 }
 
 function isMessage(m: unknown): m is Message {

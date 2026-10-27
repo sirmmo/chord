@@ -180,6 +180,64 @@ function smartHook(reportKey: string, actionKey: string): void {
     if (e.button === 0 && mod && !e.altKey) openLink(e, !e.shiftKey);
   }, true);
 
+  // ---- WebMCP: tools the page offers to browser agents (navigator.modelContext) ----
+  const mcpTools = new Map<string, { name: string; description?: string; inputSchema?: unknown; execute?: (input: unknown) => unknown }>();
+  const reportTools = () => post({ kind: 'webmcp', tools: Array.from(mcpTools.values()).map((t) => ({ name: t.name, description: t.description ?? '', inputSchema: safeJson(t.inputSchema) })) });
+  const safeJson = (v: unknown): unknown => {
+    try {
+      return JSON.parse(JSON.stringify(v ?? null));
+    } catch {
+      return null;
+    }
+  };
+  const ctxApi = {
+    registerTool(tool: { name: string }) {
+      if (tool && typeof tool.name === 'string') mcpTools.set(tool.name, tool);
+      reportTools();
+    },
+    unregisterTool(name: string) {
+      mcpTools.delete(name);
+      reportTools();
+    },
+    provideContext(ctx?: { tools?: { name: string }[] }) {
+      mcpTools.clear();
+      for (const t of ctx?.tools ?? []) if (t && typeof t.name === 'string') mcpTools.set(t.name, t);
+      reportTools();
+    },
+    clearContext() {
+      mcpTools.clear();
+      reportTools();
+    },
+  };
+  const navAny = navigator as unknown as Record<string, unknown>;
+  const native = navAny.modelContext as Record<string, (...a: unknown[]) => unknown> | undefined;
+  if (native && typeof native === 'object') {
+    // Chromium ships its own: observe what the page registers without taking it over.
+    for (const m of ['registerTool', 'unregisterTool', 'provideContext', 'clearContext'] as const) {
+      const orig = typeof native[m] === 'function' ? native[m].bind(native) : null;
+      if (orig) native[m] = (...a: unknown[]) => {
+        (ctxApi[m] as (...x: unknown[]) => void)(...a);
+        return orig(...a);
+      };
+    }
+  } else {
+    try {
+      Object.defineProperty(navigator, 'modelContext', { value: ctxApi, configurable: true });
+    } catch {
+      /* not writable */
+    }
+  }
+  async function runPageTool(callId: string, name: string, args: unknown): Promise<void> {
+    const tool = mcpTools.get(name);
+    if (!tool || typeof tool.execute !== 'function') return post({ kind: 'webmcp:result', callId, error: 'tool not found' });
+    try {
+      const result = await tool.execute(args);
+      post({ kind: 'webmcp:result', callId, result: safeJson(result) });
+    } catch (e) {
+      post({ kind: 'webmcp:result', callId, error: String(e instanceof Error ? e.message : e) });
+    }
+  }
+
   // ---- notifications ----
   const g = w as unknown as { Notification?: typeof Notification };
   const OrigNotification = g.Notification;
@@ -209,7 +267,19 @@ function smartHook(reportKey: string, actionKey: string): void {
 
   window.addEventListener('message', (e: MessageEvent) => {
     if (e.source !== window || !e.data || typeof e.data[actionKey] !== 'string') return;
-    const [kind, action] = (e.data[actionKey] as string).split(':');
+    const raw = e.data[actionKey] as string;
+    const sep = raw.indexOf(':');
+    const kind = raw.slice(0, sep);
+    const action = raw.slice(sep + 1);
+    if (kind === 'webmcp') {
+      try {
+        const { callId, name, args } = JSON.parse(action) as { callId: string; name: string; args: unknown };
+        void runPageTool(callId, name, args);
+      } catch {
+        /* malformed */
+      }
+      return;
+    }
     if (kind === 'call') return callAction(action);
     if (kind !== 'media') return;
     const fn = handlers.get(action);

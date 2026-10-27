@@ -6,6 +6,7 @@ import { titleFor } from './url.ts';
 import { importConfig } from './config.ts';
 import { cellCount, parseTiling, presetsFor } from './tiling.ts';
 import { isBoost } from './boosts.ts';
+import { clampPanel, isModeId } from './modes.ts';
 
 export const SPACE_COLORS = ['#5B6CFF', '#FF6B6B', '#2EC4B6', '#FFB347', '#B388FF', '#4CC9F0', '#F72585', '#8AC926'];
 export const MAX_PANES = 4;
@@ -24,7 +25,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -39,7 +40,11 @@ export function mergeSettings(raw: unknown): Settings {
     ? r.tilings.filter((t): t is { name: string; spec: string } => typeof t === 'object' && t !== null && typeof t.name === 'string' && typeof t.spec === 'string' && parseTiling(t.spec) !== null)
     : [];
   const boosts = Array.isArray(r.boosts) ? r.boosts.filter(isBoost) : [];
-  return { ...defaultSettings(), ...r, theme, extensions, tilings, boosts };
+  const ai = { ...defaultSettings().ai, ...((r.ai ?? {}) as Partial<Settings['ai']>) };
+  if (ai.provider !== 'anthropic' && ai.provider !== 'openai') ai.provider = 'openai';
+  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai };
+  merged.panelWidth = clampPanel(typeof merged.panelWidth === 'number' ? merged.panelWidth : 360);
+  return merged;
 }
 
 export function clampTint(v: unknown): number {
@@ -106,7 +111,11 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     t.crashed = false;
   }
   // Private spaces start locked; everything else wakes the panes of the active space.
-  for (const sp of s.spaces) if (sp.lock) sp.locked = true;
+  for (const sp of s.spaces) {
+    if (sp.lock) sp.locked = true;
+    if (sp.modes) sp.modes = sp.modes.filter(isModeId);
+    if (sp.panelMode && !(sp.modes ?? []).includes(sp.panelMode)) delete sp.panelMode;
+  }
   if (!isLocked(activeSpace(s))) for (const id of activeSpace(s).panes) s.tabs[id].awake = true;
   return s;
 }
@@ -132,6 +141,12 @@ export function focusedTab(s: State): Tab | undefined {
 /** A private space counts as locked unless it was explicitly unlocked this session. */
 export function isLocked(sp: Space): boolean {
   return Boolean(sp.lock) && sp.locked !== false;
+}
+
+/** The side panel is visible when the space has modes, is unlocked and the panel is open. */
+export function panelVisible(s: State): boolean {
+  const sp = activeSpace(s);
+  return s.settings.panelOpen && (sp.modes?.length ?? 0) > 0 && !isLocked(sp);
 }
 
 /** Panes to show: none while the space is locked. */
@@ -421,6 +436,29 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
         if (!t) return prev;
         target.tiling = a.spec;
       }
+      return s;
+    }
+    case 'space.modes': {
+      const sp = spaceById(s, a.id);
+      if (!sp) return prev;
+      const modes = a.modes.filter(isModeId);
+      sp.modes = modes;
+      if (!sp.panelMode || !modes.includes(sp.panelMode)) sp.panelMode = modes[0];
+      if (modes.length === 0) delete sp.panelMode;
+      return s;
+    }
+    case 'panel.toggle': {
+      s.settings.panelOpen = a.open ?? !s.settings.panelOpen;
+      return s;
+    }
+    case 'panel.mode': {
+      if (!(space.modes ?? []).includes(a.mode)) return prev;
+      space.panelMode = a.mode;
+      s.settings.panelOpen = true;
+      return s;
+    }
+    case 'panel.resize': {
+      s.settings.panelWidth = clampPanel(a.width);
       return s;
     }
     case 'space.setLock': {

@@ -1,5 +1,5 @@
 import { ipcMain, type IpcMainEvent } from 'electron';
-import type { CallAction, CallInfo, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabId } from '../shared/types.ts';
+import type { CallAction, CallInfo, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabId, WebMcpTool } from '../shared/types.ts';
 import { parseTitleSignals } from '../shared/signals.ts';
 import { hostOf } from '../shared/url.ts';
 import type { Controller } from './controller.ts';
@@ -33,6 +33,16 @@ export class SmartManager {
         if (!/^(https?|ftp):\/\//i.test(target)) return;
         const opener = this.c.state.tabs[id];
         this.c.apply({ type: 'tab.new', url: target, spaceId: opener?.spaceId ?? this.c.state.activeSpaceId, activate: r.background !== true });
+        return;
+      }
+      if (r.kind === 'webmcp') {
+        const prev = this.status[id] ?? empty();
+        const tools = Array.isArray(r.tools) ? r.tools.filter((t): t is WebMcpTool => typeof t === 'object' && t !== null && typeof (t as WebMcpTool).name === 'string').map((t) => ({ name: t.name.slice(0, 100), description: str(t.description, 1000), inputSchema: t.inputSchema })) : [];
+        this.set(id, { ...prev, tools: tools.length ? tools : undefined });
+        return;
+      }
+      if (r.kind === 'webmcp:result') {
+        if (typeof r.callId === 'string') this.c.ai.resolvePageTool(r.callId, r.result, typeof r.error === 'string' ? r.error : undefined);
         return;
       }
       if (r.kind === 'manifest') {
@@ -110,7 +120,7 @@ export class SmartManager {
 
   private set(id: TabId, info: SmartInfo): void {
     const next = { ...info, updatedAt: Date.now() };
-    const isEmpty = !next.media && !next.call && !next.timer && next.unread === undefined && next.notifications === 0 && !next.manifest;
+    const isEmpty = !next.media && !next.call && !next.timer && next.unread === undefined && next.notifications === 0 && !next.manifest && !next.tools;
     if (isEmpty) {
       this.clear(id);
       return;

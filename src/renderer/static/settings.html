@@ -10,7 +10,7 @@
 <body>
   <main class="page settings">
     <h1>Settings</h1>
-    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="boosts">Boosts</button><button data-v="passwords">Passwords</button><button data-v="about">About</button></nav>
+    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="boosts">Boosts</button><button data-v="passwords">Passwords</button><button data-v="ai">AI</button><button data-v="about">About</button></nav>
     <section class="s-body">
 
       <div class="s-page" data-page="general">
@@ -111,6 +111,26 @@
         <div id="s-passwords" class="pw-list"></div>
         <h3>Never save for</h3>
         <div id="s-pw-never" class="pw-list"></div>
+      </div>
+      <div class="s-page" data-page="ai">
+        <p class="s-foot" style="margin-top:0">The AI mode of a space talks to the model you configure here. It can list and read the space’s tabs, open and navigate them, fetch URLs, and call tools that pages expose through WebMCP. Nothing is sent anywhere until you write in the panel.</p>
+        <div class="s-grid">
+          <label>Provider</label>
+          <select id="s-ai-provider"><option value="openai">OpenAI-compatible (Ollama, LM Studio, OpenRouter, OpenAI…)</option><option value="anthropic">Anthropic (Claude)</option></select>
+
+          <label>Base URL</label>
+          <input type="text" id="s-ai-base" placeholder="http://localhost:11434/v1" class="wide">
+
+          <label>Model</label>
+          <input type="text" id="s-ai-model" placeholder="llama3.1 · gpt-4o · claude-opus-5-5" class="wide">
+
+          <label>API key</label>
+          <div class="row"><input type="password" id="s-ai-key" placeholder="Stored encrypted with the OS keychain" class="wide"><button class="btn" id="s-ai-key-save">Save key</button><button class="btn" id="s-ai-key-clear">Remove</button></div>
+
+          <label></label>
+          <div class="row"><button class="btn" id="s-ai-test">Test connection</button><span class="s-foot" style="margin:0" id="s-ai-state"></span></div>
+        </div>
+        <p class="s-foot">Local models need no key: run Ollama (<code>ollama run llama3.1</code>) and keep the default base URL. For Anthropic the model defaults to <code>claude-opus-5-5</code>; requests opt into Anthropic’s server-side fallback so a safety decline is retried on another Claude model. Pages can offer tools to the assistant with <code>navigator.modelContext.registerTool(...)</code> (WebMCP); Chord provides that API when Chromium does not.</p>
       </div>
       <div class="s-page" data-page="about">
         <div class="about-head">

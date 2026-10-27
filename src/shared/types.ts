@@ -51,6 +51,65 @@ export interface PasswordsStatus {
   never: string[];
 }
 
+export type ModeId = 'research' | 'ai';
+
+export interface ResearchClip {
+  id: string;
+  text: string;
+  url: string;
+  title: string;
+  at: number;
+}
+export interface ResearchSource {
+  id: string;
+  url: string;
+  title: string;
+  at: number;
+  /** saved to Zotero */
+  zotero?: boolean;
+}
+export interface ResearchData {
+  notes: string;
+  clips: ResearchClip[];
+  sources: ResearchSource[];
+}
+export interface ResearchStatus {
+  spaceId: SpaceId;
+  data: ResearchData;
+  zotero: { available: boolean; checkedAt: number };
+}
+
+export interface AiSettings {
+  provider: 'anthropic' | 'openai';
+  /** OpenAI-compatible base URL, e.g. http://localhost:11434/v1 for Ollama */
+  baseUrl: string;
+  model: string;
+}
+export interface AiMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'tool';
+  text: string;
+  /** for role 'tool': the call that produced it */
+  tool?: { name: string; input: unknown; error?: boolean };
+  at: number;
+}
+export interface AiStatus {
+  spaceId: SpaceId;
+  messages: AiMessage[];
+  busy: boolean;
+  error?: string;
+  hasKey: boolean;
+  provider: AiSettings['provider'];
+  model: string;
+}
+
+/** A tool a page exposes through WebMCP (navigator.modelContext). */
+export interface WebMcpTool {
+  name: string;
+  description: string;
+  inputSchema: unknown;
+}
+
 export interface SpaceLock {
   salt: string;
   hash: string;
@@ -69,6 +128,10 @@ export interface Space {
   panes: TabId[];
   /** split-view tiling spec (see shared/tiling.ts); equal columns when unset */
   tiling?: string;
+  /** composable modes; each has a view in the side panel */
+  modes?: ModeId[];
+  /** which mode's view the side panel shows */
+  panelMode?: ModeId;
   /** private space: password protected, never exported, never archived */
   lock?: SpaceLock;
   /** runtime: a private space starts locked and locks again when left alone */
@@ -132,6 +195,10 @@ export interface Settings {
   boosts: Boost[];
   /** pop a playing video out when switching away from its tab */
   autoPip: boolean;
+  /** the side panel (modes) is shown for spaces that have modes */
+  panelOpen: boolean;
+  panelWidth: number;
+  ai: AiSettings;
   /** editable address bar across the top of the page */
   addressBar: boolean;
   extensions: ExtensionEntry[];
@@ -173,6 +240,10 @@ export type Action =
   | { type: 'tab.move'; id: TabId; list: ListName; spaceId?: SpaceId; index: number }
   | { type: 'tab.split'; id: TabId }
   | { type: 'space.tiling'; spec: string | null; spaceId?: SpaceId }
+  | { type: 'space.modes'; id: SpaceId; modes: ModeId[] }
+  | { type: 'panel.toggle'; open?: boolean }
+  | { type: 'panel.mode'; mode: ModeId }
+  | { type: 'panel.resize'; width: number }
   | { type: 'space.setLock'; id: SpaceId; lock: SpaceLock | null }
   | { type: 'space.lock'; id: SpaceId }
   | { type: 'space.lockAll' }
@@ -239,6 +310,17 @@ export type Command =
   | { type: 'call.action'; id: TabId; action: CallAction }
   | { type: 'media.pip'; id?: TabId }
   | { type: 'space.install'; url: string }
+  | { type: 'space.modesMenu'; id: SpaceId }
+  | { type: 'research.note'; spaceId: SpaceId; text: string }
+  | { type: 'research.clip'; spaceId?: SpaceId; text?: string; url?: string; title?: string }
+  | { type: 'research.remove'; spaceId: SpaceId; kind: 'clip' | 'source'; id: string }
+  | { type: 'research.source'; spaceId?: SpaceId; url?: string; title?: string }
+  | { type: 'research.zotero'; spaceId?: SpaceId; tabId?: TabId }
+  | { type: 'ai.send'; spaceId: SpaceId; text: string }
+  | { type: 'ai.stop'; spaceId: SpaceId }
+  | { type: 'ai.clear'; spaceId: SpaceId }
+  | { type: 'ai.setKey'; key: string }
+  | { type: 'ai.test' }
   | { type: 'downloads.panel' }
   | { type: 'password.delete'; id: string }
   | { type: 'password.allowAgain'; host: string }
@@ -265,7 +347,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear',
 ]);
@@ -334,6 +416,8 @@ export interface SmartInfo {
   notifications: number;
   /** the page offers an installable space (its manifest URL) */
   manifest?: string;
+  /** tools the page exposes through WebMCP */
+  tools?: WebMcpTool[];
   lastNotification?: { title: string; body: string; at: number };
   updatedAt: number;
 }
@@ -407,4 +491,8 @@ export interface ChordApi {
   onPasswords(cb: (status: PasswordsStatus) => void): () => void;
   getPasswords(): Promise<PasswordsStatus>;
   revealPassword(id: string): Promise<string | null>;
+  onResearch(cb: (status: ResearchStatus) => void): () => void;
+  getResearch(spaceId: SpaceId): Promise<ResearchStatus>;
+  onAi(cb: (status: AiStatus) => void): () => void;
+  getAi(spaceId: SpaceId): Promise<AiStatus>;
 }
