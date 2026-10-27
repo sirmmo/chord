@@ -1,7 +1,8 @@
 // The overlay page: command bar (⌘T / ⌘L) and find bar (⌘F).
 
 import { presetsFor } from '../shared/tiling.ts';
-import type { LockPurpose, Message, SpaceId, State, Tab } from '../shared/types.ts';
+import type { DownloadsStatus, HistoryEntry, LockPurpose, Message, SmartStatus, SpaceId, State, Tab } from '../shared/types.ts';
+import { downloadRow } from './downloads-view.ts';
 import { activeSpace, focusedTab, isLocked } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { hostOf, searchUrl, SEARCH_ENGINES, toUrl } from '../shared/url.ts';
@@ -27,7 +28,18 @@ const findInput = $<HTMLInputElement>('#find-input');
 const findCount = $('#find-count');
 
 let state: State | null = null;
-let mode: 'palette' | 'find' | 'password' | null = null;
+let mode: 'palette' | 'find' | 'password' | 'downloads' | null = null;
+let downloads: DownloadsStatus = { items: [], active: 0 };
+let smart: SmartStatus = {};
+api.onSmart((m) => {
+  smart = m;
+});
+api.getSmart().then((m) => {
+  if (m) smart = m;
+});
+let historyHits: HistoryEntry[] = [];
+let historyQuery = '';
+let historyTimer = 0;
 let lockTarget: { spaceId: SpaceId; purpose: LockPurpose } | null = null;
 let intent: 'new' | 'current' = 'new';
 let items: Item[] = [];
@@ -52,6 +64,7 @@ api.onOverlay((m) => {
     case 'show':
       if (m.mode === 'palette') showPalette(m.intent, m.query);
       else if (m.mode === 'password') showPassword(m.spaceId, m.purpose, m.name);
+      else if (m.mode === 'downloads') showDownloads();
       else showFind();
       break;
     case 'password:error': {
@@ -94,6 +107,34 @@ function showPassword(spaceId: SpaceId, purpose: LockPurpose, name: string): voi
         : 'Enter the password to open this space. Esc to leave it locked.';
   input.focus();
 }
+
+function showDownloads(): void {
+  mode = 'downloads';
+  document.body.className = 'mode-downloads';
+  renderDownloads();
+}
+function renderDownloads(): void {
+  if (mode !== 'downloads') return;
+  $('#dl-list').replaceChildren(...downloads.items.slice(0, 12).map((e) => downloadRow(e, dispatch, true)));
+}
+api.onDownloads((d) => {
+  downloads = d;
+  renderDownloads();
+});
+api.getDownloads().then((d) => {
+  downloads = d;
+});
+$('#dl-backdrop').addEventListener('mousedown', (e) => {
+  if (e.target === e.currentTarget) dispatch({ type: 'palette.close' });
+});
+$('#dl-all').onclick = () => {
+  dispatch({ type: 'palette.close' });
+  dispatch({ type: 'downloads.open' });
+};
+$('#dl-folder').onclick = () => dispatch({ type: 'downloads.openFolder' });
+window.addEventListener('keydown', (e) => {
+  if (mode === 'downloads' && e.key === 'Escape') dispatch({ type: 'palette.close' });
+});
 
 function showPalette(i: 'new' | 'current', query: string): void {
   mode = 'palette';
@@ -170,6 +211,17 @@ function runSelected(newTab: boolean): void {
 }
 
 function update(): void {
+  const q = input.value.trim();
+  if (q.length >= 2 && q !== historyQuery) {
+    window.clearTimeout(historyTimer);
+    historyTimer = window.setTimeout(() => {
+      void api.getHistory({ query: q, limit: 8 }).then((r) => {
+        historyQuery = q;
+        historyHits = r.entries;
+        if (mode === 'palette' && input.value.trim() === q) update();
+      });
+    }, 120);
+  }
   items = compute(input.value);
   selected = 0;
   results.replaceChildren();
@@ -276,6 +328,9 @@ function compute(raw: string): Item[] {
     { title: `Export Space: ${space.name}`, keywords: 'export json space', run: () => dispatch({ type: 'config.export', spaceId: space.id }) },
     { title: 'Next Split Layout', keywords: 'layout tiling split grid', subtitle: '⌘⌥L', when: space.panes.length > 1, run: () => dispatch({ type: 'space.tilingNext' }) },
     ...presetsFor(space.panes.length, s.settings.tilings).map((p) => ({ title: `Layout: ${p.name}`, keywords: `layout tiling split ${p.spec}`, subtitle: p.spec, when: space.panes.length > 1, run: () => dispatch({ type: 'space.tiling', spec: p.spec }) })),
+    { title: 'Picture in Picture', keywords: 'pip video popout', subtitle: '⌘⌥P', when: !!current, run: () => dispatch({ type: 'media.pip' }) },
+    { title: `Boost ${current ? hostOf(current.url) : 'this site'}…`, keywords: 'boost css javascript userstyle userscript', subtitle: 'Per-site CSS and JavaScript', when: !!current, run: () => dispatch({ type: 'settings.open', page: `boosts:${current ? hostOf(current.url) : ''}` }) },
+    { title: 'Install Space from This Site', keywords: 'install space manifest', when: !!(current && smart[current.id]?.manifest), run: () => { const m = current && smart[current.id]?.manifest; if (m) dispatch({ type: 'space.install', url: m }); } },
     { title: 'About Chord', keywords: 'about version credits licenses open source', subtitle: 'Version and open-source credits', run: () => dispatch({ type: 'settings.open', page: 'about' }) },
     { title: 'History', keywords: 'history visited pages', subtitle: '⌘Y', run: () => dispatch({ type: 'history.open' }) },
     { title: 'Downloads', keywords: 'downloads files progress', subtitle: '⌘⇧J', run: () => dispatch({ type: 'downloads.open' }) },
@@ -292,7 +347,13 @@ function compute(raw: string): Item[] {
   for (const c of matched) out.push({ group: 'Commands', icon: '⌘', title: c.title, subtitle: c.subtitle, run: c.run });
 
   if (query) {
-    const archived = s.archived.filter((a) => !(a.spaceId && lockedSpaces.has(a.spaceId)) && score(query, a.title, a.url) > 0).slice(0, 4);
+    if (query.length >= 2 && query === historyQuery) {
+    const open = new Set(Object.values(s.tabs).map((t) => t.url));
+    for (const e of historyHits.filter((x) => !open.has(x.url)).slice(0, 4)) {
+      out.push({ group: 'History', icon: svg(ICONS.clock, 18), title: e.title || hostOf(e.url), subtitle: hostOf(e.url), run: ({ newTab }) => (newTab || intent === 'new' ? dispatch({ type: 'tab.new', url: e.url }) : dispatch({ type: 'tab.navigate', url: e.url })) });
+    }
+  }
+  const archived = s.archived.filter((a) => !(a.spaceId && lockedSpaces.has(a.spaceId)) && score(query, a.title, a.url) > 0).slice(0, 4);
     for (const a of archived) {
       out.push({ group: 'Archived', icon: faviconOf(a), title: a.title || hostOf(a.url), subtitle: hostOf(a.url), hint: 'Restore', run: () => dispatch({ type: 'archived.restore', id: a.id }) });
     }

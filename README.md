@@ -33,6 +33,22 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   across the bottom; `2:50/50 | 1:100` makes the top row twice as tall). Drag the gap
   between two panes to adjust the layout live. Each space remembers its layout.
   or use "Open in Split View" from a tab's or a link's context menu.
+- **Boosts**: per-site CSS and JavaScript of yours. Right-click a page → "Boost this
+  site…" or Settings → Boosts. Site lists like `youtube.com, *.google.com`; CSS applies
+  live, JavaScript at page load. Part of the exported configuration.
+- **Picture in picture** (`⌘⌥P`, the page's context menu, or the button on a player
+  card) pops the page's largest video out. With Settings → General → Video, a playing
+  video follows you when you switch tabs and comes back when you return.
+- **Passwords**: Chord offers to save a password after you sign in on an https site and
+  fills it in when you return. Secrets are encrypted with the OS keychain through
+  Electron's safeStorage; manage them in Settings → Passwords, including sites you said
+  never to ask for. Extension-based managers (1Password, Bitwarden) cannot run their
+  popups in Electron; their web vaults work as normal pages.
+- **Installable spaces**: a site can offer a ready-made space. Add
+  `<link rel="chord-space" href="/chord-space.json">` to a page and Chord shows an
+  Install banner; or link to `chord://install/?url=https://…/chord-space.json` ("Add to
+  Chord"), which also works from other browsers once Chord is installed. See
+  "For site owners" below.
 - **Private spaces**: right-click a space → Private → Make Private… and set a password.
   The space locks on launch, when the window is hidden, and after 15 minutes away from
   it; unlock from the sidebar or the space menu. Its tabs are never exported, never
@@ -167,6 +183,40 @@ the one you pick, or from any file you choose:
 
 You then choose Merge (add what is missing) or Replace, exactly as for a Chord
 configuration file.
+
+## For site owners: installable spaces
+
+Publish a `chord-space` manifest over https and either declare it on your pages or
+link to it:
+
+```html
+<link rel="chord-space" href="https://ofm.example/chord-space.json">
+<a href="chord://install/?url=https://ofm.example/chord-space.json">Add to Chord</a>
+```
+
+```json
+{
+  "format": "chord-space",
+  "version": 1,
+  "name": "OpenFreeMap",
+  "icon": "🗺️",
+  "color": "#2a9d8f",
+  "pinned": [
+    { "url": "https://ofm.example/", "title": "Home" },
+    { "url": "https://ofm.example/docs", "title": "Docs" },
+    "https://ofm.example/status"
+  ],
+  "today": [],
+  "boosts": [
+    { "name": "Wide map", "sites": "ofm.example", "css": ".sidebar { display: none }" }
+  ]
+}
+```
+
+A whole `chord-config` file works too. Chord shows what the manifest contains and asks
+before installing; a space with the same name receives the missing tabs instead of being
+duplicated. Boosts in a manifest may only target the publishing domain and are listed in
+the prompt, with an "Install without Boosts" choice.
 
 ## Something slow or broken?
 

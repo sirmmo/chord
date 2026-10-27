@@ -352,3 +352,12 @@ body.space-locked .lists { display: none; }
 .space-dot .lockmark svg { width: 8px; height: 8px; fill: none; stroke: currentColor; stroke-width: 2.5; }
 .space-dot.private .lockmark { display: grid; }
 .space-dot.private.open .lockmark { color: var(--accent); }
+
+/* installable spaces banner */
+.install { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; padding: 7px 8px 7px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 16%, var(--hover)); font-size: 12px; }
+.install.hidden { display: none; }
+.install > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.install-btns { display: flex; gap: 4px; flex: none; }
+.install-btns button { font: inherit; font-size: 12px; border: 0; border-radius: 6px; padding: 3px 8px; background: var(--accent); color: #fff; cursor: default; }
+.install-btns #install-no { background: transparent; color: var(--muted); padding: 3px 5px; }
+.now .pip[hidden] { display: none; }

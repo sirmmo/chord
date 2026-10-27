@@ -5,6 +5,7 @@
 import type { Settings, SpaceId, State, Tab, TabId, Theme } from './types.ts';
 import { SPACE_COLORS, MAX_ARCHIVED, clampTint, makeSpace, spaceById, type Ctx } from './model.ts';
 import { titleFor } from './url.ts';
+import { isBoost } from './boosts.ts';
 
 export const CONFIG_FORMAT = 'chord-config';
 export const CONFIG_VERSION = 1;
@@ -34,7 +35,7 @@ export interface ChordConfig {
 
 export type ImportMode = 'merge' | 'replace';
 
-const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
+const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'boosts', 'autoPip', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
 
 function tabToConfig(tab: Tab): ConfigTab {
   const out: ConfigTab = { url: tab.homeUrl ?? tab.url };
@@ -122,6 +123,8 @@ export function parseConfig(text: string): ParseResult {
       if (typeof r.askDownloadPath === 'boolean') settings.askDownloadPath = r.askDownloadPath;
       if (typeof r.downloadDir === 'string' || r.downloadDir === null) settings.downloadDir = r.downloadDir;
       if (typeof r.closeToTray === 'boolean') settings.closeToTray = r.closeToTray;
+      if (Array.isArray(r.boosts)) settings.boosts = r.boosts.filter(isBoost);
+      if (typeof r.autoPip === 'boolean') settings.autoPip = r.autoPip;
       if (Array.isArray(r.tilings)) settings.tilings = r.tilings.filter((t): t is { name: string; spec: string } => typeof t === 'object' && t !== null && typeof (t as { name?: unknown }).name === 'string' && typeof (t as { spec?: unknown }).spec === 'string');
       if (typeof r.searchEngine === 'string' && ['duckduckgo', 'google', 'brave', 'kagi', 'startpage'].includes(r.searchEngine)) {
         settings.searchEngine = r.searchEngine as Settings['searchEngine'];

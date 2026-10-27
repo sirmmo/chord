@@ -82,6 +82,7 @@ function smartHook(reportKey: string, actionKey: string): void {
       artwork: pickArtwork(m?.artwork),
       playing,
       actions: Array.from(handlers.keys()),
+      video: Array.from(document.querySelectorAll('video')).some((v) => v.readyState >= 2 && v.videoWidth > 0),
     };
   }
 
@@ -246,4 +247,70 @@ if (process.isMainFrame) {
   ipcRenderer.on('smart:action', (_event, action: string) => {
     window.postMessage({ [ACTION_KEY]: action }, '*');
   });
+
+  // ---- installable spaces: a site declares <link rel="chord-space" href="…"> ----
+  const reportManifest = () => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="chord-space"][href]');
+    if (link && /^https:/i.test(link.href)) ipcRenderer.send('smart', { kind: 'manifest', url: link.href });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', reportManifest);
+  else reportManifest();
+
+  // ---- passwords: capture on submit and fill on focus, from the isolated world (page scripts never see the bridge) ----
+  if (location.protocol === 'https:' || location.hostname === 'localhost') {
+    const passwordFields = () => Array.from(document.querySelectorAll<HTMLInputElement>('input[type="password"]')).filter((i) => !i.disabled && i.offsetParent !== null);
+    const usernameFor = (pw: HTMLInputElement): HTMLInputElement | null => {
+      const scope: ParentNode = pw.form ?? document;
+      const explicit = scope.querySelector<HTMLInputElement>('input[autocomplete="username"], input[autocomplete="email"]');
+      if (explicit) return explicit;
+      const inputs = Array.from(scope.querySelectorAll<HTMLInputElement>('input')).filter((i) => ['text', 'email', 'tel', ''].includes(i.type) && !i.disabled && !i.hidden);
+      const before = inputs.filter((i) => i.compareDocumentPosition(pw) & Node.DOCUMENT_POSITION_FOLLOWING);
+      return before[before.length - 1] ?? inputs[0] ?? null;
+    };
+    const capture = (pw: HTMLInputElement) => {
+      if (!pw.value) return;
+      const user = usernameFor(pw);
+      ipcRenderer.send('passwords:captured', { host: location.host, username: user?.value ?? '', password: pw.value });
+    };
+    document.addEventListener('submit', (e) => {
+      const form = e.target instanceof HTMLFormElement ? e.target : null;
+      const pw = form ? form.querySelector<HTMLInputElement>('input[type="password"]') : null;
+      if (pw) capture(pw);
+    }, true);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type === 'password') capture(e.target);
+    }, true);
+    document.addEventListener('click', (e) => {
+      const btn = e.target instanceof Element ? e.target.closest('button, input[type="submit"], [role="button"]') : null;
+      if (!btn) return;
+      const scope = btn.closest('form') ?? document;
+      const pw = scope.querySelector<HTMLInputElement>('input[type="password"]');
+      if (pw && pw.value) capture(pw);
+    }, true);
+
+    let filled = false;
+    const fill = async () => {
+      if (filled) return;
+      const pw = passwordFields()[0];
+      if (!pw || pw.value) return;
+      const creds = (await ipcRenderer.invoke('passwords:lookup', location.host)) as { username: string; password: string }[];
+      if (!creds.length) return;
+      filled = true;
+      const user = usernameFor(pw);
+      const set = (el: HTMLInputElement | null, value: string) => {
+        if (!el || el.value) return;
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      set(user, creds[0].username);
+      set(pw, creds[0].password);
+    };
+    document.addEventListener('focusin', (e) => {
+      if (e.target instanceof HTMLInputElement && (e.target.type === 'password' || passwordFields().some((p) => (p.form ?? document) === ((e.target as HTMLInputElement).form ?? document)))) void fill();
+    }, true);
+    window.addEventListener('load', () => {
+      if (passwordFields().length) void fill();
+    });
+  }
 }

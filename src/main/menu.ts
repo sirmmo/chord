@@ -3,7 +3,7 @@ import { app, clipboard, dialog, Menu, shell, type ContextMenuParams, type MenuI
 import { randomUUID } from 'node:crypto';
 import type { Message, SpaceId, TabId } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS, spaceOfTab } from '../shared/model.ts';
-import { searchUrl } from '../shared/url.ts';
+import { hostOf, searchUrl } from '../shared/url.ts';
 import type { Controller } from './controller.ts';
 
 const isMac = process.platform === 'darwin';
@@ -77,6 +77,7 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Settings…', accelerator: isMac ? undefined : 'Ctrl+,', click: d({ type: 'settings.open' }) },
         { label: 'Downloads', accelerator: 'CmdOrCtrl+Shift+J', click: d({ type: 'downloads.open' }) },
         { label: 'History', accelerator: 'CmdOrCtrl+Y', click: d({ type: 'history.open' }) },
+        { label: 'Picture in Picture', accelerator: 'CmdOrCtrl+Alt+P', click: d({ type: 'media.pip' }) },
         sep,
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: d({ type: 'nav.reload' }) },
         { label: 'Back', accelerator: 'CmdOrCtrl+[', click: d({ type: 'nav.back' }) },
@@ -307,6 +308,9 @@ export function pageContextMenu(c: Controller, tabId: TabId, wc: WebContents, p:
     { label: 'Inspect Element', click: () => wc.inspectElement(p.x, p.y) },
   );
   if (!app.isPackaged) items.push({ label: 'Copy Page URL', click: () => clipboard.writeText(p.pageURL) });
+  const d = (m: Message) => () => c.dispatch(m);
+  if (p.mediaType === 'video') items.push({ label: 'Picture in Picture', click: d({ type: 'media.pip', id: tabId }) }, sep);
+  items.push({ label: `Boost ${hostOf(p.pageURL) || 'this site'}…`, click: d({ type: 'settings.open', page: `boosts:${hostOf(p.pageURL)}` }) });
   Menu.buildFromTemplate(items).popup({ window: c.win });
 }
 

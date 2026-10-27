@@ -35,6 +35,13 @@ export class SmartManager {
         this.c.apply({ type: 'tab.new', url: target, spaceId: opener?.spaceId ?? this.c.state.activeSpaceId, activate: r.background !== true });
         return;
       }
+      if (r.kind === 'manifest') {
+        const target = str(r.url, 2000);
+        if (!/^https:\/\//i.test(target)) return;
+        const prev = this.status[id] ?? empty();
+        if (prev.manifest !== target) this.set(id, { ...prev, manifest: target });
+        return;
+      }
       if (!this.c.state.settings.smartPages) return;
       if (r.kind === 'notification') {
         const prev = this.status[id] ?? empty();
@@ -103,7 +110,7 @@ export class SmartManager {
 
   private set(id: TabId, info: SmartInfo): void {
     const next = { ...info, updatedAt: Date.now() };
-    const isEmpty = !next.media && !next.call && !next.timer && next.unread === undefined && next.notifications === 0;
+    const isEmpty = !next.media && !next.call && !next.timer && next.unread === undefined && next.notifications === 0 && !next.manifest;
     if (isEmpty) {
       this.clear(id);
       return;
@@ -140,6 +147,7 @@ function sanitizeMedia(raw: unknown, url: string): MediaInfo | null {
     artwork: /^(https?:|data:image\/)/i.test(artwork) ? artwork : '',
     playing: r.playing === true,
     actions: Array.isArray(r.actions) ? r.actions.filter((a): a is MediaAction => typeof a === 'string' && MEDIA_ACTIONS.has(a)) : [],
+    video: r.video === true,
     host: hostOf(url),
     updatedAt: Date.now(),
   };

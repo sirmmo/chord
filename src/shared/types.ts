@@ -29,6 +29,28 @@ export interface Tab {
   crashed?: boolean;
 }
 
+export interface Boost {
+  id: string;
+  name: string;
+  /** comma or space separated site patterns, see shared/boosts.ts */
+  sites: string;
+  css: string;
+  js: string;
+  enabled: boolean;
+}
+
+export interface PasswordEntry {
+  id: string;
+  host: string;
+  username: string;
+  updatedAt: number;
+}
+export interface PasswordsStatus {
+  available: boolean;
+  entries: PasswordEntry[];
+  never: string[];
+}
+
 export interface SpaceLock {
   salt: string;
   hash: string;
@@ -106,6 +128,10 @@ export interface Settings {
   closeToTray: boolean;
   /** user-defined split-view layouts */
   tilings: { name: string; spec: string }[];
+  /** per-site CSS and JavaScript */
+  boosts: Boost[];
+  /** pop a playing video out when switching away from its tab */
+  autoPip: boolean;
   /** editable address bar across the top of the page */
   addressBar: boolean;
   extensions: ExtensionEntry[];
@@ -211,6 +237,11 @@ export type Command =
   | { type: 'diagnostics.copy' }
   | { type: 'media.action'; id: TabId; action: MediaAction }
   | { type: 'call.action'; id: TabId; action: CallAction }
+  | { type: 'media.pip'; id?: TabId }
+  | { type: 'space.install'; url: string }
+  | { type: 'downloads.panel' }
+  | { type: 'password.delete'; id: string }
+  | { type: 'password.allowAgain'; host: string }
   | { type: 'import.browser' }
   | { type: 'download.pause'; id: string }
   | { type: 'download.resume'; id: string }
@@ -234,7 +265,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'import.browser',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear',
 ]);
@@ -251,6 +282,7 @@ export type LockPurpose = 'unlock' | 'set' | 'remove';
 export type OverlayMessage =
   | { kind: 'show'; mode: 'palette'; intent: 'new' | 'current'; query: string }
   | { kind: 'show'; mode: 'find' }
+  | { kind: 'show'; mode: 'downloads' }
   | { kind: 'show'; mode: 'password'; spaceId: SpaceId; purpose: LockPurpose; name: string }
   | { kind: 'password:error' }
   | { kind: 'hide' }
@@ -272,6 +304,8 @@ export interface MediaInfo {
   playing: boolean;
   /** actions the page registered handlers for */
   actions: MediaAction[];
+  /** the page has a playable video element */
+  video: boolean;
   host: string;
   updatedAt: number;
 }
@@ -298,6 +332,8 @@ export interface SmartInfo {
   unread?: number;
   /** notifications the page created since it was last looked at */
   notifications: number;
+  /** the page offers an installable space (its manifest URL) */
+  manifest?: string;
   lastNotification?: { title: string; body: string; at: number };
   updatedAt: number;
 }
@@ -368,4 +404,7 @@ export interface ChordApi {
   onHistory(cb: (info: { total: number }) => void): () => void;
   getHistory(query: HistoryQuery): Promise<HistoryResult>;
   getInfo(): Promise<AppInfo>;
+  onPasswords(cb: (status: PasswordsStatus) => void): () => void;
+  getPasswords(): Promise<PasswordsStatus>;
+  revealPassword(id: string): Promise<string | null>;
 }

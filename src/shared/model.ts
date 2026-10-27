@@ -5,6 +5,7 @@ import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabId, 
 import { titleFor } from './url.ts';
 import { importConfig } from './config.ts';
 import { cellCount, parseTiling, presetsFor } from './tiling.ts';
+import { isBoost } from './boosts.ts';
 
 export const SPACE_COLORS = ['#5B6CFF', '#FF6B6B', '#2EC4B6', '#FFB347', '#B388FF', '#4CC9F0', '#F72585', '#8AC926'];
 export const MAX_PANES = 4;
@@ -23,7 +24,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -37,7 +38,8 @@ export function mergeSettings(raw: unknown): Settings {
   const tilings = Array.isArray(r.tilings)
     ? r.tilings.filter((t): t is { name: string; spec: string } => typeof t === 'object' && t !== null && typeof t.name === 'string' && typeof t.spec === 'string' && parseTiling(t.spec) !== null)
     : [];
-  return { ...defaultSettings(), ...r, theme, extensions, tilings };
+  const boosts = Array.isArray(r.boosts) ? r.boosts.filter(isBoost) : [];
+  return { ...defaultSettings(), ...r, theme, extensions, tilings, boosts };
 }
 
 export function clampTint(v: unknown): number {

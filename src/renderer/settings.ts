@@ -1,7 +1,7 @@
 // chord://settings — the settings page.
 
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
-import type { ExtensionsStatus, Message, State } from '../shared/types.ts';
+import type { Boost, ExtensionsStatus, Message, PasswordsStatus, State } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { SEARCH_ENGINES } from '../shared/url.ts';
@@ -46,14 +46,17 @@ const sAddressBar = $<HTMLInputElement>('#s-addressbar');
 const sSmart = $<HTMLInputElement>('#s-smart');
 const sAskDl = $<HTMLInputElement>('#s-askdl');
 const sTray = $<HTMLInputElement>('#s-tray');
+const sAutoPip = $<HTMLInputElement>('#s-autopip');
 const sDlDir = $('#s-dldir');
 const sDlDirReset = $<HTMLButtonElement>('#s-dldir-reset');
 const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = {};
 
-const PAGES = ['general', 'appearance', 'layouts', 'addins', 'about'];
-const showPage = (page: string) => {
+const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'passwords', 'about'];
+const showPage = (raw: string) => {
+  const [page, arg] = raw.split(':');
+  if (page === 'boosts' && arg) prefillBoost(decodeURIComponent(arg));
   settingsPage = PAGES.includes(page) ? page : 'general';
   $('#s-tabs').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === settingsPage));
   document.querySelectorAll<HTMLElement>('.s-page').forEach((p) => p.classList.toggle('on', p.dataset.page === settingsPage));
@@ -66,6 +69,7 @@ sAddressBar.onchange = () => dispatch({ type: 'settings.update', patch: { addres
 sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages: sSmart.checked } });
 sAskDl.onchange = () => dispatch({ type: 'settings.update', patch: { askDownloadPath: sAskDl.checked } });
 sTray.onchange = () => dispatch({ type: 'settings.update', patch: { closeToTray: sTray.checked } });
+sAutoPip.onchange = () => dispatch({ type: 'settings.update', patch: { autoPip: sAutoPip.checked } });
 $('#s-dldir-choose').onclick = () => dispatch({ type: 'downloads.chooseFolder' });
 sDlDirReset.onclick = () => dispatch({ type: 'settings.update', patch: { downloadDir: null } });
 $('#s-default').onclick = () => dispatch({ type: 'app.setDefaultBrowser' });
@@ -166,6 +170,8 @@ function fillSettings(): void {
   sSmart.checked = s.settings.smartPages;
   sAskDl.checked = s.settings.askDownloadPath;
   sTray.checked = s.settings.closeToTray;
+  sAutoPip.checked = s.settings.autoPip;
+  renderBoosts();
   sDlDir.textContent = s.settings.downloadDir ?? 'System Downloads folder';
   sDlDirReset.hidden = s.settings.downloadDir === null;
   renderExtensions();
@@ -307,3 +313,121 @@ void fetch('licenses.json')
     $('#a-tools-list').replaceChildren(...data.tools.map((c) => creditRow(c, { electron: 'Electron', 'electron-builder': 'electron-builder', esbuild: 'esbuild', typescript: 'TypeScript' }[c.name] ?? c.name)));
   })
   .catch(() => {});
+
+// ---- boosts page ----
+
+const bName = $<HTMLInputElement>('#s-boost-name');
+const bSites = $<HTMLInputElement>('#s-boost-sites');
+const bCss = $<HTMLTextAreaElement>('#s-boost-css');
+const bJs = $<HTMLTextAreaElement>('#s-boost-js');
+const bSave = $<HTMLButtonElement>('#s-boost-save');
+const bCancel = $<HTMLButtonElement>('#s-boost-cancel');
+let editingBoost: string | null = null;
+
+function newBoostId(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function prefillBoost(host: string): void {
+  if (editingBoost) return;
+  if (!bSites.value) bSites.value = host;
+  if (!bName.value) bName.value = host;
+}
+
+function startEditBoost(b: Boost): void {
+  editingBoost = b.id;
+  bName.value = b.name;
+  bSites.value = b.sites;
+  bCss.value = b.css;
+  bJs.value = b.js;
+  $('#s-boost-form-title').textContent = `Edit “${b.name || b.sites}”`;
+  bCancel.hidden = false;
+  bSave.textContent = 'Save changes';
+  bName.focus();
+}
+
+function resetBoostForm(): void {
+  editingBoost = null;
+  bName.value = '';
+  bSites.value = '';
+  bCss.value = '';
+  bJs.value = '';
+  $('#s-boost-form-title').textContent = 'New boost';
+  bCancel.hidden = true;
+  bSave.textContent = 'Save boost';
+}
+bCancel.onclick = resetBoostForm;
+bSave.onclick = () => {
+  const s = state;
+  if (!s) return;
+  const sites = bSites.value.trim();
+  const css = bCss.value;
+  const js = bJs.value;
+  bSites.classList.toggle('bad', !sites);
+  if (!sites || (!css.trim() && !js.trim())) return;
+  const boost: Boost = { id: editingBoost ?? newBoostId(), name: bName.value.trim() || sites, sites, css, js, enabled: editingBoost ? (s.settings.boosts.find((b) => b.id === editingBoost)?.enabled ?? true) : true };
+  const boosts = editingBoost ? s.settings.boosts.map((b) => (b.id === editingBoost ? boost : b)) : [...s.settings.boosts, boost];
+  dispatch({ type: 'settings.update', patch: { boosts } });
+  resetBoostForm();
+};
+
+function renderBoosts(): void {
+  const s = state;
+  if (!s) return;
+  $('#s-boosts').replaceChildren(
+    ...s.settings.boosts.map((b) =>
+      h(
+        'div',
+        { class: 'boost' },
+        h('label', { class: 'switch' }, Object.assign(h('input', { type: 'checkbox' }), { checked: b.enabled, onchange: (e: Event) => dispatch({ type: 'settings.update', patch: { boosts: s.settings.boosts.map((x) => (x.id === b.id ? { ...x, enabled: (e.target as HTMLInputElement).checked } : x)) } }) }), h('i')),
+        h('div', { class: 'text' }, h('strong', {}, b.name || b.sites), h('span', {}, `${b.sites}${b.css.trim() ? ' · CSS' : ''}${b.js.trim() ? ' · JS' : ''}`)),
+        h('button', { class: 'btn', onclick: () => startEditBoost(b) }, 'Edit'),
+        h('button', { class: 'btn danger', onclick: () => dispatch({ type: 'settings.update', patch: { boosts: s.settings.boosts.filter((x) => x.id !== b.id) } }) }, 'Remove'),
+      ),
+    ),
+    s.settings.boosts.length ? '' : h('span', { class: 's-foot', style: 'margin:0' }, 'No boosts yet. Right-click a page → “Boost this site…” or fill the form below.'),
+  );
+}
+
+// ---- passwords page ----
+
+let passwords: PasswordsStatus = { available: false, entries: [], never: [] };
+api.onPasswords((p) => {
+  passwords = p;
+  renderPasswords();
+});
+void api.getPasswords().then((p) => {
+  passwords = p;
+  renderPasswords();
+});
+
+function renderPasswords(): void {
+  $('#s-pw-note').textContent = passwords.available
+    ? 'Chord offers to save passwords when you sign in on an https site and fills them in when you return. They are encrypted with your operating system’s keychain (macOS Keychain, Windows DPAPI, your Linux keyring), so the file in the profile folder is unreadable without your OS account. Password-manager extensions (1Password, Bitwarden, KeePassXC) need extension popups and native messaging, which Electron does not provide; their web vaults work as ordinary pages.'
+    : 'Password storage is unavailable: the operating system keychain cannot be reached (on Linux, install and unlock a keyring such as GNOME Keyring or KWallet). Nothing will be saved.';
+  $('#s-passwords').replaceChildren(
+    ...passwords.entries
+      .slice()
+      .sort((a, b) => a.host.localeCompare(b.host) || a.username.localeCompare(b.username))
+      .map((e) => {
+        const secret = h('span', { class: 'secret' }, '••••••••');
+        let shown = false;
+        return h(
+          'div',
+          { class: 'pw' },
+          h('div', {}, h('div', { class: 'host' }, e.host), h('div', { class: 'user' }, e.username || '(no username)')),
+          secret,
+          h(
+            'div',
+            { class: 'btns' },
+            h('button', { class: 'btn', onclick: async () => { if (shown) { secret.textContent = '••••••••'; shown = false; return; } const v = await api.revealPassword(e.id); if (v !== null) { secret.textContent = v; shown = true; } } }, 'Show'),
+            h('button', { class: 'btn', onclick: async () => { const v = await api.revealPassword(e.id); if (v !== null) await navigator.clipboard.writeText(v).catch(() => {}); } }, 'Copy'),
+            h('button', { class: 'btn danger', onclick: () => dispatch({ type: 'password.delete', id: e.id }) }, 'Delete'),
+          ),
+        );
+      }),
+  );
+  $('#s-pw-never').replaceChildren(
+    ...passwords.never.map((host) => h('div', { class: 'pw' }, h('div', { class: 'host' }, host), h('span'), h('div', { class: 'btns' }, h('button', { class: 'btn', onclick: () => dispatch({ type: 'password.allowAgain', host }) }, 'Allow again')))),
+  );
+}

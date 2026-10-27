@@ -32,7 +32,7 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   let controller: Controller | null = null;
   let pendingUrl: string | null = null;
-  const urlFromArgv = (argv: string[]) => argv.find((a) => /^https?:\/\//i.test(a)) ?? null;
+  const urlFromArgv = (argv: string[]) => argv.find((a) => /^(https?|chord):\/\//i.test(a)) ?? null;
 
   app.on('second-instance', (_event, argv) => {
     const url = urlFromArgv(argv);
@@ -53,6 +53,7 @@ if (!app.requestSingleInstanceLock()) {
     warnIfTranslated(controller);
     const url = pendingUrl ?? urlFromArgv(process.argv.slice(1));
     if (url) controller.openUrl(url);
+    if (!process.defaultApp) app.setAsDefaultProtocolClient('chord');
   });
 
   app.on('activate', () => controller?.focusWindow());

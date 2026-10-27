@@ -22,6 +22,11 @@ import { TrayManager } from './tray.ts';
 import { confirmImport, importFromBrowser } from './importers.ts';
 import { DownloadManager } from './downloads.ts';
 import { HistoryManager } from './history.ts';
+import { BoostManager } from './boosts.ts';
+import { PasswordManager } from './passwords.ts';
+import { PIP_JS } from './pip.ts';
+import { installSpace } from './installer.ts';
+import { installUrlFrom } from '../shared/installer.ts';
 import { browsingSession } from './session.ts';
 import { isInternal } from '../shared/url.ts';
 
@@ -41,6 +46,8 @@ export class Controller {
   quitting = false;
   readonly downloads = new DownloadManager(this);
   readonly history = new HistoryManager(this);
+  readonly boosts = new BoostManager(this);
+  readonly passwords = new PasswordManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
     onStatus: (status) => this.sendAll('extensions', status),
@@ -69,6 +76,7 @@ export class Controller {
     this.tray.sync(this.state.settings.closeToTray);
     this.downloads.init(browsingSession());
     this.history.init();
+    this.passwords.init();
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -191,12 +199,18 @@ export class Controller {
 
   openUrl(url: string): void {
     this.focusWindow();
+    const manifest = installUrlFrom(url);
+    if (manifest) {
+      void installSpace(this, manifest);
+      return;
+    }
     this.apply({ type: 'tab.new', url, activate: true });
   }
 
   flush(): void {
     this.downloads.flush();
     this.history.flush();
+    this.passwords.flush();
     this.store.save(this.state);
     this.store.flush();
   }
@@ -236,6 +250,8 @@ export class Controller {
     if (prev.settings.shields !== next.settings.shields) void setShields(next.settings.shields);
     if (prev.settings.smartPages && !next.settings.smartPages) this.smart.clearAll();
     if (prev.settings.closeToTray !== next.settings.closeToTray) this.tray.sync(next.settings.closeToTray);
+    if (prev.settings.boosts !== next.settings.boosts && JSON.stringify(prev.settings.boosts) !== JSON.stringify(next.settings.boosts)) void this.boosts.refresh();
+    this.autoPip(prev, next);
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.settings.theme.mode !== next.settings.theme.mode) this.applyChromeColors();
@@ -404,6 +420,21 @@ export class Controller {
       case 'media.action':
         this.smart.mediaAction(cmd.id, cmd.action);
         return;
+      case 'media.pip': {
+        const target = cmd.id ? this.tabs.get(cmd.id)?.webContents : wc();
+        if (target && !target.isDestroyed()) void target.executeJavaScript(PIP_JS('toggle'), true).catch(() => {});
+        return;
+      }
+      case 'downloads.panel':
+        if (this.overlay.mode === 'downloads') this.overlay.hide();
+        else this.overlay.show({ kind: 'show', mode: 'downloads' });
+        return;
+      case 'password.delete':
+        this.passwords.remove(cmd.id);
+        return;
+      case 'password.allowAgain':
+        this.passwords.allowAgain(cmd.host);
+        return;
       case 'call.action':
         this.smart.callAction(cmd.id, cmd.action);
         return;
@@ -445,6 +476,9 @@ export class Controller {
         return;
       case 'history.open':
         this.openInternal('chord://history/');
+        return;
+      case 'space.install':
+        void installSpace(this, cmd.url);
         return;
       case 'space.passwordPrompt': {
         const sp = this.state.spaces.find((x) => x.id === cmd.id);
@@ -546,6 +580,24 @@ export class Controller {
         this.apply({ type: 'tab.closeActive' });
       }
     });
+  }
+
+  /** Auto picture-in-picture: a playing video follows the user to the next tab, and comes back when they return. */
+  private autoPip(prev: State, next: State): void {
+    if (!next.settings.autoPip) return;
+    const before = focusedTab(prev)?.id;
+    const after = focusedTab(next)?.id;
+    if (before === after) return;
+    const run = (id: TabId | undefined, mode: 'enter' | 'exit') => {
+      if (!id) return;
+      const info = this.smart.getStatus()[id]?.media;
+      const wc = this.tabs.get(id)?.webContents;
+      if (!wc || wc.isDestroyed()) return;
+      if (mode === 'enter' && !(info?.playing && info.video)) return;
+      void wc.executeJavaScript(PIP_JS(mode), true).catch(() => {});
+    };
+    run(before, 'enter');
+    run(after, 'exit');
   }
 
   /** Show one of Chord's own pages: reuse it if the active space already has it open. */

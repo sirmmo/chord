@@ -161,11 +161,11 @@ const dlSub = $('#dl-sub');
 const dlBar = $('#dl-bar');
 let dlHideTimer = 0;
 dlBtn.replaceChildren(svg(ICONS.download), dlBtn.querySelector('.ring')!, dlBtn.querySelector('.badge')!);
-dlBtn.onclick = () => dispatch({ type: 'downloads.open' });
+dlBtn.onclick = () => dispatch({ type: 'downloads.panel' });
 const settingsBtn = $<HTMLButtonElement>('#settings-btn');
 settingsBtn.replaceChildren(svg(ICONS.settings));
 settingsBtn.onclick = () => dispatch({ type: 'settings.open' });
-dlRow.onclick = () => dispatch({ type: 'downloads.open' });
+dlRow.onclick = () => dispatch({ type: 'downloads.panel' });
 api.onDownloads((d) => {
   downloads = d;
   renderDownloads();
@@ -325,6 +325,7 @@ function fmtDuration(ms: number): string {
 }
 
 function renderSmart(): void {
+  renderInstall();
   renderPlayer();
   renderCall();
   renderChip();
@@ -348,6 +349,7 @@ function makePlayerCard(entry: [TabId, MediaInfo]): HTMLElement {
       h('button', { class: 'icon-btn prev', title: 'Previous', onclick: mediaAction(id, 'previoustrack') }),
       h('button', { class: 'icon-btn pp', title: 'Play/Pause', onclick: togglePlayOf(id) }),
       h('button', { class: 'icon-btn next', title: 'Next', onclick: mediaAction(id, 'nexttrack') }),
+      h('button', { class: 'icon-btn pip', title: 'Picture in Picture (⌘⌥P)', onclick: () => dispatch({ type: 'media.pip', id }) }),
     ),
   );
 }
@@ -376,6 +378,9 @@ function updatePlayerCard(el: HTMLElement, entry: [TabId, MediaInfo]): void {
   setIconKey(pp, info.playing ? 'pause' : 'play', () => svg(info.playing ? ICONS.pause : ICONS.play));
   setIconKey(prev, 'prev', () => svg(ICONS.prev));
   setIconKey(next, 'next', () => svg(ICONS.next));
+  const pip = el.querySelector('.pip') as HTMLButtonElement;
+  pip.hidden = !info.video;
+  setIconKey(pip, 'pip', () => svg(ICONS.pip));
 }
 
 function renderPlayer(): void {
@@ -459,6 +464,25 @@ function renderChip(): void {
     chipTab = null;
     chip.classList.add('hidden');
   }
+}
+
+/** A site offering a space: a banner above the lists, dismissable per manifest. */
+const installBanner = $('#install');
+const dismissedManifests = new Set<string>();
+let bannerManifest = '';
+$('#install-go').onclick = () => {
+  if (bannerManifest) dispatch({ type: 'space.install', url: bannerManifest });
+};
+$('#install-no').onclick = () => {
+  dismissedManifests.add(bannerManifest);
+  renderInstall();
+};
+function renderInstall(): void {
+  const tab = focused();
+  const manifest = tab ? smart[tab.id]?.manifest : undefined;
+  bannerManifest = manifest && !dismissedManifests.has(manifest) ? manifest : '';
+  installBanner.classList.toggle('hidden', !bannerManifest);
+  if (bannerManifest) setText($('#install-text'), `${hostOf(bannerManifest)} offers a space for Chord`);
 }
 
 /** Unread / notification counts on tab rows and space dots. */

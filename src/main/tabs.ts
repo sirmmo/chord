@@ -7,6 +7,7 @@ import { parseTiling } from '../shared/tiling.ts';
 import { PARTITION } from './session.ts';
 import { PAGE_PRELOAD, PRELOAD } from './paths.ts';
 import { externalScheme, isInternal } from '../shared/url.ts';
+import { installUrlFrom } from '../shared/installer.ts';
 import { openExternalLink } from './external.ts';
 import { pageContextMenu } from './menu.ts';
 import type { Controller } from './controller.ts';
@@ -178,9 +179,13 @@ export class TabManager {
       patch({ url, favicon: undefined, ...navState() });
       const owner = this.c.state.tabs[id];
       if (!owner || !spaceOfTab(this.c.state, owner).lock) this.c.history.record(url, wc.getTitle());
+      this.c.passwords.navigated(id);
     });
     wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
-      if (isMainFrame) patch({ url, ...navState() });
+      if (isMainFrame) {
+        patch({ url, ...navState() });
+        this.c.passwords.navigated(id);
+      }
     });
     wc.on('did-start-loading', () => patch({ loading: true }));
     wc.on('did-stop-loading', () => {
@@ -191,9 +196,13 @@ export class TabManager {
       if (details.isMainFrame && !details.isSameDocument) {
         navStarted(id, details.url);
         this.c.smart.clear(id);
+        this.c.boosts.reset(id);
       }
     });
-    wc.on('dom-ready', () => navDomReady(id));
+    wc.on('dom-ready', () => {
+      navDomReady(id);
+      void this.c.boosts.apply(id, wc);
+    });
     wc.on('audio-state-changed', (e) => patch({ audible: e.audible }));
     wc.on('focus', () => this.c.apply({ type: 'pane.focus', id }));
     wc.on('input-event', (_e, input) => {
@@ -226,8 +235,11 @@ export class TabManager {
     });
     wc.on('will-navigate', (e, url) => {
       // Web pages may not navigate into Chord's own pages; the user does that from the chrome.
+      // The one exception is an "Add to Chord" link: chord://install/?url=<manifest>.
       if (isInternal(url) && !isInternal(wc.getURL())) {
         e.preventDefault();
+        const manifest = installUrlFrom(url);
+        if (manifest) this.c.dispatch({ type: 'space.install', url: manifest });
         return;
       }
       if (externalScheme(url)) {
@@ -243,6 +255,12 @@ export class TabManager {
         void openExternalLink(wc, url);
         return { action: 'deny' };
       }
+      const manifest = installUrlFrom(url);
+      if (manifest) {
+        this.c.dispatch({ type: 'space.install', url: manifest });
+        return { action: 'deny' };
+      }
+      if (isInternal(url)) return { action: 'deny' };
       const background = details.disposition === 'background-tab';
       const opener = this.c.state.tabs[id];
       return {

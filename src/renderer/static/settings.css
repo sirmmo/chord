@@ -82,3 +82,25 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 .lic .n { font-weight: 600; }
 .lic .v { font-size: 12px; color: var(--muted); }
 .lic .l { font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+
+/* boosts */
+.boost-list { display: flex; flex-direction: column; gap: 6px; }
+.boost { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.boost .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.boost .text span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boost .btn { padding: 4px 9px; font-size: 12px; }
+.boost-form { display: flex; flex-direction: column; gap: 8px; }
+.boost-form input[type="text"], .boost-form textarea { font: inherit; font-size: 13px; color: var(--fg); background: var(--hover); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; min-width: 0; }
+.boost-form input#s-boost-name { width: 180px; }
+.boost-form input#s-boost-sites { flex: 1; }
+.boost-form textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; resize: vertical; width: 100%; box-sizing: border-box; }
+.boost-form .bad { border-color: #ff5f57; }
+/* passwords */
+.pw-list { display: flex; flex-direction: column; gap: 4px; }
+.pw { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: center; padding: 7px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
+.pw .host { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw .user { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw .secret { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 1px; }
+.pw .btns { display: flex; gap: 4px; }
+.pw .btn { padding: 3px 8px; font-size: 12px; }
+.pw-list:empty::before { content: "Nothing here."; font-size: 13px; color: var(--muted); }
