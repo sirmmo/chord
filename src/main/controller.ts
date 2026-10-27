@@ -17,6 +17,7 @@ import { CaptureManager } from './capture.ts';
 import { PageTabsManager } from './pagetabs.ts';
 import { UpdateManager } from './updater.ts';
 import { McpManager } from './mcp.ts';
+import { SourcesManager } from './sources.ts';
 import { initIdentityIpc, setGoogleSignIn } from './identity.ts';
 import { setShields } from './session.ts';
 import { buildAppMenu, spaceContextMenu, tabContextMenu, groupContextMenu } from './menu.ts';
@@ -59,6 +60,7 @@ export class Controller {
   readonly pageTabs = new PageTabsManager(this);
   readonly updates = new UpdateManager(this);
   readonly mcp = new McpManager(this);
+  readonly sources = new SourcesManager(this);
   readonly smart = new SmartManager(this);
   readonly tray = new TrayManager(this);
   /** set once the app is really quitting, so close-to-tray does not swallow the window close */
@@ -172,6 +174,7 @@ export class Controller {
     this.pageTabs.init();
     this.updates.init();
     this.mcp.init();
+    this.sources.init();
     initIdentityIpc();
     setGoogleSignIn(this.state.settings.googleSignIn);
 
@@ -451,6 +454,7 @@ export class Controller {
     if (prev.settings.googleSignIn !== next.settings.googleSignIn) setGoogleSignIn(next.settings.googleSignIn);
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
+    if (prev.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() !== next.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() || JSON.stringify(prev.settings.sourceror) !== JSON.stringify(next.settings.sourceror)) this.sources.refresh();
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
     if (prev.settings.extensions !== next.settings.extensions && JSON.stringify(prev.settings.extensions) !== JSON.stringify(next.settings.extensions)) {
       void this.extensions.sync(next);
@@ -713,6 +717,15 @@ export class Controller {
         return;
       case 'mcp.regenerate':
         this.mcp.regenerateToken();
+        return;
+      case 'sources.analyze':
+        void this.sources.analyze(cmd.spaceId);
+        return;
+      case 'sources.clear':
+        void this.sources.clear(cmd.spaceId);
+        return;
+      case 'sources.focus':
+        void this.sources.focus(cmd.spaceId, cmd.kind, cmd.id);
         return;
       case 'window.new': {
         const free = this.freeSpace();

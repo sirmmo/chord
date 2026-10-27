@@ -1,6 +1,7 @@
 // chord://panel — the side panel: the active space's mode views.
 
-import type { AiStatus, Message, ModeId, ResearchStatus, Space, State } from '../shared/types.ts';
+import type { AiStatus, Message, ModeId, ResearchStatus, SourcesStatus, Space, State } from '../shared/types.ts';
+import { initSourcesView } from './sources-view.ts';
 import { activeSpace } from '../shared/model.ts';
 import { MODES } from '../shared/modes.ts';
 import { hostOf } from '../shared/url.ts';
@@ -14,6 +15,8 @@ const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySe
 let state: State | null = null;
 let research: ResearchStatus | null = null;
 let ai: AiStatus | null = null;
+let sources: SourcesStatus | null = null;
+const sourcesView = initSourcesView($('#view-sources'), () => state, dispatch);
 let shownSpace = '';
 let shownMode: ModeId | 'none' = 'none';
 
@@ -44,16 +47,24 @@ api.onAi((a) => {
     renderAi();
   }
 });
+api.onSources((r) => {
+  if (state && r.spaceId === state.activeSpaceId) {
+    sources = r;
+    sourcesView.update(r);
+  }
+});
 
 async function loadSpace(): Promise<void> {
   if (!state) return;
   const id = state.activeSpaceId;
-  const [r, a] = await Promise.all([api.getResearch(id), api.getAi(id)]);
+  const [r, a, src] = await Promise.all([api.getResearch(id), api.getAi(id), api.getSources(id)]);
   if (state.activeSpaceId !== id) return;
   research = r;
   ai = a;
+  sources = src;
   renderResearch();
   renderAi();
+  if (src) sourcesView.update(src);
 }
 
 $('#close').onclick = () => dispatch({ type: 'panel.toggle', open: false });

@@ -64,7 +64,7 @@ export interface PasswordsStatus {
   never: string[];
 }
 
-export type ModeId = 'research' | 'ai';
+export type ModeId = 'research' | 'ai' | 'sources';
 
 export interface ResearchClip {
   id: string;
@@ -241,6 +241,36 @@ export interface Settings {
   updates: UpdateSettings;
   /** local MCP server for Claude Desktop and other MCP clients */
   mcp: McpSettings;
+  /** Sources mode: the Sourceror server and its options */
+  sourceror: SourcerorSettings;
+}
+
+export interface SourcerorSettings {
+  server: string;
+  checkLinks: boolean;
+  useLlm: boolean;
+  discover: boolean;
+}
+
+/** What the side panel's Sources view shows for a space's focused tab */
+export interface SourcesStatus {
+  spaceId: SpaceId;
+  tabId?: TabId;
+  url: string;
+  title: string;
+  web: boolean;
+  server: string;
+  serverUp: boolean | null;
+  serverInfo: string;
+  busy: boolean;
+  progress?: { phase: string; done: number; total: number };
+  /** a message key, or `failed:<detail>` */
+  message?: { text: string; error: boolean };
+  kind?: 'article' | 'wikipedia';
+  result?: Record<string, unknown>;
+  marks?: { sources: number; claims: number };
+  /** the mark the user clicked in the page */
+  selected?: { kind: string; id: string; seq: number };
 }
 
 export interface McpSettings {
@@ -452,7 +482,10 @@ export type Command =
   | { type: 'window.new' }
   | { type: 'space.openInWindow'; id: SpaceId }
   | { type: 'mcp.copyConfig' }
-  | { type: 'mcp.regenerate' };
+  | { type: 'mcp.regenerate' }
+  | { type: 'sources.analyze'; spaceId: SpaceId }
+  | { type: 'sources.clear'; spaceId: SpaceId }
+  | { type: 'sources.focus'; spaceId: SpaceId; kind: string; id: string };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
@@ -461,7 +494,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus',
 ]);
 
 export type Message = Action | Command;
@@ -623,4 +656,6 @@ export interface ChordApi {
   getResearch(spaceId: SpaceId): Promise<ResearchStatus>;
   onAi(cb: (status: AiStatus) => void): () => void;
   getAi(spaceId: SpaceId): Promise<AiStatus>;
+  onSources(cb: (status: SourcesStatus) => void): () => void;
+  getSources(spaceId: SpaceId): Promise<SourcesStatus>;
 }

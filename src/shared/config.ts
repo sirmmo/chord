@@ -40,7 +40,7 @@ export interface ChordConfig {
 
 export type ImportMode = 'merge' | 'replace';
 
-const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'boosts', 'autoPip', 'ai', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine', 'googleSignIn'];
+const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'boosts', 'autoPip', 'ai', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine', 'googleSignIn', 'sourceror'];
 
 function tabToConfig(tab: Tab): ConfigTab {
   const out: ConfigTab = { url: tab.homeUrl ?? tab.url };
@@ -148,6 +148,7 @@ export function parseConfig(text: string): ParseResult {
       if (typeof r.searchEngine === 'string' && ['duckduckgo', 'google', 'brave', 'kagi', 'startpage'].includes(r.searchEngine)) {
         settings.searchEngine = r.searchEngine as Settings['searchEngine'];
       if (r.googleSignIn === 'firefox' || r.googleSignIn === 'electron' || r.googleSignIn === 'off') settings.googleSignIn = r.googleSignIn;
+      if (isRecord(r.sourceror)) settings.sourceror = { server: typeof r.sourceror.server === 'string' ? r.sourceror.server : 'http://127.0.0.1:5010', checkLinks: r.sourceror.checkLinks !== false, useLlm: r.sourceror.useLlm !== false, discover: r.sourceror.discover !== false };
       }
       if (isRecord(r.theme)) {
         const t = r.theme;

@@ -408,6 +408,10 @@ if (/^(accounts\.google\.com|accounts\.youtube\.com)$/.test(location.host)) {
 }
 
 if (process.isMainFrame) {
+  // Sources mode runs its page script in this isolated world; clicks on its marks come back through here.
+  (window as Window & { __chordSourceror?: { select(kind: string, id: string): void } }).__chordSourceror = {
+    select: (kind: string, id: string) => ipcRenderer.send('sourceror', { kind: String(kind), id: String(id) }),
+  };
   try {
     runInMainWorld(smartHook, [REPORT_KEY, ACTION_KEY]);
   } catch (err) {

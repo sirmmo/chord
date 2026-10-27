@@ -39,6 +39,35 @@
     </div>
   </section>
 
+  <section class="view srcr" id="view-sources">
+    <div class="srcr-bar"><span class="srcr-server" id="srcr-server-dot"></span><span class="srcr-brand">Sourceror</span><span class="spacer"></span><button class="icon" id="srcr-toggle-settings" title="Settings">⚙</button></div>
+    <div class="srcr-settings" id="srcr-settings" hidden>
+      <label class="srcr-field"><span data-i18n="server_url"></span><input id="srcr-server" type="url" spellcheck="false" placeholder="http://127.0.0.1:5010"></label>
+      <label class="srcr-check"><input id="srcr-links" type="checkbox"> <span data-i18n="opt_links"></span></label>
+      <label class="srcr-check"><input id="srcr-llm" type="checkbox"> <span data-i18n="opt_llm"></span></label>
+      <label class="srcr-check"><input id="srcr-discover" type="checkbox"> <span data-i18n="opt_discover"></span></label>
+      <p class="hint" data-i18n="server_hint"></p>
+    </div>
+    <div class="srcr-target">
+      <div class="srcr-title" id="srcr-title"></div>
+      <div class="srcr-url" id="srcr-url"></div>
+      <div class="srcr-actions"><button class="btn primary" id="srcr-analyze" data-i18n="analyze"></button><button class="btn" id="srcr-clear" data-i18n="clear_marks" hidden></button></div>
+    </div>
+    <div class="srcr-progress" id="srcr-progress" hidden>
+      <div class="phase"><span id="srcr-phase"></span><span id="srcr-count"></span></div>
+      <div class="track"><div id="srcr-bar" class="fill"></div></div>
+    </div>
+    <div class="srcr-message" id="srcr-message" hidden></div>
+    <div class="srcr-report" id="srcr-report" hidden></div>
+    <div class="srcr-legend" id="srcr-legend" hidden>
+      <span><i class="d solid"></i><span data-i18n="g_solid"></span></span>
+      <span><i class="d ok"></i><span data-i18n="g_ok"></span></span>
+      <span><i class="d weak"></i><span data-i18n="g_weak"></span></span>
+      <span><i class="d unreliable"></i><span data-i18n="g_unreliable"></span></span>
+      <p data-i18n="limits"></p>
+    </div>
+  </section>
+
   <section class="view" id="view-none"><p class="hint">This space has no modes. Add one from the space’s menu.</p></section>
   <script src="panel.js"></script>
 </body>

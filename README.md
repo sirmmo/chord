@@ -221,6 +221,19 @@ cookies and settings live in a `ChordData` folder beside it. The earlier single-
 portable `.exe` is gone: it re-extracted the whole application on every launch, which
 made starting it take ages. Quit with `Ctrl+Q` or the window's close button.
 
+## Sources mode (Sourceror built in)
+
+The [Sourceror](https://github.com/sirmmo/sourceror) extension is part of Chord: turn on
+the **Sources** mode of a space (right-click its dot → Modes) and the side panel checks
+any article or Wikipedia entry against the lists Wikipedia editors maintain (WP:RSP,
+CITEWATCH), Crossref and OpenAlex: who published every link, dead links, retractions,
+and which claims rest on nothing, with candidate sources for those. Links get a coloured
+dot in the page and problem claims a highlight; clicking either selects it in the panel.
+It needs the Sourceror server running on this computer (`docker run … ghcr.io/sirmmo/sourceror`,
+`http://127.0.0.1:5010` by default; address and options in the panel's ⚙). The page is
+read only when you press the button, with Mozilla's Readability, and sent to that server
+and nowhere else.
+
 ## MCP server for Claude Desktop and friends
 
 Settings → Add-ins → Local MCP server starts an MCP endpoint on `http://127.0.0.1:23120/mcp`

@@ -6,6 +6,7 @@ import type { ModeId } from './types.ts';
 export const MODES: { id: ModeId; name: string; description: string }[] = [
   { id: 'research', name: 'Research', description: 'Keep notes, clip passages and sources, save pages to Zotero.' },
   { id: 'ai', name: 'AI', description: 'Chat with a local or remote model that can read and act on the tabs of this space.' },
+  { id: 'sources', name: 'Sources', description: 'Check who is behind every link of an article and which claims rest on nothing (Sourceror, running on this computer).' },
 ];
 
 export const MODE_IDS = new Set<string>(MODES.map((m) => m.id));

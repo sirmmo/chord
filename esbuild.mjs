@@ -11,6 +11,7 @@ const configs = [
   node('src/main/index.ts', 'dist/main.js'),
   node('src/preload/index.ts', 'dist/preload.js'),
   node('src/preload/page.ts', 'dist/page-preload.js'),
+  { ...common, entryPoints: ['src/page/sourceror.ts'], outfile: 'dist/sourceror.js', platform: 'browser', format: 'iife' },
   { ...common, entryPoints: ['src/renderer/sidebar.ts', 'src/renderer/palette.ts', 'src/renderer/downloads.ts', 'src/renderer/settings.ts', 'src/renderer/history.ts', 'src/renderer/guide.ts', 'src/renderer/panel.ts'], outdir: 'dist/renderer', platform: 'browser', format: 'iife' },
 ];
 

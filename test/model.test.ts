@@ -417,3 +417,17 @@ test('google sign-in setting defaults to firefox and rejects junk', () => {
   const off = reduce(s, { type: 'settings.update', patch: { googleSignIn: 'off' } }, ctx);
   assert.equal(off.settings.googleSignIn, 'off');
 });
+
+test('sources mode and its settings', () => {
+  const ctx: Ctx = { now: 1, newId: () => 'x' };
+  const s = initialState(ctx);
+  assert.deepEqual(s.settings.sourceror, { server: 'http://127.0.0.1:5010', checkLinks: true, useLlm: true, discover: true });
+  const sp = activeSpace(s);
+  const on = reduce(s, { type: 'space.modes', id: sp.id, modes: ['sources'] }, ctx);
+  assert.deepEqual(activeSpace(on).modes, ['sources']);
+  const raw = JSON.parse(JSON.stringify(s)) as State;
+  (raw.settings as unknown as { sourceror: Record<string, unknown> }).sourceror = { server: 'ftp://nope', checkLinks: 'no' };
+  const back = hydrate(raw, ctx);
+  assert.equal(back.settings.sourceror.server, 'http://127.0.0.1:5010');
+  assert.equal(back.settings.sourceror.checkLinks, true);
+});

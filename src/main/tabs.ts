@@ -213,6 +213,7 @@ export class TabManager {
     this.views.delete(id);
     this.partitions.delete(id);
     this.c.smart.clear(id);
+    this.c.sources.forget(id);
     if (this.fullscreenTab === id) this.fullscreenTab = null;
     const parent = this.windowOfView(id);
     this.parents.delete(id);
@@ -230,6 +231,7 @@ export class TabManager {
 
     wc.on('page-title-updated', (_e, title) => {
       patch({ title });
+      this.c.sources.refresh();
       this.c.smart.title(id, title);
       this.c.history.title(wc.getURL(), title);
     });
@@ -258,6 +260,7 @@ export class TabManager {
         navStarted(id, details.url);
         this.c.smart.clear(id);
         this.c.boosts.reset(id);
+        this.c.sources.navigated(id);
       }
     });
     wc.on('dom-ready', () => {
