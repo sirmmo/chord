@@ -188,14 +188,16 @@ export class Controller {
   }
 
   private chromeColor(): string {
+    if (this.state.settings.theme.skin === 'lcars') return '#000000';
     const mode = this.state.settings.theme.mode;
     const dark = mode === 'dark' || (mode === 'system' && nativeTheme.shouldUseDarkColors);
     return dark ? CHROME_DARK : CHROME_LIGHT;
   }
 
   private titleBarOverlay(): { color: string; symbolColor: string; height: number } {
-    const dark = this.chromeColor() === CHROME_DARK;
-    return { color: this.chromeColor(), symbolColor: dark ? '#dddde3' : '#2a2a33', height: TITLEBAR_HEIGHT };
+    const color = this.chromeColor();
+    const symbolColor = this.state.settings.theme.skin === 'lcars' ? '#ff9966' : color === CHROME_DARK ? '#dddde3' : '#2a2a33';
+    return { color, symbolColor, height: TITLEBAR_HEIGHT };
   }
 
   private applyChromeColors(): void {
@@ -294,7 +296,7 @@ export class Controller {
     if (soundChanged) this.tray.refresh();
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
-    if (prev.settings.theme.mode !== next.settings.theme.mode) this.applyChromeColors();
+    if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
     if (prev.settings.extensions !== next.settings.extensions && JSON.stringify(prev.settings.extensions) !== JSON.stringify(next.settings.extensions)) {
       void this.extensions.sync(next);
     }

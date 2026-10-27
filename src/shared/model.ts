@@ -21,7 +21,7 @@ export interface Ctx {
 }
 
 export function defaultTheme(): Theme {
-  return { mode: 'system', tint: 30, accent: null, iconStyle: 'color', iconColor: null, font: 'system' };
+  return { mode: 'system', tint: 30, accent: null, iconStyle: 'color', iconColor: null, font: 'system', skin: 'chord' };
 }
 
 export function defaultSettings(): Settings {
@@ -33,6 +33,7 @@ export function mergeSettings(raw: unknown): Settings {
   const r = (raw ?? {}) as Partial<Settings>;
   const theme = { ...defaultTheme(), ...((r.theme ?? {}) as Partial<Theme>) };
   theme.tint = clampTint(theme.tint);
+  if (theme.skin !== 'lcars') theme.skin = 'chord';
   const extensions = Array.isArray(r.extensions)
     ? r.extensions.filter((e): e is Settings['extensions'][number] => typeof e === 'object' && e !== null && typeof e.path === 'string')
     : [];

@@ -330,3 +330,14 @@ test('troubleshooting flags survive a reload and ignore junk', () => {
   const back = hydrate(raw, ctx);
   assert.deepEqual(back.settings.flags, { noHwVideoDecode: true });
 });
+
+test('skin setting defaults to chord and only accepts known skins', () => {
+  const ctx: Ctx = { now: 1, newId: () => 'x' };
+  const s = initialState(ctx);
+  assert.equal(s.settings.theme.skin, 'chord');
+  const next = reduce(s, { type: 'theme.update', patch: { skin: 'lcars' } }, ctx);
+  assert.equal(next.settings.theme.skin, 'lcars');
+  const raw = JSON.parse(JSON.stringify(next)) as { settings: { theme: Record<string, unknown> } };
+  raw.settings.theme.skin = 'holodeck';
+  assert.equal(hydrate(raw, ctx).settings.theme.skin, 'chord');
+});

@@ -29,6 +29,7 @@ api.getState().then((s) => {
 // ---- appearance panel ----
 
 const sMode = $('#s-mode');
+const sSkin = $('#s-skin');
 const sIcons = $('#s-icons');
 const sSwatches = $('#s-swatches');
 const sSpaceColor = $<HTMLInputElement>('#s-space-color');
@@ -143,6 +144,7 @@ const segment = (el: HTMLElement, onPick: (v: string) => void) => {
   el.querySelectorAll('button').forEach((b) => (b.onclick = () => onPick(b.dataset.v ?? '')));
 };
 segment(sMode, (v) => dispatch({ type: 'theme.update', patch: { mode: v as 'system' | 'light' | 'dark' } }));
+segment(sSkin, (v) => dispatch({ type: 'theme.update', patch: { skin: v as 'chord' | 'lcars' } }));
 segment(sIcons, (v) => dispatch({ type: 'theme.update', patch: { iconStyle: v as 'color' | 'mono' } }));
 sSpaceColor.oninput = () => state && dispatch({ type: 'space.update', id: state.activeSpaceId, patch: { color: sSpaceColor.value } });
 sTint.oninput = () => {
@@ -172,6 +174,7 @@ function fillSettings(): void {
   const active = document.activeElement;
   const pick = (el: HTMLElement, v: string) => el.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
   pick(sMode, t.mode);
+  pick(sSkin, t.skin);
   pick(sIcons, t.iconStyle);
   $('#s-space-name').textContent = `“${space.name}”`;
   sSwatches.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.title.toLowerCase() === space.color.toLowerCase()));

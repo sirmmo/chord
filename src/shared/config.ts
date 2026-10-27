@@ -146,6 +146,7 @@ export function parseConfig(text: string): ParseResult {
         if (t.iconStyle === 'color' || t.iconStyle === 'mono') theme.iconStyle = t.iconStyle;
         if (isHex(t.iconColor) || t.iconColor === null) theme.iconColor = t.iconColor;
         if (t.font === 'system' || t.font === 'rounded' || t.font === 'mono' || t.font === 'serif') theme.font = t.font;
+        if (t.skin === 'chord' || t.skin === 'lcars') theme.skin = t.skin;
         if (Object.keys(theme).length) settings.theme = theme as Theme;
       }
     }

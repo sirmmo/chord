@@ -47,3 +47,32 @@ h1 { font-size: 24px; margin: 0; }
 .dl .bar.indeterminate i { width: 30%; animation: slide 1.2s infinite linear; }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
 .dl:not(.progressing) .bar { display: none; }
+
+/* LCARS skin for chord:// pages */
+:root[data-skin="lcars"] {
+  --bg: #000;
+  --card: color-mix(in srgb, #ff9966 12%, transparent);
+  --fg: #ffcc99;
+  --muted: #cc99cc;
+  --line: color-mix(in srgb, #cc99cc 50%, transparent);
+  --hover: color-mix(in srgb, #ff9966 22%, transparent);
+  --bar: color-mix(in srgb, #ff9966 45%, transparent);
+  --accent: #ff9966;
+  --danger: #cc6666;
+  --font: "Antonio", "Bahnschrift SemiCondensed", "Roboto Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+:root[data-skin="lcars"] body { letter-spacing: .02em; }
+:root[data-skin="lcars"] h1, :root[data-skin="lcars"] h2, :root[data-skin="lcars"] h3, :root[data-skin="lcars"] th, :root[data-skin="lcars"] .day, :root[data-skin="lcars"] label, :root[data-skin="lcars"] .btn, :root[data-skin="lcars"] .tabs button, :root[data-skin="lcars"] #modes button { text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+:root[data-skin="lcars"] h1 { color: #ff9966; border-left: 14px solid #cc99cc; padding-left: 14px; border-radius: 8px 0 0 8px; }
+:root[data-skin="lcars"] .btn, :root[data-skin="lcars"] .tabs button, :root[data-skin="lcars"] .seg button, :root[data-skin="lcars"] #modes button { border-radius: 999px; }
+:root[data-skin="lcars"] .btn { background: #cc99cc; color: #000; border-color: transparent; }
+:root[data-skin="lcars"] .btn:hover { background: #ff9966; color: #000; }
+:root[data-skin="lcars"] .btn.danger, :root[data-skin="lcars"] .btn.confirm { background: #cc6666; color: #000; }
+:root[data-skin="lcars"] .tabs button.on, :root[data-skin="lcars"] .seg button.on, :root[data-skin="lcars"] #modes button.on { background: #ff9966; color: #000; box-shadow: none; }
+:root[data-skin="lcars"] .settings .tabs button { border-radius: 16px 6px 6px 16px; }
+:root[data-skin="lcars"] .dl, :root[data-skin="lcars"] .entry, :root[data-skin="lcars"] .item, :root[data-skin="lcars"] .addin, :root[data-skin="lcars"] .lic { border-radius: 18px 8px 8px 18px; }
+:root[data-skin="lcars"] input[type="text"], :root[data-skin="lcars"] input[type="search"], :root[data-skin="lcars"] input[type="password"], :root[data-skin="lcars"] select, :root[data-skin="lcars"] textarea { border-radius: 999px; border: 2px solid #9999ff; background: #000; color: #99ccff; }
+:root[data-skin="lcars"] textarea { border-radius: 14px; }
+:root[data-skin="lcars"] .search input { border-radius: 999px; }
+:root[data-skin="lcars"] .dl .bar i { background: #ff9966; }
+:root[data-skin="lcars"] code, :root[data-skin="lcars"] kbd { background: color-mix(in srgb, #9999ff 25%, transparent); color: #99ccff; border-color: #9999ff; }

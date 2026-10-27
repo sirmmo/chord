@@ -21,4 +21,6 @@ export function applyTheme(theme: Theme, space: Space | undefined): void {
   if (theme.mode === 'system') root.removeAttribute('data-theme');
   else root.setAttribute('data-theme', theme.mode);
   document.body.classList.toggle('icons-mono', theme.iconStyle === 'mono');
+  if (theme.skin === 'lcars') root.setAttribute('data-skin', 'lcars');
+  else root.removeAttribute('data-skin');
 }

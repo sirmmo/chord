@@ -371,3 +371,88 @@ body.space-locked .lists { display: none; }
 
 .now { flex-wrap: wrap; }
 .now .vol { flex-basis: 100%; width: 100%; margin: 4px 2px 0; height: 14px; accent-color: var(--accent); }
+
+/* ---------------------------------------------------------------------------
+   LCARS skin: black chrome, the classic peach/lavender/periwinkle palette,
+   pill-shaped controls, a framed sidebar and condensed uppercase type.
+   --------------------------------------------------------------------------- */
+:root[data-skin="lcars"] {
+  --lc-orange: #ff9966;
+  --lc-peach: #ffcc99;
+  --lc-lavender: #cc99cc;
+  --lc-blue: #9999ff;
+  --lc-sky: #99ccff;
+  --lc-red: #cc6666;
+  --lc-tan: #ffcc66;
+  --chrome: #000;
+  --bg: #000;
+  --bg2: #000;
+  --fg: var(--lc-peach);
+  --muted: var(--lc-lavender);
+  --faint: color-mix(in srgb, var(--lc-lavender) 55%, transparent);
+  --hover: color-mix(in srgb, var(--lc-orange) 22%, transparent);
+  --active: color-mix(in srgb, var(--lc-orange) 40%, transparent);
+  --line: color-mix(in srgb, var(--lc-lavender) 45%, transparent);
+  --selected: var(--lc-orange);
+  --accent: var(--lc-orange);
+  --icon-color: var(--lc-peach);
+  --font: "Antonio", "Bahnschrift SemiCondensed", "Roboto Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+:root[data-skin="lcars"] body { background: #000; text-transform: uppercase; letter-spacing: .03em; font-size: 13px; font-weight: 600; }
+:root[data-skin="lcars"] #sidebar { padding-left: 24px; }
+/* the frame: a segmented bar down the left edge with an elbow at the top */
+:root[data-skin="lcars"] #sidebar::before {
+  content: ""; position: absolute; left: 4px; top: 8px; bottom: 8px; width: 14px; border-radius: 14px 0 0 14px;
+  background: linear-gradient(to bottom,
+    var(--lc-orange) 0 18%, #000 18% calc(18% + 3px),
+    var(--lc-lavender) calc(18% + 3px) 46%, #000 46% calc(46% + 3px),
+    var(--lc-blue) calc(46% + 3px) 72%, #000 72% calc(72% + 3px),
+    var(--lc-peach) calc(72% + 3px) 90%, #000 90% calc(90% + 3px),
+    var(--lc-red) calc(90% + 3px) 100%);
+}
+:root[data-skin="lcars"] #sidebar::after {
+  content: ""; position: absolute; left: 4px; top: 8px; height: 36px; width: 70px; border-radius: 22px 0 0 0;
+  background: var(--lc-orange); clip-path: polygon(0 0, 100% 0, 100% 10px, 14px 10px, 14px 100%, 0 100%);
+}
+:root[data-skin="lcars"] .titlebar { height: 48px; padding-left: 60px; }
+:root[data-skin="lcars"] .platform-darwin .titlebar { padding-left: 64px; }
+/* the Mac draws its traffic lights over the top-left corner: start the frame below them, no elbow */
+:root[data-skin="lcars"] .platform-darwin #sidebar::before { top: 40px; border-radius: 14px 0 0 14px; }
+:root[data-skin="lcars"] .platform-darwin #sidebar::after { display: none; }
+:root[data-skin="lcars"] .icon-btn { border-radius: 999px; color: var(--lc-peach); }
+:root[data-skin="lcars"] .icon-btn:hover:not(:disabled) { background: var(--lc-lavender); color: #000; }
+:root[data-skin="lcars"] .urlbar { border-radius: 999px; background: color-mix(in srgb, var(--lc-blue) 25%, transparent); color: var(--lc-sky); text-transform: none; }
+:root[data-skin="lcars"] .urlbar:hover { background: var(--lc-blue); color: #000; }
+:root[data-skin="lcars"] .fav { border-radius: 12px 4px 4px 12px; background: color-mix(in srgb, var(--lc-blue) 35%, transparent); }
+:root[data-skin="lcars"] .fav:hover { background: var(--lc-blue); }
+:root[data-skin="lcars"] .fav.active { background: var(--lc-orange); box-shadow: none; }
+:root[data-skin="lcars"] .space-header { color: var(--lc-lavender); font-size: 14px; letter-spacing: .08em; }
+:root[data-skin="lcars"] .section-header { color: var(--lc-blue); letter-spacing: .1em; }
+:root[data-skin="lcars"] .divider { height: 3px; border-radius: 2px; background: var(--lc-lavender); margin: 8px 0 8px 4px; }
+:root[data-skin="lcars"] .tab { border-radius: 16px 6px 6px 16px; background: color-mix(in srgb, var(--lc-peach) 14%, transparent); margin-bottom: 3px; padding-left: 12px; }
+:root[data-skin="lcars"] .tab:hover { background: var(--lc-peach); color: #000; }
+:root[data-skin="lcars"] .tab:hover .close, :root[data-skin="lcars"] .tab:hover .audio { color: #000; }
+:root[data-skin="lcars"] .tab.active { background: var(--lc-orange); color: #000; }
+:root[data-skin="lcars"] .tab.active .close, :root[data-skin="lcars"] .tab.active .audio, :root[data-skin="lcars"] .tab.active .title { color: #000; }
+:root[data-skin="lcars"] .tab .title { text-overflow: clip; }
+:root[data-skin="lcars"] .tab.asleep { opacity: .7; }
+:root[data-skin="lcars"] .tab .close, :root[data-skin="lcars"] .tab .audio, :root[data-skin="lcars"] .tab .close:hover { border-radius: 999px; }
+:root[data-skin="lcars"] .new-tab { border-radius: 16px 6px 6px 16px; color: var(--lc-lavender); padding-left: 12px; }
+:root[data-skin="lcars"] .new-tab:hover { background: var(--lc-lavender); color: #000; }
+:root[data-skin="lcars"] .glyph, :root[data-skin="lcars"] .fav .glyph { border-radius: 999px; background: var(--lc-blue); color: #000; }
+:root[data-skin="lcars"] footer { padding-top: 10px; border-top: 3px solid var(--lc-orange); margin-left: 4px; }
+:root[data-skin="lcars"] .space-dot { border-radius: 999px; }
+:root[data-skin="lcars"] .space-dot.active { background: var(--lc-peach); }
+:root[data-skin="lcars"] .space-dot.active .initial { box-shadow: 0 0 0 2px #000; }
+:root[data-skin="lcars"] .space-dot:hover { background: var(--lc-lavender); }
+:root[data-skin="lcars"] .now { border-radius: 18px 8px 8px 18px; background: #000; border: 2px solid var(--lc-lavender); }
+:root[data-skin="lcars"] .now .title { color: var(--lc-peach); }
+:root[data-skin="lcars"] .now .sub { color: var(--lc-lavender); }
+:root[data-skin="lcars"] .chip { border-radius: 999px; background: var(--lc-lavender); color: #000; }
+:root[data-skin="lcars"] .chip:hover { background: var(--lc-peach); }
+:root[data-skin="lcars"] kbd { border-radius: 999px; background: var(--lc-blue); color: #000; }
+:root[data-skin="lcars"] #stage .empty-msg { color: var(--lc-lavender); }
+:root[data-skin="lcars"] #addressbar .field { border-radius: 999px; background: #000; border: 2px solid var(--lc-blue); color: var(--lc-sky); text-transform: none; }
+:root[data-skin="lcars"] #address { text-transform: none; letter-spacing: 0; font-weight: 400; }
+:root[data-skin="lcars"] .lists::-webkit-scrollbar-thumb { background: var(--lc-lavender); border-radius: 999px; }
+:root[data-skin="lcars"] .resizer:hover { background: var(--lc-orange); }

@@ -169,7 +169,11 @@ export interface Theme {
   /** colour of monochrome icons and letter glyphs; null follows the text colour */
   iconColor: string | null;
   font: FontStyle;
+  /** overall look of the chrome: Chord's own, or an LCARS homage */
+  skin: Skin;
 }
+
+export type Skin = 'chord' | 'lcars';
 
 /** An unpacked Chrome extension the user added from a folder. */
 export interface ExtensionEntry {

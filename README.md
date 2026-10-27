@@ -159,6 +159,13 @@ URL strings or objects with `url`, `title` and `favicon`:
 }
 ```
 
+## LCARS
+
+Settings → Appearance → Skin switches the whole chrome (sidebar, command bar, chord://
+pages) to an LCARS homage: black panels, the peach, lavender and periwinkle palette,
+pill-shaped controls and condensed uppercase type. Web pages are untouched. Install the
+free "Antonio" font for the full effect; without it a condensed system font is used.
+
 ## Shortcuts
 
 | Keys | Action |

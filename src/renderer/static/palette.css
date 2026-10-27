@@ -222,3 +222,29 @@ body.mode-sources #cap-backdrop { display: flex; }
 .cap-note:empty { display: none; }
 .cap-perm { display: none; font-size: 12.5px; margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(255, 180, 0, 0.12); }
 body.mode-sources.needs-permission .cap-perm { display: block; }
+
+/* LCARS skin */
+:root[data-skin="lcars"] {
+  --panel: #000;
+  --fg: #ffcc99;
+  --muted: #cc99cc;
+  --line: color-mix(in srgb, #cc99cc 45%, transparent);
+  --hover: color-mix(in srgb, #ff9966 22%, transparent);
+  --active: color-mix(in srgb, #ff9966 40%, transparent);
+  --selected: #ff9966;
+  --accent: #ff9966;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 0 3px #ff9966;
+  --font: "Antonio", "Bahnschrift SemiCondensed", "Roboto Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+:root[data-skin="lcars"] body { text-transform: uppercase; letter-spacing: .03em; font-weight: 600; }
+:root[data-skin="lcars"] #box, :root[data-skin="lcars"] #dl-panel, :root[data-skin="lcars"] #cap-panel { border-radius: 26px 10px 10px 26px; backdrop-filter: none; }
+:root[data-skin="lcars"] #input, :root[data-skin="lcars"] #find-input { text-transform: none; letter-spacing: 0; font-weight: 400; color: #99ccff; }
+:root[data-skin="lcars"] #results li { border-radius: 999px; padding-left: 14px; }
+:root[data-skin="lcars"] #results li.selected { background: #ff9966; color: #000; }
+:root[data-skin="lcars"] #results li.selected .subtitle, :root[data-skin="lcars"] #results li.selected .kbd, :root[data-skin="lcars"] #results li.selected .glyph { color: #000; }
+:root[data-skin="lcars"] #results .group { color: #9999ff; letter-spacing: .1em; }
+:root[data-skin="lcars"] #findbar { border-radius: 999px; background: #000; box-shadow: 0 0 0 3px #cc99cc; }
+:root[data-skin="lcars"] .btn, :root[data-skin="lcars"] .cap-tabs button { border-radius: 999px; background: #cc99cc; color: #000; border: 0; }
+:root[data-skin="lcars"] .btn:hover, :root[data-skin="lcars"] .cap-tabs button.on { background: #ff9966; color: #000; }
+:root[data-skin="lcars"] .hint { border-radius: 999px; border-color: #9999ff; color: #9999ff; }
+:root[data-skin="lcars"] #pw-help, :root[data-skin="lcars"] .cap-note { text-transform: none; letter-spacing: 0; font-weight: 400; }
