@@ -1,4 +1,4 @@
-import { app, ipcMain, shell, type DownloadItem, type Session } from 'electron';
+import { app, dialog, ipcMain, shell, type DownloadItem, type Session } from 'electron';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { basename, extname, join } from 'node:path';
@@ -38,6 +38,23 @@ export class DownloadManager {
     ipcMain.handle('downloads', () => this.status());
   }
 
+  /** The folder downloads go to: the chosen one if it still exists, else the system Downloads folder. */
+  dir(): string {
+    const chosen = this.c.state.settings.downloadDir;
+    return chosen && existsSync(chosen) ? chosen : app.getPath('downloads');
+  }
+
+  async chooseDir(): Promise<void> {
+    if (!this.c.win) return;
+    const { canceled, filePaths } = await dialog.showOpenDialog(this.c.win, {
+      title: 'Choose the download folder',
+      defaultPath: this.dir(),
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (canceled || !filePaths[0]) return;
+    this.c.apply({ type: 'settings.update', patch: { downloadDir: filePaths[0] } });
+  }
+
   status(): DownloadsStatus {
     return {
       items: this.items.map((e) => (e.state === 'completed' ? { ...e, exists: existsSync(e.path) } : e)),
@@ -47,7 +64,7 @@ export class DownloadManager {
 
   private track(item: DownloadItem): void {
     const id = randomUUID();
-    const dir = app.getPath('downloads');
+    const dir = this.dir();
     if (this.c.state.settings.askDownloadPath) item.setSaveDialogOptions({ defaultPath: join(dir, item.getFilename()) });
     else item.setSavePath(uniquePath(join(dir, item.getFilename())));
 

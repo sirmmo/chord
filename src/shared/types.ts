@@ -87,8 +87,10 @@ export interface Settings {
   theme: Theme;
   /** show media controls for pages that expose a Media Session (YouTube Music, Spotify…) */
   smartPages: boolean;
-  /** show a save dialog for every download instead of saving to the Downloads folder */
+  /** show a save dialog for every download instead of saving to the download folder */
   askDownloadPath: boolean;
+  /** where downloads go; null means the system Downloads folder */
+  downloadDir: string | null;
   /** closing the window hides it; Chord keeps running in the menu bar / tray */
   closeToTray: boolean;
   /** user-defined split-view layouts */
@@ -204,6 +206,7 @@ export type Command =
   | { type: 'download.remove'; id: string }
   | { type: 'downloads.clear' }
   | { type: 'downloads.openFolder' }
+  | { type: 'downloads.chooseFolder' }
   | { type: 'downloads.open' }
   | { type: 'history.open' }
   | { type: 'history.remove'; id: string }
@@ -216,7 +219,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.open', 'history.open', 'history.remove', 'history.clear',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'history.open', 'history.remove', 'history.clear',
 ]);
 
 export type Message = Action | Command;

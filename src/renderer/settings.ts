@@ -46,6 +46,8 @@ const sAddressBar = $<HTMLInputElement>('#s-addressbar');
 const sSmart = $<HTMLInputElement>('#s-smart');
 const sAskDl = $<HTMLInputElement>('#s-askdl');
 const sTray = $<HTMLInputElement>('#s-tray');
+const sDlDir = $('#s-dldir');
+const sDlDirReset = $<HTMLButtonElement>('#s-dldir-reset');
 const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = {};
@@ -64,6 +66,8 @@ sAddressBar.onchange = () => dispatch({ type: 'settings.update', patch: { addres
 sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages: sSmart.checked } });
 sAskDl.onchange = () => dispatch({ type: 'settings.update', patch: { askDownloadPath: sAskDl.checked } });
 sTray.onchange = () => dispatch({ type: 'settings.update', patch: { closeToTray: sTray.checked } });
+$('#s-dldir-choose').onclick = () => dispatch({ type: 'downloads.chooseFolder' });
+sDlDirReset.onclick = () => dispatch({ type: 'settings.update', patch: { downloadDir: null } });
 $('#s-default').onclick = () => dispatch({ type: 'app.setDefaultBrowser' });
 $('#s-export').onclick = () => dispatch({ type: 'config.export' });
 $('#s-import').onclick = () => dispatch({ type: 'config.importFile' });
@@ -162,6 +166,8 @@ function fillSettings(): void {
   sSmart.checked = s.settings.smartPages;
   sAskDl.checked = s.settings.askDownloadPath;
   sTray.checked = s.settings.closeToTray;
+  sDlDir.textContent = s.settings.downloadDir ?? 'System Downloads folder';
+  sDlDirReset.hidden = s.settings.downloadDir === null;
   renderExtensions();
 }
 

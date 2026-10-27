@@ -432,7 +432,10 @@ export class Controller {
         this.downloads.clearFinished();
         return;
       case 'downloads.openFolder':
-        void shell.openPath(app.getPath('downloads'));
+        void shell.openPath(this.downloads.dir());
+        return;
+      case 'downloads.chooseFolder':
+        void this.downloads.chooseDir();
         return;
       case 'downloads.open':
         this.openInternal('chord://downloads/');
