@@ -256,7 +256,10 @@ footer { flex: none; display: flex; align-items: center; gap: 4px; padding-top: 
 .resizer { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 2; }
 
 /* smart pages: the current player, shown across spaces */
-.now { flex: none; display: flex; align-items: center; gap: 2px; margin-top: 6px; padding: 6px; border-radius: 10px; background: var(--hover); }
+#players { flex: none; display: flex; flex-direction: column; gap: 4px; max-height: 40%; overflow-y: auto; scrollbar-width: none; }
+#players:not(:empty) { margin-top: 6px; }
+.now { flex: none; display: flex; align-items: center; gap: 2px; padding: 6px; border-radius: 10px; background: var(--hover); }
+.now:not(.playing) { opacity: 0.8; }
 .now.hidden, .now-mini.hidden, .now-mini-pp.hidden { display: none; }
 .now-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--fg); padding: 0; text-align: left; cursor: default; }
 .now .art, .now-mini .art { flex: none; width: 34px; height: 34px; border-radius: 7px; background: var(--active) center/cover no-repeat; display: grid; place-items: center; color: var(--muted); overflow: hidden; }

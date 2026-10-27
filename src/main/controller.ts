@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell, type WebContents, type IpcMainInvokeEvent } from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
@@ -102,6 +102,7 @@ export class Controller {
     });
     this.win = win;
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    this.wireKeys(win.webContents);
     win.loadFile(join(RENDERER_DIR, 'index.html'));
     win.once('ready-to-show', () => {
       win.show();
@@ -473,6 +474,23 @@ export class Controller {
       return;
     }
     await confirmImport(this, parsed.config, 'a Chord configuration');
+  }
+
+  /**
+   * Keys Chord must own on every view, handled before the page and before the menu.
+   * Ctrl+W closes the tab and never the window (Electron's close role defaults to Ctrl+W).
+   */
+  wireKeys(wc: WebContents): void {
+    wc.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown') return;
+      const mod = isMac ? input.meta : input.control;
+      if (!mod || input.alt || input.key.length !== 1) return;
+      const key = input.key.toLowerCase();
+      if (key === 'w' && !input.shift) {
+        event.preventDefault();
+        this.apply({ type: 'tab.closeActive' });
+      }
+    });
   }
 
   /** Show one of Chord's own pages: reuse it if the active space already has it open. */

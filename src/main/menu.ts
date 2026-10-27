@@ -47,7 +47,8 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Export Configuration…', click: d({ type: 'config.export' }) },
         sep,
         { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: d({ type: 'tab.closeActive' }) },
-        { label: 'Close Window', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
+        // Not role:'close' on Windows/Linux: Electron's role defaults to Ctrl+W, which must close the tab.
+        isMac ? { label: 'Close Window', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' } : { label: 'Close Window', accelerator: 'Ctrl+Shift+W', click: () => c.win?.close() },
         ...(isMac ? [] : [sep, { role: 'quit', accelerator: 'Ctrl+Q' } as MenuItemConstructorOptions]),
       ],
     },

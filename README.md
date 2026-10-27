@@ -35,8 +35,9 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   or use "Open in Split View" from a tab's or a link's context menu.
 - **Smart pages**: what a tab gives away is shown from every space, and you can act on it.
   - Players (YouTube Music, Spotify, Amazon Music, anything with a Media Session or a
-    plain audio/video element): a now-playing card above the spaces strip and a pill in
-    the title bar, with play/pause, previous and next.
+    plain audio/video element): one now-playing card per player above the spaces strip,
+    playing ones first, and a pill in the title bar for the top one, with play/pause,
+    previous and next.
   - Calls (Meet, Zoom, Jitsi, anything using the microphone or camera): a card with the
     call duration, mute, camera and leave, and a pulsing chip in the title bar.
   - Timers and progress read from the title (`24:59 - Pomofocus`, `Uploading 45%`): a

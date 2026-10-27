@@ -141,6 +141,7 @@ export class TabManager {
     win.contentView.addChildView(view);
     this.c.overlay.raise();
     this.wire(id, view.webContents);
+    this.c.wireKeys(view.webContents);
     return view;
   }
 

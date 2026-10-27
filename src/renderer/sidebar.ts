@@ -218,35 +218,24 @@ api.getSmart().then((m) => {
   }
 });
 
-const now = $('#now');
-const nowArt = $('#now-art');
-const nowTitle = $('#now-title');
-const nowSub = $('#now-sub');
-const nowPrev = $<HTMLButtonElement>('#now-prev');
-const nowPP = $<HTMLButtonElement>('#now-pp');
-const nowNext = $<HTMLButtonElement>('#now-next');
+const players = $('#players');
 const minis = [
   { pill: $<HTMLButtonElement>('#now-mini'), pp: $<HTMLButtonElement>('#now-mini-pp') },
   { pill: $<HTMLButtonElement>('#ab-now'), pp: $<HTMLButtonElement>('#ab-now-pp') },
 ];
 let playerTab: TabId | null = null;
-const mediaAction = (action: MediaAction) => () => {
-  if (playerTab) dispatch({ type: 'media.action', id: playerTab, action });
+const mediaAction = (id: TabId, action: MediaAction) => () => dispatch({ type: 'media.action', id, action });
+const togglePlayOf = (id: TabId) => () => {
+  const info = smart[id]?.media;
+  if (info) mediaAction(id, info.playing ? 'pause' : 'play')();
 };
-const openPlayer = () => {
-  if (playerTab) dispatch({ type: 'tab.activate', id: playerTab });
-};
-const togglePlay = () => {
-  const info = playerTab ? smart[playerTab]?.media : undefined;
-  if (info) mediaAction(info.playing ? 'pause' : 'play')();
-};
-$('#now-open').onclick = openPlayer;
-nowPrev.onclick = mediaAction('previoustrack');
-nowNext.onclick = mediaAction('nexttrack');
-nowPP.onclick = togglePlay;
 for (const m of minis) {
-  m.pill.onclick = openPlayer;
-  m.pp.onclick = togglePlay;
+  m.pill.onclick = () => {
+    if (playerTab) dispatch({ type: 'tab.activate', id: playerTab });
+  };
+  m.pp.onclick = () => {
+    if (playerTab) togglePlayOf(playerTab)();
+  };
 }
 
 const callEl = $('#call');
@@ -281,15 +270,11 @@ function entries(): [TabId, SmartInfo][] {
   return Object.entries(smart).filter(([id]) => tabs[id]);
 }
 
-/** The player to show: a playing one first, then the most recently updated. */
-function currentPlayer(): [TabId, MediaInfo] | null {
-  let best: [TabId, MediaInfo] | null = null;
-  for (const [id, s] of entries()) {
-    const info = s.media;
-    if (!info) continue;
-    if (!best || (info.playing && !best[1].playing) || (info.playing === best[1].playing && info.updatedAt > best[1].updatedAt)) best = [id, info];
-  }
-  return best;
+/** Every tab with a player, playing ones first, then the most recently updated. */
+function currentPlayers(): [TabId, MediaInfo][] {
+  const out: [TabId, MediaInfo][] = [];
+  for (const [id, s] of entries()) if (s.media) out.push([id, s.media]);
+  return out.sort((a, b) => Number(b[1].playing) - Number(a[1].playing) || b[1].updatedAt - a[1].updatedAt);
 }
 
 function currentCall(): [TabId, CallInfo] | null {
@@ -337,43 +322,76 @@ function renderSmart(): void {
   renderBadges();
 }
 
-function renderPlayer(): void {
-  const player = currentPlayer();
-  playerTab = player ? player[0] : null;
-  now.classList.toggle('hidden', !player);
-  for (const m of minis) {
-    m.pill.classList.toggle('hidden', !player);
-    m.pp.classList.toggle('hidden', !player);
-  }
-  if (!player || !state) return;
-  const [id, info] = player;
+function makePlayerCard(entry: [TabId, MediaInfo]): HTMLElement {
+  const id = entry[0];
+  return h(
+    'div',
+    { class: 'now', 'data-id': id },
+    h(
+      'button',
+      { class: 'now-main', title: 'Go to this tab', onclick: () => dispatch({ type: 'tab.activate', id }) },
+      h('span', { class: 'art' }),
+      h('span', { class: 'text' }, h('span', { class: 'title' }), h('span', { class: 'sub' })),
+    ),
+    h(
+      'div',
+      { class: 'now-controls' },
+      h('button', { class: 'icon-btn prev', title: 'Previous', onclick: mediaAction(id, 'previoustrack') }),
+      h('button', { class: 'icon-btn pp', title: 'Play/Pause', onclick: togglePlayOf(id) }),
+      h('button', { class: 'icon-btn next', title: 'Next', onclick: mediaAction(id, 'nexttrack') }),
+    ),
+  );
+}
+
+function updatePlayerCard(el: HTMLElement, entry: [TabId, MediaInfo]): void {
+  if (!state) return;
+  const [id, info] = entry;
   const tab = state.tabs[id];
   const title = info.title || tab.title || info.host;
   const sub = [info.artist, info.host].filter(Boolean).join(' · ');
-  setText(nowTitle, title);
-  setText(nowSub, sub);
+  setText(el.querySelector('.title') as HTMLElement, title);
+  setText(el.querySelector('.sub') as HTMLElement, sub);
+  const art = el.querySelector('.art') as HTMLElement;
   const artKey = info.artwork ? `img:${info.artwork}` : 'icon';
-  const makeArt = () => (info.artwork ? document.createTextNode('') : svg(ICONS.music));
-  setIconKey(nowArt, artKey, makeArt);
+  setIconKey(art, artKey, () => (info.artwork ? document.createTextNode('') : svg(ICONS.music)));
   const bg = info.artwork ? `url("${info.artwork}")` : '';
-  if (nowArt.style.backgroundImage !== bg) nowArt.style.backgroundImage = bg;
-  setClass(now, 'playing', info.playing);
+  if (art.style.backgroundImage !== bg) art.style.backgroundImage = bg;
+  setClass(el, 'playing', info.playing);
   const can = (a: MediaAction) => info.actions.length === 0 || info.actions.includes(a);
-  nowPrev.disabled = !info.actions.includes('previoustrack');
-  nowNext.disabled = !info.actions.includes('nexttrack');
-  nowPP.disabled = !(can('play') || can('pause'));
-  const ppKey = info.playing ? 'pause' : 'play';
-  setIconKey(nowPP, ppKey, () => svg(info.playing ? ICONS.pause : ICONS.play));
-  setIconKey(nowPrev, 'prev', () => svg(ICONS.prev));
-  setIconKey(nowNext, 'next', () => svg(ICONS.next));
+  const prev = el.querySelector('.prev') as HTMLButtonElement;
+  const pp = el.querySelector('.pp') as HTMLButtonElement;
+  const next = el.querySelector('.next') as HTMLButtonElement;
+  prev.disabled = !info.actions.includes('previoustrack');
+  next.disabled = !info.actions.includes('nexttrack');
+  pp.disabled = !(can('play') || can('pause'));
+  setIconKey(pp, info.playing ? 'pause' : 'play', () => svg(info.playing ? ICONS.pause : ICONS.play));
+  setIconKey(prev, 'prev', () => svg(ICONS.prev));
+  setIconKey(next, 'next', () => svg(ICONS.next));
+}
+
+function renderPlayer(): void {
+  const list = currentPlayers();
+  syncChildren(players, list, (e) => e[0], makePlayerCard, updatePlayerCard);
+  const top = list[0];
+  playerTab = top ? top[0] : null;
+  for (const m of minis) {
+    m.pill.classList.toggle('hidden', !top);
+    m.pp.classList.toggle('hidden', !top);
+  }
+  if (!top || !state) return;
+  const [id, info] = top;
+  const title = info.title || state.tabs[id].title || info.host;
+  const sub = [info.artist, info.host].filter(Boolean).join(' · ');
+  const artKey = info.artwork ? `img:${info.artwork}` : 'icon';
+  const bg = info.artwork ? `url("${info.artwork}")` : '';
   for (const m of minis) {
     const art = m.pill.querySelector('.art') as HTMLElement;
-    setIconKey(art, artKey, makeArt);
+    setIconKey(art, artKey, () => (info.artwork ? document.createTextNode('') : svg(ICONS.music)));
     if (art.style.backgroundImage !== bg) art.style.backgroundImage = bg;
     setText(m.pill.querySelector('.t') as HTMLElement, title);
-    m.pill.title = `${title}${sub ? ` — ${sub}` : ''}`;
-    setIconKey(m.pp, ppKey, () => svg(info.playing ? ICONS.pause : ICONS.play));
-    m.pp.disabled = nowPP.disabled;
+    m.pill.title = `${list.length > 1 ? `${list.length} players · ` : ''}${title}${sub ? ` — ${sub}` : ''}`;
+    setIconKey(m.pp, info.playing ? 'pause' : 'play', () => svg(info.playing ? ICONS.pause : ICONS.play));
+    m.pp.disabled = info.actions.length > 0 && !info.actions.includes('play') && !info.actions.includes('pause');
   }
 }
 

@@ -40,6 +40,7 @@ export class Overlay {
     });
     view.setBackgroundColor('#00000000');
     view.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    this.c.wireKeys(view.webContents);
     view.webContents.on('did-finish-load', () => {
       this.ready = true;
       for (const m of this.queue.splice(0)) this.send(m);
