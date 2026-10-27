@@ -10,7 +10,7 @@
 <body>
   <main class="page settings">
     <h1>Settings</h1>
-    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button></nav>
+    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="about">About</button></nav>
     <section class="s-body">
 
       <div class="s-page" data-page="general">
@@ -89,6 +89,33 @@
         <div id="s-extensions"></div>
         <div class="row"><button class="btn" id="s-ext-add">Add unpacked extension…</button></div>
         <p class="s-foot">Chord loads unpacked extensions: a folder with a <code>manifest.json</code>. Download the extension’s source or unzip its <code>.crx</code>, then pick that folder. Content scripts, storage and most page-level APIs work; toolbar popups are not shown.</p>
+      </div>
+      <div class="s-page" data-page="about">
+        <div class="about-head">
+          <div class="about-logo"><svg viewBox="0 0 16 16"><rect x="2" y="9" width="3" height="5" rx="0.8"/><rect x="6" y="5" width="3" height="9" rx="0.8"/><rect x="10" y="2" width="3" height="12" rx="0.8"/></svg></div>
+          <div>
+            <h2>Chord <span id="a-version"></span></h2>
+            <p class="s-foot" style="margin:2px 0 0" id="a-runtime"></p>
+            <p class="s-foot" style="margin:2px 0 0" id="a-platform"></p>
+          </div>
+        </div>
+        <div class="row" style="margin:14px 0 6px">
+          <button class="btn" id="a-site">Website</button>
+          <button class="btn" id="a-github">Source on GitHub</button>
+          <button class="btn" id="a-releases">Releases</button>
+          <button class="btn" id="a-diag">Copy Diagnostics</button>
+        </div>
+        <p class="s-foot">Chord is free software under the MIT license. Profile folder: <code id="a-userdata"></code></p>
+        <h3>Runs on</h3>
+        <div class="lic-list" id="a-runtime-list"></div>
+        <h3>Filter lists (Shields)</h3>
+        <div class="lic-list">
+          <a class="lic" href="https://easylist.to/" target="_blank"><span class="n">EasyList</span><span class="v">GPL-3.0 / CC BY-SA 3.0</span></a>
+          <a class="lic" href="https://easylist.to/" target="_blank"><span class="n">EasyPrivacy</span><span class="v">GPL-3.0 / CC BY-SA 3.0</span></a>
+          <a class="lic" href="https://github.com/ghostery/adblocker" target="_blank"><span class="n">Ghostery prebuilt engine</span><span class="v">MPL-2.0</span></a>
+        </div>
+        <h3>Built with</h3>
+        <div class="lic-list" id="a-tools-list"></div>
       </div>
       <p class="s-foot">Changes apply immediately and are saved with your configuration.</p>
     </section>

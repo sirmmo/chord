@@ -129,6 +129,7 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Set Chord as Default Browser', click: d({ type: 'app.setDefaultBrowser' }) },
         sep,
         { label: 'Copy Diagnostics', click: d({ type: 'diagnostics.copy' }) },
+        { label: 'About Chord', click: d({ type: 'settings.open', page: 'about' }) },
       ],
     },
   ];

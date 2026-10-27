@@ -178,7 +178,7 @@ export type Command =
   | { type: 'nav.stop' }
   | { type: 'palette.open'; intent: 'new' | 'current' }
   | { type: 'palette.close' }
-  | { type: 'settings.open' }
+  | { type: 'settings.open'; page?: string }
   | { type: 'sidebar.peek'; on: boolean }
   | { type: 'find.open' }
   | { type: 'find.query'; text: string; forward: boolean; findNext: boolean }
@@ -282,6 +282,17 @@ export interface SmartInfo {
 }
 export type SmartStatus = Record<TabId, SmartInfo>;
 
+export interface AppInfo {
+  version: string;
+  electron: string;
+  chrome: string;
+  node: string;
+  v8: string;
+  platform: string;
+  arch: string;
+  userData: string;
+}
+
 export interface HistoryEntry {
   id: string;
   url: string;
@@ -335,4 +346,5 @@ export interface ChordApi {
   getDownloads(): Promise<DownloadsStatus>;
   onHistory(cb: (info: { total: number }) => void): () => void;
   getHistory(query: HistoryQuery): Promise<HistoryResult>;
+  getInfo(): Promise<AppInfo>;
 }

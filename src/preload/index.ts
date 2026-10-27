@@ -26,6 +26,7 @@ const api: ChordApi = {
   getDownloads: () => ipcRenderer.invoke('downloads'),
   onHistory: listen<{ total: number }>('history'),
   getHistory: (query: HistoryQuery) => ipcRenderer.invoke('history', query),
+  getInfo: () => ipcRenderer.invoke('info'),
 };
 
 contextBridge.exposeInMainWorld('chord', api);

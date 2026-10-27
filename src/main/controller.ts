@@ -2,7 +2,7 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell, typ
 import { readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import type { Action, Command, Message, SidebarMessage, State, TabId } from '../shared/types.ts';
+import type { Action, AppInfo, Command, Message, SidebarMessage, State, TabId } from '../shared/types.ts';
 import { isCommand } from '../shared/types.ts';
 import { activeSpace, focusedTab, hydrate, reduce, type Ctx } from '../shared/model.ts';
 import { titleFor } from '../shared/url.ts';
@@ -75,6 +75,7 @@ export class Controller {
     });
     ipcMain.handle('state', (event) => (this.trusted(event) ? this.state : null));
     ipcMain.handle('extensions', (event) => (this.trusted(event) ? this.extensions.getStatus() : {}));
+    ipcMain.handle('info', (event) => (this.trusted(event) ? this.appInfo() : null));
     ipcMain.handle('smart', (event) => (this.trusted(event) ? this.smart.getStatus() : {}));
     ipcMain.handle('downloads', (event) => (this.trusted(event) ? this.downloads.status() : { items: [], active: 0 }));
 
@@ -334,7 +335,7 @@ export class Controller {
         this.overlay.hide();
         return;
       case 'settings.open':
-        this.openInternal('chord://settings/');
+        this.openInternal('chord://settings/', cmd.page);
         return;
       case 'sidebar.peek':
         if (this.peeking === cmd.on || this.state.settings.sidebarOpen) {
@@ -514,11 +515,28 @@ export class Controller {
   }
 
   /** Show one of Chord's own pages: reuse it if the active space already has it open. */
-  openInternal(url: string): void {
+  openInternal(url: string, hash?: string): void {
     const space = activeSpace(this.state);
-    const existing = [...space.pinned, ...space.today].map((id) => this.state.tabs[id]).find((t) => t && t.url === url);
-    if (existing) this.apply({ type: 'tab.activate', id: existing.id });
-    else this.apply({ type: 'tab.new', url });
+    const base = url.split('#')[0];
+    const target = hash ? `${base}#${hash}` : url;
+    const existing = [...space.pinned, ...space.today].map((id) => this.state.tabs[id]).find((t) => t && t.url.split('#')[0] === base);
+    if (existing) {
+      this.apply({ type: 'tab.activate', id: existing.id });
+      if (hash && existing.url !== target) this.navigate(existing.id, target);
+    } else this.apply({ type: 'tab.new', url: target });
+  }
+
+  appInfo(): AppInfo {
+    return {
+      version: app.getVersion(),
+      electron: process.versions.electron,
+      chrome: process.versions.chrome,
+      node: process.versions.node,
+      v8: process.versions.v8,
+      platform: `${process.platform} ${process.getSystemVersion()}`,
+      arch: process.arch,
+      userData: app.getPath('userData'),
+    };
   }
 
   private navigate(id: TabId, url: string): void {

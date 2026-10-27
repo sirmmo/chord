@@ -6,6 +6,7 @@ import { warnIfTranslated } from './diagnostics.ts';
 import { registerInternalScheme } from './internal.ts';
 
 app.setName('Chord');
+app.setAboutPanelOptions({ applicationName: 'Chord', applicationVersion: app.getVersion(), website: 'https://ingmmo.com/chord/', copyright: 'MIT licensed · github.com/sirmmo/chord' });
 registerInternalScheme();
 
 // The Windows portable build (electron-builder "portable" target) sets this to the

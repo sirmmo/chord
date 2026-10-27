@@ -60,7 +60,8 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   permission prompts, OAuth-style popups opened as tabs.
 - **Settings page** at `chord://settings` (`⌘,`), a tab like any other: General
   (smart pages, tray, downloads, address bar, archiving, search engine, default browser,
-  import and export), Appearance, Layouts, and Add-ins.
+  import and export), Appearance, Layouts, Add-ins, and About (version, runtime and the
+  open-source projects Chord is built on, generated from the dependency tree at build time).
 - **Address bar**: an optional editable URL field across the top of the page,
   toggled with `⌘⇧L`, from Settings, or from the View menu. Type a URL or a search
   and press Enter.

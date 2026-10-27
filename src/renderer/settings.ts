@@ -52,7 +52,7 @@ const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = {};
 
-const PAGES = ['general', 'appearance', 'layouts', 'addins'];
+const PAGES = ['general', 'appearance', 'layouts', 'addins', 'about'];
 const showPage = (page: string) => {
   settingsPage = PAGES.includes(page) ? page : 'general';
   $('#s-tabs').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === settingsPage));
@@ -253,3 +253,57 @@ $('#s-layout-add').onclick = () => {
   sLayoutSpec.value = '';
   previewInput();
 };
+
+// ---- about page ----
+
+interface Credit {
+  name: string;
+  version: string;
+  license: string;
+  url: string;
+}
+const RUNTIME_NAMES: Record<string, string> = {
+  electron: 'Electron',
+  '@ghostery/adblocker-electron': 'Ghostery adblocker (Electron)',
+  '@ghostery/adblocker': 'Ghostery adblocker engine',
+  '@ghostery/adblocker-electron-preload': 'Ghostery adblocker preload',
+  '@ghostery/adblocker-content': 'Ghostery adblocker content',
+  '@ghostery/adblocker-extended-selectors': 'Ghostery extended selectors',
+  'tldts-experimental': 'tldts (public suffix list parsing)',
+};
+const openExternal = (url: string) => dispatch({ type: 'open.external', url });
+$('#a-site').onclick = () => openExternal('https://ingmmo.com/chord/');
+$('#a-github').onclick = () => openExternal('https://github.com/sirmmo/chord');
+$('#a-releases').onclick = () => openExternal('https://github.com/sirmmo/chord/releases');
+$('#a-diag').onclick = () => dispatch({ type: 'diagnostics.copy' });
+
+function creditRow(c: Credit, label = ''): HTMLElement {
+  return h(
+    'a',
+    { class: 'lic', href: c.url, onclick: (e: MouseEvent) => { e.preventDefault(); openExternal(c.url); } },
+    h('span', { class: 'n' }, label || RUNTIME_NAMES[c.name] || c.name),
+    h('span', { class: 'v' }, c.version),
+    h('span', { class: 'l' }, c.license),
+  );
+}
+
+void api.getInfo().then((info) => {
+  if (!info) return;
+  $('#a-version').textContent = `v${info.version}`;
+  $('#a-runtime').textContent = `Electron ${info.electron} · Chromium ${info.chrome} · Node ${info.node} · V8 ${info.v8}`;
+  $('#a-platform').textContent = `${info.platform} · ${info.arch}`;
+  $('#a-userdata').textContent = info.userData;
+  const runtimeList = $('#a-runtime-list');
+  runtimeList.prepend(
+    creditRow({ name: 'electron', version: info.electron, license: 'MIT', url: 'https://www.electronjs.org/' }),
+    creditRow({ name: 'chromium', version: info.chrome, license: 'BSD-3-Clause', url: 'https://www.chromium.org/' }, 'Chromium'),
+    creditRow({ name: 'node', version: info.node, license: 'MIT', url: 'https://nodejs.org/' }, 'Node.js'),
+  );
+});
+void fetch('licenses.json')
+  .then((r) => r.json())
+  .then((data: { runtime: Credit[]; tools: Credit[] }) => {
+    $('#a-runtime-list').append(...data.runtime.map((c) => creditRow(c)));
+    $('#a-tools-list').replaceChildren(...data.tools.map((c) => creditRow(c, { electron: 'Electron', 'electron-builder': 'electron-builder', esbuild: 'esbuild', typescript: 'TypeScript' }[c.name] ?? c.name)));
+  })
+  .catch(() => {});

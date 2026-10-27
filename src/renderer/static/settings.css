@@ -69,3 +69,16 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 .layout-form input#s-layout-name { width: 130px; }
 .layout-form input#s-layout-spec { width: 150px; }
 .layout-form input.bad { border-color: #ff5f57; }
+
+/* about */
+.about-head { display: flex; align-items: center; gap: 16px; }
+.about-head h2 { margin: 0; font-size: 20px; }
+.about-head h2 span { font-weight: 400; color: var(--muted); font-size: 15px; margin-left: 6px; }
+.about-logo { width: 56px; height: 56px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 22%, transparent); display: grid; place-items: center; }
+.about-logo svg { width: 28px; height: 28px; fill: var(--accent); }
+.lic-list { display: flex; flex-direction: column; gap: 2px; }
+.lic { display: flex; align-items: baseline; gap: 10px; padding: 6px 10px; border-radius: 8px; color: var(--fg); text-decoration: none; }
+.lic:hover { background: var(--hover); }
+.lic .n { font-weight: 600; }
+.lic .v { font-size: 12px; color: var(--muted); }
+.lic .l { font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }

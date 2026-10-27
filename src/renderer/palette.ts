@@ -231,6 +231,7 @@ function compute(raw: string): Item[] {
     { title: `Export Space: ${space.name}`, keywords: 'export json space', run: () => dispatch({ type: 'config.export', spaceId: space.id }) },
     { title: 'Next Split Layout', keywords: 'layout tiling split grid', subtitle: '⌘⌥L', when: space.panes.length > 1, run: () => dispatch({ type: 'space.tilingNext' }) },
     ...presetsFor(space.panes.length, s.settings.tilings).map((p) => ({ title: `Layout: ${p.name}`, keywords: `layout tiling split ${p.spec}`, subtitle: p.spec, when: space.panes.length > 1, run: () => dispatch({ type: 'space.tiling', spec: p.spec }) })),
+    { title: 'About Chord', keywords: 'about version credits licenses open source', subtitle: 'Version and open-source credits', run: () => dispatch({ type: 'settings.open', page: 'about' }) },
     { title: 'History', keywords: 'history visited pages', subtitle: '⌘Y', run: () => dispatch({ type: 'history.open' }) },
     { title: 'Downloads', keywords: 'downloads files progress', subtitle: '⌘⇧J', run: () => dispatch({ type: 'downloads.open' }) },
     { title: 'Import from Arc, Chrome, Brave…', keywords: 'import arc chrome brave edge bookmarks migrate browser', subtitle: 'Spaces and bookmarks from another browser', run: () => dispatch({ type: 'import.browser' }) },
