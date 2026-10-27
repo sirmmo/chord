@@ -44,6 +44,12 @@
           <label>Search engine</label>
           <select id="s-engine"></select>
 
+          <label>Google sign-in</label>
+          <div>
+            <select id="s-google"><option value="firefox">Present as Firefox on accounts.google.com (default)</option><option value="electron">Present as Electron on accounts.google.com</option><option value="off">No special treatment</option></select>
+            <p class="s-foot">Google rejects sign-ins from browsers it takes for embedded apps (“This browser or app may not be secure”). On its sign-in pages only, Chord can identify as Firefox or as Electron, which Google treats differently; every other site sees plain Chromium. If one choice fails, reload the sign-in page with the other.</p>
+          </div>
+
           <label>Pages that manage tabs</label>
           <div id="s-pagetabs" class="s-list"></div>
 

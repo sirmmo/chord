@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import { serveInternalPages } from './internal.ts';
+import { installIdentity, rememberElectronUserAgent } from './identity.ts';
 
 export const PARTITION = 'persist:chord';
 
@@ -65,12 +66,16 @@ export function configureSession(partition = PARTITION): Session {
   const ses = session.fromPartition(partition);
   configured.set(partition, ses);
 
-  // Present as a plain Chromium build: some sites serve degraded pages to unknown UA tokens.
-  const ua = ses
-    .getUserAgent()
+  // Present as a plain Chromium build: some sites serve degraded pages to unknown UA tokens,
+  // and a full Chrome build number is itself a tell (Chrome reports major.0.0.0).
+  const raw = ses.getUserAgent();
+  rememberElectronUserAgent(raw);
+  const ua = raw
     .replace(/ ?Electron\/\S+/i, '')
-    .replace(/ ?chord(-browser)?\/\S+/i, '');
+    .replace(/ ?chord(-browser)?\/\S+/i, '')
+    .replace(/Chrome\/(\d+)\.[\d.]+/, 'Chrome/$1.0.0.0');
   ses.setUserAgent(ua);
+  installIdentity(ses);
 
   ses.setPermissionRequestHandler((wc, permission, callback, details) => {
     if (ALWAYS.has(permission)) return callback(true);

@@ -17,6 +17,7 @@ import { CaptureManager } from './capture.ts';
 import { PageTabsManager } from './pagetabs.ts';
 import { UpdateManager } from './updater.ts';
 import { McpManager } from './mcp.ts';
+import { initIdentityIpc, setGoogleSignIn } from './identity.ts';
 import { setShields } from './session.ts';
 import { buildAppMenu, spaceContextMenu, tabContextMenu, groupContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
@@ -171,6 +172,8 @@ export class Controller {
     this.pageTabs.init();
     this.updates.init();
     this.mcp.init();
+    initIdentityIpc();
+    setGoogleSignIn(this.state.settings.googleSignIn);
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -445,6 +448,7 @@ export class Controller {
     this.pageTabs.diff(prev, next);
     if (prev.settings.updates.check !== next.settings.updates.check) this.updates.schedule();
     if (prev.settings.mcp.enabled !== next.settings.mcp.enabled || prev.settings.mcp.port !== next.settings.mcp.port) this.mcp.sync();
+    if (prev.settings.googleSignIn !== next.settings.googleSignIn) setGoogleSignIn(next.settings.googleSignIn);
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();

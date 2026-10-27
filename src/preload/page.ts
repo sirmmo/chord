@@ -10,6 +10,25 @@ import { contextBridge, ipcRenderer, webFrame } from 'electron';
 const REPORT_KEY = '__chordSmart';
 const ACTION_KEY = '__chordSmartAction';
 
+/** Runs in the page's main world on accounts.google.com: make navigator agree with the User-Agent header Chord sends there. */
+function identityHook(userAgent: string, firefox: string): void {
+  const define = (obj: object, key: string, value: unknown) => {
+    try {
+      Object.defineProperty(obj, key, { get: () => value, configurable: true });
+    } catch {
+      /* not configurable */
+    }
+  };
+  const proto = Object.getPrototypeOf(navigator) as object;
+  define(proto, 'userAgent', userAgent);
+  define(proto, 'appVersion', userAgent.replace(/^Mozilla\//, ''));
+  if (firefox === '1') {
+    define(proto, 'userAgentData', undefined);
+    define(proto, 'vendor', '');
+    define(proto, 'productSub', '20100101');
+  }
+}
+
 /** Runs inside the page's main world. Must stay self-contained: no imports, no closures. */
 function smartHook(reportKey: string, actionKey: string): void {
   const w = window as Window & { __chordHooked?: boolean; APP?: { conference?: Record<string, (...a: unknown[]) => unknown> } };
@@ -372,11 +391,25 @@ function smartHook(reportKey: string, actionKey: string): void {
   });
 }
 
+const bridge = contextBridge as typeof contextBridge & { executeInMainWorld?: (script: { func: (...args: string[]) => void; args?: string[] }) => unknown };
+const runInMainWorld = (func: (...args: string[]) => void, args: string[]) => {
+  if (typeof bridge.executeInMainWorld === 'function') bridge.executeInMainWorld({ func, args });
+  else void webFrame.executeJavaScript(`(${func.toString()})(${args.map((a) => JSON.stringify(a)).join(', ')})`);
+};
+
+// Google's sign-in pages get a different identity (see main/identity.ts); the page must see the same one.
+if (/^(accounts\.google\.com|accounts\.youtube\.com)$/.test(location.host)) {
+  try {
+    const ident = ipcRenderer.sendSync('identity') as { mode: string; userAgent: string } | undefined;
+    if (ident && ident.mode !== 'off' && ident.userAgent) runInMainWorld(identityHook, [ident.userAgent, ident.mode === 'firefox' ? '1' : '0']);
+  } catch (err) {
+    console.warn('Chord identity hook not installed', err);
+  }
+}
+
 if (process.isMainFrame) {
   try {
-    const bridge = contextBridge as typeof contextBridge & { executeInMainWorld?: (script: { func: (...args: string[]) => void; args?: string[] }) => unknown };
-    if (typeof bridge.executeInMainWorld === 'function') bridge.executeInMainWorld({ func: smartHook, args: [REPORT_KEY, ACTION_KEY] });
-    else void webFrame.executeJavaScript(`(${smartHook.toString()})(${JSON.stringify(REPORT_KEY)}, ${JSON.stringify(ACTION_KEY)})`);
+    runInMainWorld(smartHook, [REPORT_KEY, ACTION_KEY]);
   } catch (err) {
     console.warn('Chord page hook not installed', err);
   }

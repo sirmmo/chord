@@ -331,6 +331,15 @@ if ('chord' in navigator && (await navigator.chord.requestTabs())) {
 
 Closing the page closes its subspace. Type declarations: [`docs/chord-page-api.d.ts`](docs/chord-page-api.d.ts).
 
+## Google sign-in
+
+Google refuses sign-ins from what it takes for embedded browsers ("This browser or app
+may not be secure"). On `accounts.google.com` only, Chord therefore presents itself as
+Firefox (User-Agent, no Client Hints, matching `navigator.userAgent`); every other site
+sees plain Chromium. Settings → General → Google sign-in can switch that to Electron's
+own identity, which Google handles through a lighter flow, or turn it off. If one choice
+fails, reload the sign-in page with the other.
+
 ## Something slow or broken?
 
 Help → Copy Diagnostics puts a text report on the clipboard (and in `diagnostics.txt` in

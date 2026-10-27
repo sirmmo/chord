@@ -188,6 +188,8 @@ export interface Theme {
 
 export type Skin = 'chord' | 'lcars';
 
+export type GoogleSignIn = 'firefox' | 'electron' | 'off';
+
 /** An unpacked Chrome extension the user added from a folder. */
 export interface ExtensionEntry {
   path: string;
@@ -230,6 +232,8 @@ export interface Settings {
   /** ad and tracker blocking */
   shields: boolean;
   searchEngine: SearchEngine;
+  /** how Chord presents itself to accounts.google.com, which rejects embedded browsers */
+  googleSignIn: GoogleSignIn;
   /** Chromium troubleshooting switches applied at the next launch */
   flags: TroubleFlags;
   /** origins allowed to open and close tabs of their own through navigator.chord */

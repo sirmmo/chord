@@ -406,3 +406,14 @@ test('windows: remembered per space, deduplicated and pruned on hydrate', () => 
   const back = hydrate(raw, ctx);
   assert.deepEqual(back.windows?.map((w) => w.spaceId), [first, second]);
 });
+
+test('google sign-in setting defaults to firefox and rejects junk', () => {
+  const ctx: Ctx = { now: 1, newId: () => 'x' };
+  const s = initialState(ctx);
+  assert.equal(s.settings.googleSignIn, 'firefox');
+  const raw = JSON.parse(JSON.stringify(s)) as State;
+  (raw.settings as unknown as { googleSignIn: string }).googleSignIn = 'chrome';
+  assert.equal(hydrate(raw, ctx).settings.googleSignIn, 'firefox');
+  const off = reduce(s, { type: 'settings.update', patch: { googleSignIn: 'off' } }, ctx);
+  assert.equal(off.settings.googleSignIn, 'off');
+});

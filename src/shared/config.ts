@@ -40,7 +40,7 @@ export interface ChordConfig {
 
 export type ImportMode = 'merge' | 'replace';
 
-const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'boosts', 'autoPip', 'ai', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
+const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'boosts', 'autoPip', 'ai', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine', 'googleSignIn'];
 
 function tabToConfig(tab: Tab): ConfigTab {
   const out: ConfigTab = { url: tab.homeUrl ?? tab.url };
@@ -147,6 +147,7 @@ export function parseConfig(text: string): ParseResult {
       if (Array.isArray(r.tilings)) settings.tilings = r.tilings.filter((t): t is { name: string; spec: string } => typeof t === 'object' && t !== null && typeof (t as { name?: unknown }).name === 'string' && typeof (t as { spec?: unknown }).spec === 'string');
       if (typeof r.searchEngine === 'string' && ['duckduckgo', 'google', 'brave', 'kagi', 'startpage'].includes(r.searchEngine)) {
         settings.searchEngine = r.searchEngine as Settings['searchEngine'];
+      if (r.googleSignIn === 'firefox' || r.googleSignIn === 'electron' || r.googleSignIn === 'off') settings.googleSignIn = r.googleSignIn;
       }
       if (isRecord(r.theme)) {
         const t = r.theme;

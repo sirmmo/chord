@@ -234,6 +234,8 @@ sIconColor.oninput = () => dispatch({ type: 'theme.update', patch: { iconColor: 
 sFont.onchange = () => dispatch({ type: 'theme.update', patch: { font: sFont.value as 'system' | 'rounded' | 'mono' | 'serif' } });
 sArchive.onchange = () => dispatch({ type: 'settings.update', patch: { archiveAfterHours: Number(sArchive.value) } });
 sEngine.onchange = () => dispatch({ type: 'settings.update', patch: { searchEngine: sEngine.value as keyof typeof SEARCH_ENGINES } });
+const sGoogle = $<HTMLSelectElement>('#s-google');
+sGoogle.onchange = () => dispatch({ type: 'settings.update', patch: { googleSignIn: sGoogle.value as 'firefox' | 'electron' | 'off' } });
 sShields.onchange = () => dispatch({ type: 'settings.update', patch: { shields: sShields.checked } });
 
 function textColorHex(): string {
@@ -266,6 +268,7 @@ function fillSettings(): void {
   sFont.value = t.font;
   sArchive.value = String(s.settings.archiveAfterHours);
   sEngine.value = s.settings.searchEngine;
+  sGoogle.value = s.settings.googleSignIn;
   sShields.checked = s.settings.shields;
   sAddressBar.checked = s.settings.addressBar;
   sSmart.checked = s.settings.smartPages;
