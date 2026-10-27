@@ -40,6 +40,8 @@ export interface Space {
   today: TabId[];
   /** tabs currently shown side by side (split view); usually one */
   panes: TabId[];
+  /** split-view tiling spec (see shared/tiling.ts); equal columns when unset */
+  tiling?: string;
   focused: TabId | null;
 }
 
@@ -89,6 +91,8 @@ export interface Settings {
   askDownloadPath: boolean;
   /** closing the window hides it; Chord keeps running in the menu bar / tray */
   closeToTray: boolean;
+  /** user-defined split-view layouts */
+  tilings: { name: string; spec: string }[];
   /** editable address bar across the top of the page */
   addressBar: boolean;
   extensions: ExtensionEntry[];
@@ -129,6 +133,8 @@ export type Action =
   | { type: 'tab.unfavorite'; id: TabId }
   | { type: 'tab.move'; id: TabId; list: ListName; spaceId?: SpaceId; index: number }
   | { type: 'tab.split'; id: TabId }
+  | { type: 'space.tiling'; spec: string | null; spaceId?: SpaceId }
+  | { type: 'space.tilingNext' }
   | { type: 'tab.unsplit'; id: TabId }
   | { type: 'pane.focus'; id: TabId }
   | { type: 'tab.next' }

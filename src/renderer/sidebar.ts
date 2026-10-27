@@ -7,6 +7,8 @@ import { activeSpace } from '../shared/model.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
 import { applyTheme } from './theme.ts';
+import { computeLayout, GAP, topInsetFor } from '../shared/layout.ts';
+import { cellCount, defaultTiling, formatTiling, parseTiling, resizeColumn, resizeRow, type Tiling } from '../shared/tiling.ts';
 
 const api = window.chord;
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -505,6 +507,7 @@ function render(): void {
     syncChildren($('#spaces'), s.spaces, (sp) => sp.id, makeSpaceDot, (el, sp) => updateSpaceDot(el, sp, s));
   }
   $('#stage').classList.toggle('empty', space.panes.length === 0);
+  renderGutters(s, space);
   renderSmart();
 }
 
@@ -768,4 +771,85 @@ function dropZone(list: HTMLElement, name: ListName): void {
       dispatch({ type: 'tab.new', url, spaceId, activate: false });
     }
   });
+}
+
+// ---- split-view gutters: drag the gaps between panes to reshape the tiling ----
+
+const gutters = $('#gutters');
+let draggingGutter = false;
+window.addEventListener('resize', () => {
+  if (state) renderGutters(state, activeSpace(state));
+});
+
+function effectiveTiling(space: Space): Tiling {
+  const n = space.panes.length;
+  const t = space.tiling ? parseTiling(space.tiling) : null;
+  return t && cellCount(t) === n ? t : defaultTiling(n);
+}
+
+function renderGutters(s: State, space: Space): void {
+  if (draggingGutter) return;
+  const n = space.panes.length;
+  if (n < 2) {
+    if (gutters.childElementCount) gutters.replaceChildren();
+    return;
+  }
+  const tiling = effectiveTiling(space);
+  const { content, panes } = computeLayout({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    sidebarOpen: s.settings.sidebarOpen || peeking,
+    sidebarWidth: s.settings.sidebarWidth,
+    panes: n,
+    topInset: topInsetFor(api.platform, s.settings.addressBar),
+    tiling,
+  });
+  const els: HTMLElement[] = [];
+  let k = 0;
+  tiling.rows.forEach((row, r) => {
+    const first = panes[k];
+    row.cols.forEach((_c, c) => {
+      const rect = panes[k + c];
+      if (c < row.cols.length - 1) els.push(gutter('v', { x: rect.x + rect.width, y: rect.y, width: GAP, height: rect.height }, r, c, content, tiling));
+    });
+    if (r < tiling.rows.length - 1) els.push(gutter('h', { x: content.x, y: first.y + first.height, width: content.width, height: GAP }, r, -1, content, tiling));
+    k += row.cols.length;
+  });
+  gutters.replaceChildren(...els);
+}
+
+function gutter(kind: 'v' | 'h', rect: { x: number; y: number; width: number; height: number }, row: number, col: number, content: { x: number; y: number; width: number; height: number }, tiling: Tiling): HTMLElement {
+  const el = h('div', { class: `gutter ${kind}` });
+  // a little wider than the gap so it is easy to grab; the native views hide the excess
+  const pad = 2;
+  el.style.left = `${rect.x - (kind === 'v' ? pad : 0)}px`;
+  el.style.top = `${rect.y - (kind === 'h' ? pad : 0)}px`;
+  el.style.width = `${rect.width + (kind === 'v' ? pad * 2 : 0)}px`;
+  el.style.height = `${rect.height + (kind === 'h' ? pad * 2 : 0)}px`;
+  el.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    draggingGutter = true;
+    el.classList.add('dragging');
+    let current = tiling;
+    let frame = 0;
+    const move = (ev: MouseEvent) => {
+      const at = kind === 'v' ? (ev.clientX - content.x) / content.width : (ev.clientY - content.y) / content.height;
+      current = kind === 'v' ? resizeColumn(tiling, row, col, at) : resizeRow(tiling, row, at);
+      const shift = kind === 'v' ? ev.clientX - (rect.x + rect.width / 2) : ev.clientY - (rect.y + rect.height / 2);
+      el.style.transform = kind === 'v' ? `translateX(${shift}px)` : `translateY(${shift}px)`;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => dispatch({ type: 'space.tiling', spec: formatTiling(current) }));
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      draggingGutter = false;
+      cancelAnimationFrame(frame);
+      dispatch({ type: 'space.tiling', spec: formatTiling(current) });
+      if (state) renderGutters(state, activeSpace(state));
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  });
+  return el;
 }

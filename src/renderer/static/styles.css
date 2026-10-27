@@ -326,3 +326,13 @@ footer { flex: none; display: flex; align-items: center; gap: 4px; padding-top: 
 .space-dot { position: relative; }
 .space-dot .badge { position: absolute; top: -2px; right: -2px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center; box-sizing: border-box; }
 .space-dot.has-badge .badge { display: block; }
+
+/* gaps between split panes are the only part of the stage the native views leave uncovered: drag them */
+#gutters { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+.gutter { position: absolute; pointer-events: auto; }
+.gutter.v { cursor: col-resize; }
+.gutter.h { cursor: row-resize; }
+.gutter::after { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 2px; background: color-mix(in srgb, var(--accent) 60%, transparent); opacity: 0; transition: opacity 0.15s; }
+.gutter.v::after { width: 3px; height: 36px; }
+.gutter.h::after { width: 36px; height: 3px; }
+.gutter:hover::after, .gutter.dragging::after { opacity: 1; }

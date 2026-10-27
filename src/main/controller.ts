@@ -234,7 +234,8 @@ export class Controller {
   }
 
   private refreshMenu(): void {
-    const key = this.state.spaces.map((sp) => `${sp.id}:${sp.icon ?? ''}${sp.name}`).join('|') + `|ab=${this.state.settings.addressBar}`;
+    const space = activeSpace(this.state);
+    const key = this.state.spaces.map((sp) => `${sp.id}:${sp.icon ?? ''}${sp.name}`).join('|') + `|ab=${this.state.settings.addressBar}|panes=${space.panes.length}|tiling=${space.tiling ?? ''}|custom=${this.state.settings.tilings.map((t) => t.spec).join(',')}`;
     if (key === this.menuKey) return;
     this.menuKey = key;
     buildAppMenu(this);
@@ -503,7 +504,7 @@ function viewSignature(s: State): string {
   const space = activeSpace(s);
   const awake: string[] = [];
   for (const t of Object.values(s.tabs)) if (t.awake) awake.push(t.id + (t.muted ? '!' : ''));
-  return [s.activeSpaceId, space.panes.join(','), space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
+  return [s.activeSpaceId, space.panes.join(','), space.tiling ?? '', space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
 }
 
 function isMessage(m: unknown): m is Message {

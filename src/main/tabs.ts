@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace } from '../shared/model.ts';
 import { computeLayout } from '../shared/layout.ts';
+import { parseTiling } from '../shared/tiling.ts';
 import { PARTITION } from './session.ts';
 import { PAGE_PRELOAD, PRELOAD } from './paths.ts';
 import { isInternal } from '../shared/url.ts';
@@ -112,6 +113,7 @@ export class TabManager {
       sidebarWidth: state.settings.sidebarWidth,
       panes: visible.length,
       topInset: this.c.topInset(),
+      tiling: space.tiling ? parseTiling(space.tiling) : null,
     });
     visible.forEach((id, k) => this.views.get(id)!.setBounds(panes[k]));
   }

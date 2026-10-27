@@ -1,5 +1,7 @@
 // Pure layout math for the content area: where the web views go.
 
+import { tilingRects, cellCount, type Tiling } from './tiling.ts';
+
 export interface Rect {
   x: number;
   y: number;
@@ -16,10 +18,20 @@ export interface LayoutInput {
   fullscreen?: boolean;
   /** distance from the top of the window to the content; defaults to PAD */
   topInset?: number;
+  /** how the panes share the content area; equal columns when absent or not matching */
+  tiling?: Tiling | null;
 }
 
 export const PAD = 8;
 export const GAP = 6;
+/** Windows and Linux draw the window controls in a strip this tall. */
+export const TITLEBAR_STRIP = 36;
+export const ADDRESS_BAR_HEIGHT = 44;
+
+/** Distance from the top of the window to the page: window controls plus the address bar. */
+export function topInsetFor(platform: string, addressBar: boolean): number {
+  return (platform === 'darwin' ? PAD : TITLEBAR_STRIP) + (addressBar ? ADDRESS_BAR_HEIGHT : 0);
+}
 
 export function computeLayout(i: LayoutInput): { content: Rect; panes: Rect[] } {
   if (i.fullscreen) {
@@ -35,6 +47,7 @@ export function computeLayout(i: LayoutInput): { content: Rect; panes: Rect[] } 
     height: Math.max(0, i.height - top - PAD),
   };
   const n = Math.max(0, i.panes);
+  if (n > 0 && i.tiling && cellCount(i.tiling) === n) return { content, panes: tilingRects(i.tiling, content, GAP) };
   const panes: Rect[] = [];
   if (n > 0) {
     const w = (content.width - GAP * (n - 1)) / n;

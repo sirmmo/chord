@@ -28,6 +28,10 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
 - **Command bar** (`⌘T` for a new tab, `⌘L` to edit the current URL): URLs, search,
   open tabs, archived tabs, and commands. `⌘↩` forces a new tab.
 - **Split view**: `⌘⇧D` adds the next tab beside the current one (up to four),
+  tiled any way you like: pick a layout from Tabs → Split Layout, cycle with `⌘⌥L`,
+  or write your own in Settings → Layouts (`50/50 | 100` is two panes on top and one
+  across the bottom; `2:50/50 | 1:100` makes the top row twice as tall). Drag the gap
+  between two panes to adjust the layout live. Each space remembers its layout.
   or use "Open in Split View" from a tab's or a link's context menu.
 - **Smart pages**: what a tab gives away is shown from every space, and you can act on it.
   - Players (YouTube Music, Spotify, Amazon Music, anything with a Media Session or a

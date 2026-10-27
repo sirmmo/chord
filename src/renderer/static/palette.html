@@ -20,7 +20,7 @@
   <div id="settings-backdrop">
     <div id="settings" role="dialog" aria-label="Settings">
       <div class="s-head">
-        <div class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="addins">Add-ins</button></div>
+        <div class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button></div>
         <button id="settings-close" title="Close (Esc)">×</button>
       </div>
 
@@ -77,6 +77,16 @@
         </div>
       </div>
 
+      <div class="s-page" data-page="layouts">
+        <p class="s-foot" style="margin-top:0">Split view can tile its panes any way you like. A layout is rows separated by <code>|</code>, columns by <code>/</code>, weights as numbers; a row may start with its own weight and a colon. <code>50/50 | 100</code> puts two panes on top and one across the bottom; <code>2:50/50 | 1:100</code> makes the top row twice as tall. Up to four panes. Drag the gaps between panes to adjust a layout live.</p>
+        <h3>Current space</h3>
+        <div id="s-layout-current" class="layout-grid"></div>
+        <h3>Your layouts</h3>
+        <div id="s-layouts" class="layout-grid"></div>
+        <div class="row layout-form"><input type="text" id="s-layout-name" placeholder="Name"><input type="text" id="s-layout-spec" placeholder="50/50 | 100"><span id="s-layout-preview" class="layout-preview"></span><button class="btn" id="s-layout-add">Add</button></div>
+        <h3>Built in</h3>
+        <div id="s-layouts-builtin" class="layout-grid"></div>
+      </div>
       <div class="s-page" data-page="addins">
         <h3>Built in</h3>
         <div class="addin">

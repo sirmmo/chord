@@ -4,6 +4,7 @@
 import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabId, Theme } from './types.ts';
 import { titleFor } from './url.ts';
 import { importConfig } from './config.ts';
+import { cellCount, parseTiling, presetsFor } from './tiling.ts';
 
 export const SPACE_COLORS = ['#5B6CFF', '#FF6B6B', '#2EC4B6', '#FFB347', '#B388FF', '#4CC9F0', '#F72585', '#8AC926'];
 export const MAX_PANES = 4;
@@ -22,7 +23,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, closeToTray: false, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, closeToTray: false, tilings: [], addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -33,7 +34,10 @@ export function mergeSettings(raw: unknown): Settings {
   const extensions = Array.isArray(r.extensions)
     ? r.extensions.filter((e): e is Settings['extensions'][number] => typeof e === 'object' && e !== null && typeof e.path === 'string')
     : [];
-  return { ...defaultSettings(), ...r, theme, extensions };
+  const tilings = Array.isArray(r.tilings)
+    ? r.tilings.filter((t): t is { name: string; spec: string } => typeof t === 'object' && t !== null && typeof t.name === 'string' && typeof t.spec === 'string' && parseTiling(t.spec) !== null)
+    : [];
+  return { ...defaultSettings(), ...r, theme, extensions, tilings };
 }
 
 export function clampTint(v: unknown): number {
@@ -366,6 +370,24 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       tab.lastActiveAt = now;
       space.panes.push(a.id);
       space.focused = a.id;
+      return s;
+    }
+    case 'space.tiling': {
+      const target = a.spaceId ? spaceById(s, a.spaceId) : space;
+      if (!target) return prev;
+      if (a.spec === null) delete target.tiling;
+      else {
+        const t = parseTiling(a.spec);
+        if (!t) return prev;
+        target.tiling = a.spec;
+      }
+      return s;
+    }
+    case 'space.tilingNext': {
+      const options = presetsFor(space.panes.length, s.settings.tilings).map((p) => p.spec);
+      if (options.length === 0) return prev;
+      const current = space.tiling && parseTiling(space.tiling) && cellCount(parseTiling(space.tiling)!) === space.panes.length ? options.indexOf(space.tiling) : -1;
+      space.tiling = options[(current + 1) % options.length];
       return s;
     }
     case 'tab.unsplit': {

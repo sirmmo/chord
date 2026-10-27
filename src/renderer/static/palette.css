@@ -147,3 +147,21 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 .switch input:checked + i { background: var(--accent); }
 .switch input:checked + i::after { transform: translateX(14px); }
 #s-extensions:empty::before { content: "No extensions added yet."; font-size: 13px; color: var(--muted); display: block; padding: 4px 0 8px; }
+
+/* layouts */
+.layout-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.layout-card { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 112px; padding: 8px 6px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--fg); font: inherit; font-size: 12px; cursor: default; position: relative; }
+.layout-card:hover { background: var(--hover); }
+.layout-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.layout-card .name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layout-card .spec { font-size: 10.5px; color: var(--muted); }
+.layout-card .remove { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 13px; line-height: 18px; padding: 0; display: none; }
+.layout-card:hover .remove { display: block; }
+.layout-card .remove:hover { background: color-mix(in srgb, #ff5f57 30%, transparent); color: var(--fg); }
+.layout-preview { display: inline-grid; width: 64px; height: 40px; }
+.layout-preview svg { width: 64px; height: 40px; }
+.layout-preview rect { fill: color-mix(in srgb, var(--accent) 45%, transparent); stroke: var(--accent); stroke-width: 1; }
+.layout-form input[type="text"] { font: inherit; font-size: 13px; color: var(--fg); background: var(--hover); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; min-width: 0; }
+.layout-form input#s-layout-name { width: 130px; }
+.layout-form input#s-layout-spec { width: 150px; }
+.layout-form input.bad { border-color: #ff5f57; }

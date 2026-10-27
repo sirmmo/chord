@@ -1,3 +1,4 @@
+import { presetsFor } from '../shared/tiling.ts';
 import { app, clipboard, dialog, Menu, shell, type ContextMenuParams, type MenuItemConstructorOptions, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { Message, SpaceId, TabId } from '../shared/types.ts';
@@ -97,6 +98,7 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Pin / Unpin Tab', accelerator: 'CmdOrCtrl+D', click: d({ type: 'tab.togglePin' }) },
         { label: 'Add Focused Tab to Split View', accelerator: 'CmdOrCtrl+Shift+D', click: () => splitFocused(c) },
         { label: 'Remove from Split View', accelerator: 'CmdOrCtrl+Alt+W', click: () => unsplitFocused(c) },
+        { label: 'Split Layout', submenu: layoutMenu(c) },
         sep,
         { label: 'Archive Today’s Tabs', click: d({ type: 'today.clear' }) },
         sep,
@@ -288,4 +290,18 @@ export function pageContextMenu(c: Controller, tabId: TabId, wc: WebContents, p:
   );
   if (!app.isPackaged) items.push({ label: 'Copy Page URL', click: () => clipboard.writeText(p.pageURL) });
   Menu.buildFromTemplate(items).popup({ window: c.win });
+}
+
+function layoutMenu(c: Controller): MenuItemConstructorOptions[] {
+  const space = activeSpace(c.state);
+  const d = (m: Message) => () => c.dispatch(m);
+  const presets = presetsFor(space.panes.length, c.state.settings.tilings);
+  const items: MenuItemConstructorOptions[] = [
+    { label: 'Next Layout', accelerator: 'CmdOrCtrl+Alt+L', enabled: presets.length > 0, click: d({ type: 'space.tilingNext' }) },
+    { type: 'separator' },
+    { label: 'Equal Columns', type: 'radio', checked: !space.tiling, click: d({ type: 'space.tiling', spec: null }) },
+    ...presets.map((p) => ({ label: `${p.name}  (${p.spec})`, type: 'radio' as const, checked: space.tiling === p.spec, click: d({ type: 'space.tiling', spec: p.spec }) })),
+  ];
+  if (space.panes.length < 2) items.push({ type: 'separator' }, { label: 'Add a second pane with ⌘⇧D to choose a layout', enabled: false });
+  return items;
 }

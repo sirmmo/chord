@@ -1,5 +1,6 @@
 // The overlay page: command bar (⌘T / ⌘L) and find bar (⌘F).
 
+import { cellCount, defaultTiling, formatTiling, parseTiling, presetsFor, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
 import type { ExtensionsStatus, Message, State, Tab } from '../shared/types.ts';
 import { activeSpace, focusedTab, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
@@ -230,6 +231,8 @@ function compute(raw: string): Item[] {
     { title: 'Clear Archive', keywords: 'archive delete', when: s.archived.length > 0, run: () => dispatch({ type: 'archived.clear' }) },
     { title: 'Export Configuration', keywords: 'export json backup spaces', subtitle: 'Save spaces, tabs and settings to a JSON file', run: () => dispatch({ type: 'config.export' }) },
     { title: `Export Space: ${space.name}`, keywords: 'export json space', run: () => dispatch({ type: 'config.export', spaceId: space.id }) },
+    { title: 'Next Split Layout', keywords: 'layout tiling split grid', subtitle: '⌘⌥L', when: space.panes.length > 1, run: () => dispatch({ type: 'space.tilingNext' }) },
+    ...presetsFor(space.panes.length, s.settings.tilings).map((p) => ({ title: `Layout: ${p.name}`, keywords: `layout tiling split ${p.spec}`, subtitle: p.spec, when: space.panes.length > 1, run: () => dispatch({ type: 'space.tiling', spec: p.spec }) })),
     { title: 'Downloads', keywords: 'downloads files progress', subtitle: '⌘⇧J', run: () => dispatch({ type: 'downloads.open' }) },
     { title: 'Import from Arc, Chrome, Brave…', keywords: 'import arc chrome brave edge bookmarks migrate browser', subtitle: 'Spaces and bookmarks from another browser', run: () => dispatch({ type: 'import.browser' }) },
     { title: 'Import Configuration', keywords: 'import json restore spaces', subtitle: 'Merge or replace from a JSON file', run: () => dispatch({ type: 'config.importFile' }) },
@@ -401,6 +404,7 @@ function textColorHex(): string {
 function fillSettings(): void {
   const s = state;
   if (!s) return;
+  renderLayouts();
   const t = s.settings.theme;
   const space = activeSpace(s);
   const active = document.activeElement;
@@ -436,3 +440,85 @@ function showSettings(): void {
   fillSettings();
   $('#settings-close').focus();
 }
+
+// ---- layouts page ----
+
+const sLayoutName = $<HTMLInputElement>('#s-layout-name');
+const sLayoutSpec = $<HTMLInputElement>('#s-layout-spec');
+const sLayoutPreview = $('#s-layout-preview');
+
+function layoutPreview(t: Tiling): SVGSVGElement {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  el.setAttribute('viewBox', '0 0 64 40');
+  for (const r of tilingRects(t, { x: 1, y: 1, width: 62, height: 38 }, 3)) {
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', String(r.x));
+    rect.setAttribute('y', String(r.y));
+    rect.setAttribute('width', String(Math.max(1, r.width)));
+    rect.setAttribute('height', String(Math.max(1, r.height)));
+    rect.setAttribute('rx', '2');
+    el.append(rect);
+  }
+  return el;
+}
+
+function layoutCard(name: string, spec: string, on: boolean, onRemove?: () => void): HTMLElement {
+  const t = parseTiling(spec);
+  const card = h(
+    'button',
+    { class: `layout-card${on ? ' on' : ''}`, title: `${name} (${spec})`, onclick: () => dispatch({ type: 'space.tiling', spec }) },
+    h('span', { class: 'layout-preview' }, t ? layoutPreview(t) : ''),
+    h('span', { class: 'name' }, name),
+    h('span', { class: 'spec' }, spec),
+  );
+  if (onRemove) {
+    card.append(
+      h('button', { class: 'remove', title: 'Remove', onclick: (e: MouseEvent) => { e.stopPropagation(); onRemove(); } }, '×'),
+    );
+  }
+  return card;
+}
+
+function renderLayouts(): void {
+  const s = state;
+  if (!s) return;
+  const space = activeSpace(s);
+  const n = space.panes.length;
+  const current = $('#s-layout-current');
+  const chosen = space.tiling ?? null;
+  const effective = chosen && parseTiling(chosen) && cellCount(parseTiling(chosen)!) === n ? parseTiling(chosen)! : defaultTiling(n);
+  current.replaceChildren(
+    h('span', { class: 'layout-preview' }, layoutPreview(effective)),
+    h('span', { class: 's-foot', style: 'margin:0' }, n > 1 ? `${n} panes · ${chosen ?? 'equal columns'}` : 'One pane. Add another with ⌘⇧D, then pick a layout here, from the Tabs menu, or with ⌘⌥L.'),
+    n > 1 && chosen ? h('button', { class: 'btn', onclick: () => dispatch({ type: 'space.tiling', spec: null }) }, 'Equal columns') : '',
+  );
+  const custom = s.settings.tilings;
+  $('#s-layouts').replaceChildren(
+    ...custom.map((p, i) =>
+      layoutCard(p.name, p.spec, chosen === p.spec, () => dispatch({ type: 'settings.update', patch: { tilings: custom.filter((_x, k) => k !== i) } })),
+    ),
+    custom.length ? '' : h('span', { class: 's-foot', style: 'margin:0' }, 'None yet. Add one below.'),
+  );
+  $('#s-layouts-builtin').replaceChildren(...TILING_PRESETS.map((p) => layoutCard(p.name, p.spec, chosen === p.spec)));
+}
+
+function previewInput(): void {
+  const t = parseTiling(sLayoutSpec.value);
+  sLayoutSpec.classList.toggle('bad', sLayoutSpec.value.trim() !== '' && !t);
+  sLayoutPreview.replaceChildren(t ? layoutPreview(t) : '');
+}
+sLayoutSpec.oninput = previewInput;
+$('#s-layout-add').onclick = () => {
+  const s = state;
+  const t = parseTiling(sLayoutSpec.value);
+  if (!s || !t) {
+    sLayoutSpec.classList.add('bad');
+    return;
+  }
+  const spec = formatTiling(t);
+  const name = sLayoutName.value.trim() || `${cellCount(t)} panes: ${spec}`;
+  dispatch({ type: 'settings.update', patch: { tilings: [...s.settings.tilings, { name, spec }] } });
+  sLayoutName.value = '';
+  sLayoutSpec.value = '';
+  previewInput();
+};
