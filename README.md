@@ -121,6 +121,23 @@ cookies and settings in a `ChordData` folder next to the executable, so it can l
 USB stick. Quit with `Ctrl+Q` or the window's close button; Chord never stays running in
 the background.
 
+## Coming from Arc, Chrome or Brave
+
+File → Import from Another Browser… (also in the command bar and in Settings → General)
+looks for Arc, Chrome, Brave, Edge and Chromium in their usual folders and imports from
+the one you pick, or from any file you choose:
+
+- **Arc**: spaces with their names, emoji and colours, pinned and today tabs, and the
+  favorites bar, read from `StorableSidebar.json`. Folders are flattened; archived Arc
+  tabs are not imported.
+- **Chrome, Brave, Edge, Chromium**: the profile's `Bookmarks` file. Bookmarks become
+  pinned tabs; each folder in the bookmarks bar becomes a space, loose bookmarks go to a
+  "Chrome Bookmarks" space, and "Other bookmarks" gets a space of its own. Pick a
+  `Bookmarks` file from another profile folder with Choose File….
+
+You then choose Merge (add what is missing) or Replace, exactly as for a Chord
+configuration file.
+
 ## Something slow or broken?
 
 Help → Copy Diagnostics puts a text report on the clipboard (and in `diagnostics.txt` in

@@ -17,6 +17,7 @@ import { isMac, TITLEBAR_HEIGHT, TOP_INSET, ADDRESS_BAR_HEIGHT } from './platfor
 import { ExtensionManager } from './extensions.ts';
 import { copyDiagnostics, startLagMonitor } from './diagnostics.ts';
 import { MediaManager } from './media.ts';
+import { confirmImport, importFromBrowser } from './importers.ts';
 
 const CHROME_DARK = '#1b1b22';
 const CHROME_LIGHT = '#f4f4f7';
@@ -361,6 +362,9 @@ export class Controller {
       case 'media.action':
         this.media.act(cmd.id, cmd.action);
         return;
+      case 'import.browser':
+        void importFromBrowser(this);
+        return;
     }
   }
 
@@ -405,20 +409,7 @@ export class Controller {
       dialog.showErrorBox('Import failed', `This is not a valid Chord configuration: ${parsed.error}.`);
       return;
     }
-    const { config } = parsed;
-    const tabCount = config.favorites.length + config.spaces.reduce((n, sp) => n + sp.pinned.length + sp.today.length, 0);
-    const { response } = await dialog.showMessageBox(this.win, {
-      type: 'question',
-      buttons: ['Merge', 'Replace', 'Cancel'],
-      defaultId: 0,
-      cancelId: 2,
-      message: `Import ${config.spaces.length} space${config.spaces.length === 1 ? '' : 's'} and ${tabCount} tab${tabCount === 1 ? '' : 's'}?`,
-      detail:
-        'Merge adds what is missing: spaces with the same name receive new tabs, other spaces are created.\n\n' +
-        'Replace rebuilds spaces, favorites and settings from the file; your current tabs are moved to the archive.',
-    });
-    if (response === 2) return;
-    this.apply({ type: 'config.import', config, mode: response === 0 ? 'merge' : 'replace' });
+    await confirmImport(this, parsed.config, 'a Chord configuration');
   }
 
   private navigate(id: TabId, url: string): void {

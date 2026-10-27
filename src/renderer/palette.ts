@@ -230,6 +230,7 @@ function compute(raw: string): Item[] {
     { title: 'Clear Archive', keywords: 'archive delete', when: s.archived.length > 0, run: () => dispatch({ type: 'archived.clear' }) },
     { title: 'Export Configuration', keywords: 'export json backup spaces', subtitle: 'Save spaces, tabs and settings to a JSON file', run: () => dispatch({ type: 'config.export' }) },
     { title: `Export Space: ${space.name}`, keywords: 'export json space', run: () => dispatch({ type: 'config.export', spaceId: space.id }) },
+    { title: 'Import from Arc, Chrome, Brave…', keywords: 'import arc chrome brave edge bookmarks migrate browser', subtitle: 'Spaces and bookmarks from another browser', run: () => dispatch({ type: 'import.browser' }) },
     { title: 'Import Configuration', keywords: 'import json restore spaces', subtitle: 'Merge or replace from a JSON file', run: () => dispatch({ type: 'config.importFile' }) },
     { title: 'Settings…', keywords: 'settings preferences appearance theme add-ins extensions address bar', subtitle: 'General, appearance, add-ins', run: () => dispatch({ type: 'settings.open' }) },
     { title: s.settings.addressBar ? 'Hide Address Bar' : 'Show Address Bar', keywords: 'address bar url toggle', subtitle: '⌘⇧L', run: () => dispatch({ type: 'settings.update', patch: { addressBar: !s.settings.addressBar } }) },
@@ -318,6 +319,10 @@ $('#s-import').onclick = () => {
   dispatch({ type: 'config.importFile' });
 };
 $('#s-ext-add').onclick = () => dispatch({ type: 'extension.pickFolder' });
+$('#s-browser').onclick = () => {
+  dispatch({ type: 'palette.close' });
+  dispatch({ type: 'import.browser' });
+};
 api.onExtensions((st) => {
   extStatus = st;
   if (mode === 'settings') renderExtensions();

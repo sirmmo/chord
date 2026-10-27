@@ -182,14 +182,15 @@ export type Command =
   | { type: 'config.export'; spaceId?: SpaceId }
   | { type: 'config.importFile' }
   | { type: 'diagnostics.copy' }
-  | { type: 'media.action'; id: TabId; action: MediaAction };
+  | { type: 'media.action'; id: TabId; action: MediaAction }
+  | { type: 'import.browser' };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'import.browser',
 ]);
 
 export type Message = Action | Command;

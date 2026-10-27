@@ -41,6 +41,7 @@ export function buildAppMenu(c: Controller): void {
         { label: 'New Space', accelerator: 'CmdOrCtrl+Shift+N', click: d({ type: 'space.create' }) },
         { label: 'Reopen Closed Tab', accelerator: 'CmdOrCtrl+Shift+T', click: d({ type: 'closed.reopen' }) },
         sep,
+        { label: 'Import from Another Browser…', click: d({ type: 'import.browser' }) },
         { label: 'Import Configuration…', click: d({ type: 'config.importFile' }) },
         { label: 'Export Configuration…', click: d({ type: 'config.export' }) },
         sep,
