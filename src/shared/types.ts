@@ -26,6 +26,8 @@ export interface Tab {
   canGoForward?: boolean;
   audible?: boolean;
   muted?: boolean;
+  /** 0–1 applied to the page's media elements; 1 (or unset) is the page's own level */
+  volume?: number;
   crashed?: boolean;
 }
 
@@ -234,6 +236,7 @@ export type Action =
   | { type: 'tab.closeActive' }
   | { type: 'tab.patch'; id: TabId; patch: Partial<Tab> }
   | { type: 'tab.sleep'; id: TabId }
+  | { type: 'tab.volume'; id: TabId; volume: number }
   | { type: 'tab.pin'; id: TabId }
   | { type: 'tab.unpin'; id: TabId }
   | { type: 'tab.togglePin'; id?: TabId }

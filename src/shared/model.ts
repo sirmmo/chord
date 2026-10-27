@@ -351,6 +351,14 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       closeTab(s, space.focused, now);
       return s;
     }
+    case 'tab.volume': {
+      const tab = s.tabs[a.id];
+      if (!tab) return prev;
+      const v = Math.round(Math.max(0, Math.min(1, Number.isFinite(a.volume) ? a.volume : 1)) * 100) / 100;
+      if (v >= 1) delete tab.volume;
+      else tab.volume = v;
+      return s;
+    }
     case 'tab.patch': {
       const tab = s.tabs[a.id];
       if (!tab) return prev;

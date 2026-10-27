@@ -368,3 +368,6 @@ body.space-locked .lists { display: none; }
 
 .profile-pill { flex: none; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 5px; padding: 1px 5px; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .profile-pill.hidden { display: none; }
+
+.now { flex-wrap: wrap; }
+.now .vol { flex-basis: 100%; width: 100%; margin: 4px 2px 0; height: 14px; accent-color: var(--accent); }

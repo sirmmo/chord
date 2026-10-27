@@ -72,6 +72,9 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   it; unlock from the sidebar or the space menu. Its tabs are never exported, never
   archived, never recorded in history, and hidden from the command bar while locked.
   Passwords are stored as scrypt hashes; the tabs themselves are not encrypted on disk.
+- **Per-tab volume**: a slider on every player card, the scroll wheel over a tab's speaker
+  icon, or the tab menu's Volume submenu. Applies to the page's audio and video elements
+  (sites that play through the Web Audio API keep their own level); mute stays separate.
 - **Smart pages**: what a tab gives away is shown from every space, and you can act on it.
   - Players (YouTube Music, Spotify, Amazon Music, anything with a Media Session or a
     plain audio/video element): one now-playing card per player above the spaces strip,

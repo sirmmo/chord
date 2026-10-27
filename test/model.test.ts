@@ -306,3 +306,15 @@ test('private spaces: lock, unlock, no traces, never exported', () => {
   const reloaded = hydrate(structuredClone(persisted), ctx());
   assert.equal(isLocked(spaceById(reloaded, priv.id)!), true, 'private spaces start locked on launch');
 });
+
+test('tab volume is clamped and 100% means unset', () => {
+  let s = initialState(ctx());
+  s = reduce(s, { type: 'tab.new', url: 'https://a.test/' }, ctx());
+  const id = activeSpace(s).today[0];
+  s = reduce(s, { type: 'tab.volume', id, volume: 0.333 }, ctx());
+  assert.equal(s.tabs[id].volume, 0.33);
+  s = reduce(s, { type: 'tab.volume', id, volume: 5 }, ctx());
+  assert.equal(s.tabs[id].volume, undefined);
+  s = reduce(s, { type: 'tab.volume', id, volume: -1 }, ctx());
+  assert.equal(s.tabs[id].volume, 0);
+});

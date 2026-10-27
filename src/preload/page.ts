@@ -54,6 +54,14 @@ function smartHook(reportKey: string, actionKey: string): void {
     }
   }
   const mediaEls = () => Array.from(document.querySelectorAll<HTMLMediaElement>('audio, video'));
+  // ---- per-tab volume set from Chord's sidebar ----
+  let tabVolume = 1;
+  const applyVolume = () => {
+    if (tabVolume >= 1) return;
+    for (const el of mediaEls()) if (Math.abs(el.volume - tabVolume) > 0.001) el.volume = tabVolume;
+  };
+  document.addEventListener('play', applyVolume, true);
+  document.addEventListener('loadedmetadata', applyVolume, true);
   const elementPlaying = () => mediaEls().some((el) => !el.paused && !el.ended && el.readyState > 2);
   function pickArtwork(list: ReadonlyArray<MediaImage> | undefined): string {
     if (!list || list.length === 0) return '';
@@ -278,6 +286,12 @@ function smartHook(reportKey: string, actionKey: string): void {
       } catch {
         /* malformed */
       }
+      return;
+    }
+    if (kind === 'volume') {
+      tabVolume = Math.max(0, Math.min(1, Number(action)));
+      if (tabVolume >= 1) for (const el of mediaEls()) el.volume = 1;
+      else applyVolume();
       return;
     }
     if (kind === 'call') return callAction(action);

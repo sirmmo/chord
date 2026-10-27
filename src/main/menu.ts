@@ -185,6 +185,10 @@ export function tabContextMenu(c: Controller, id: TabId): void {
   items.push(sep);
   if (tab.awake) {
     items.push({ label: tab.muted ? 'Unmute' : 'Mute', click: d({ type: 'tab.mute', id }) });
+  items.push({
+    label: `Volume${tab.volume !== undefined ? ` (${Math.round(tab.volume * 100)}%)` : ''}`,
+    submenu: [100, 75, 50, 25, 10].map((pct) => ({ label: `${pct}%`, type: 'radio' as const, checked: Math.round((tab.volume ?? 1) * 100) === pct, click: d({ type: 'tab.volume', id, volume: pct / 100 }) })),
+  });
     items.push({ label: 'Put to Sleep', click: d({ type: 'tab.sleep', id }) });
   }
   items.push({ label: tab.kind === 'today' ? 'Close Tab' : 'Close', click: d({ type: 'tab.close', id }) });

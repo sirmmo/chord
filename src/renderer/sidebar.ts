@@ -357,6 +357,7 @@ function makePlayerCard(entry: [TabId, MediaInfo]): HTMLElement {
       h('button', { class: 'icon-btn next', title: 'Next', onclick: mediaAction(id, 'nexttrack') }),
       h('button', { class: 'icon-btn pip', title: 'Picture in Picture (⌘⌥P)', onclick: () => dispatch({ type: 'media.pip', id }) }),
     ),
+    h('input', { class: 'vol', type: 'range', min: '0', max: '100', step: '5', title: 'Volume', oninput: (e: Event) => dispatch({ type: 'tab.volume', id, volume: Number((e.target as HTMLInputElement).value) / 100 }) }),
   );
 }
 
@@ -384,6 +385,9 @@ function updatePlayerCard(el: HTMLElement, entry: [TabId, MediaInfo]): void {
   setIconKey(pp, info.playing ? 'pause' : 'play', () => svg(info.playing ? ICONS.pause : ICONS.play));
   setIconKey(prev, 'prev', () => svg(ICONS.prev));
   setIconKey(next, 'next', () => svg(ICONS.next));
+  const vol = el.querySelector('.vol') as HTMLInputElement;
+  const level = String(Math.round((tab.volume ?? 1) * 100));
+  if (document.activeElement !== vol && vol.value !== level) vol.value = level;
   const pip = el.querySelector('.pip') as HTMLButtonElement;
   pip.hidden = !info.video;
   setIconKey(pip, 'pip', () => svg(ICONS.pip));
@@ -703,7 +707,7 @@ function makeTab(tab: Tab): HTMLElement {
     h('span', { class: 'icon-slot' }),
     h('span', { class: 'title' }),
     h('span', { class: 'badge' }),
-    h('button', { class: 'audio', onclick: () => dispatch({ type: 'tab.mute', id: tab.id }) }),
+    h('button', { class: 'audio', onclick: () => dispatch({ type: 'tab.mute', id: tab.id }), onwheel: (e: WheelEvent) => { e.preventDefault(); const cur = state?.tabs[tab.id]?.volume ?? 1; dispatch({ type: 'tab.volume', id: tab.id, volume: Math.max(0, Math.min(1, cur - Math.sign(e.deltaY) * 0.05)) }); } }),
     h('button', { class: 'close', onclick: () => dispatch({ type: 'tab.close', id: tab.id }) }, svg(ICONS.close)),
   );
   tabEvents(el);
@@ -718,11 +722,13 @@ function updateTab(el: HTMLElement, tab: Tab, space: Space): void {
   setIconKey(el.querySelector('.icon-slot') as HTMLElement, iconKey(tab, true), () => makeIcon(tab, true));
   setText(el.querySelector('.title') as HTMLElement, tab.title || hostOf(tab.url));
   const audio = el.querySelector('.audio') as HTMLButtonElement;
-  const showAudio = Boolean(tab.audible || tab.muted);
+  const showAudio = Boolean(tab.audible || tab.muted || (tab.volume !== undefined && tab.volume < 1));
   if (audio.hidden === showAudio) audio.hidden = !showAudio;
   if (showAudio) {
-    setIconKey(audio, tab.muted ? 'muted' : 'sound', () => svg(tab.muted ? ICONS.muted : ICONS.sound));
-    audio.title = tab.muted ? 'Unmute' : 'Mute';
+    const level = tab.volume ?? 1;
+    const key = tab.muted ? 'muted' : level < 0.5 ? 'low' : 'sound';
+    setIconKey(audio, key, () => svg(tab.muted ? ICONS.muted : level < 0.5 ? ICONS.soundLow : ICONS.sound));
+    audio.title = `${tab.muted ? 'Muted' : `Volume ${Math.round(level * 100)}%`} · click to ${tab.muted ? 'unmute' : 'mute'} · scroll to change volume`;
   }
   const close = el.querySelector('.close') as HTMLButtonElement;
   const closeTitle = tab.kind === 'today' ? 'Close' : 'Close and reset';

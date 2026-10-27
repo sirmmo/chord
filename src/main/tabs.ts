@@ -214,6 +214,8 @@ export class TabManager {
     });
     wc.on('dom-ready', () => {
       navDomReady(id);
+      const volume = this.c.state.tabs[id]?.volume;
+      if (volume !== undefined && volume < 1) wc.send('smart:action', `volume:${volume}`);
       void this.c.boosts.apply(id, wc);
     });
     wc.on('audio-state-changed', (e) => patch({ audible: e.audible }));
