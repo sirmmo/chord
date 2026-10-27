@@ -107,6 +107,21 @@
           <div class="addin-text"><strong>Shields</strong><span>Blocks ads and trackers with EasyList and EasyPrivacy.</span></div>
           <label class="switch"><input type="checkbox" id="s-shields"><i></i></label>
         </div>
+        <h3>MCP server</h3>
+        <div class="addin">
+          <div class="addin-text"><strong>Local MCP server</strong><span>Lets Claude Desktop and other MCP clients on this computer list spaces and tabs, read pages, open and navigate tabs, search history and call the tools pages expose. Bound to 127.0.0.1 and protected by a token.</span></div>
+          <label class="switch"><input type="checkbox" id="s-mcp"><i></i></label>
+        </div>
+        <div class="s-grid" style="margin-top:8px">
+          <label>Port</label>
+          <div class="row"><input type="number" id="s-mcp-port" min="1024" max="65535" style="width:90px"><span class="s-foot" style="margin:0" id="s-mcp-status"></span></div>
+          <label>Client setup</label>
+          <div>
+            <div class="row"><button class="btn" id="s-mcp-copy">Copy Claude Desktop config</button><button class="btn" id="s-mcp-regen">New token</button></div>
+            <p class="s-foot">Paste the copied JSON into Claude Desktop → Settings → Developer → Edit Config (<code>claude_desktop_config.json</code>), merging the <code>chord</code> entry into <code>mcpServers</code>, and restart Claude Desktop. It uses <code>npx mcp-remote</code>, so Node.js must be installed. Clients that speak Streamable HTTP directly can use the URL below with the token as a bearer header.</p>
+            <pre class="s-pre" id="s-mcp-url"></pre>
+          </div>
+        </div>
         <h3>Chrome extensions</h3>
         <div id="s-extensions"></div>
         <div class="row"><button class="btn" id="s-ext-add">Add unpacked extension…</button></div>

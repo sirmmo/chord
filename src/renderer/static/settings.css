@@ -116,3 +116,5 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 .s-list { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .s-list .row { justify-content: space-between; }
 .s-list .muted { color: var(--muted); font-size: 12px; }
+
+.s-pre { font-size: 12px; background: var(--hover); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; word-break: break-all; user-select: text; margin: 6px 0 0; }

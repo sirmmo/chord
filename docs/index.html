@@ -119,6 +119,7 @@
         <a href="#shortcuts">Shortcuts</a>
         <a href="#install">Install</a>
         <a href="#sites">For sites</a>
+        <a href="#mcp">MCP</a>
         <a href="#config">Config files</a>
         <a href="#architecture">How it works</a>
         <a href="#contribute">Contribute</a>
@@ -168,7 +169,8 @@
       <div class="grid">
         <div class="card"><span class="k">Profiles</span><h3>Separate logins per space</h3><p>Give a space its own profile and its cookies and logins stay apart from the rest; give several spaces the same profile and they share it. Two Google accounts, two spaces.</p></div>
 <div class="card"><span class="k">Modes</span><h3>Research and AI, per space</h3><p>Turn on Research for notes, clips, sources and one-click saving to Zotero, or AI for a side-panel assistant on a local or remote model that reads and drives the tabs of that space and calls the tools pages expose through WebMCP.</p></div>
-<div class="card"><span class="k">⌘N</span><h3>Several windows</h3><p>Each window shows one space; open a space in its own window from its context menu, drag tabs between spaces and therefore windows, and find every window back where you left it at the next launch.</p></div>
+<div class="card"><span class="k">MCP</span><h3>Drive it from Claude Desktop</h3><p>A local MCP server, off by default, lets an assistant on your computer read your tabs, open pages and use the tools sites expose. One click copies the Claude Desktop config.</p></div>
+        <div class="card"><span class="k">⌘N</span><h3>Several windows</h3><p>Each window shows one space; open a space in its own window from its context menu, drag tabs between spaces and therefore windows, and find every window back where you left it at the next launch.</p></div>
         <div class="card"><span class="k">Updates</span><h3>Keeps itself current</h3><p>Chord checks for new releases after launch and every few hours. The Windows installer and the AppImage update themselves on restart; the macOS build, the portable zip and the deb get a one-click download instead.</p></div>
         <div class="card"><span class="k">Share</span><h3>Screen sharing and calls</h3><p>Meet, Zoom and Jitsi get mute, camera and leave controls in the sidebar. Sharing uses the system picker on macOS 15 and Chord's own screen, window and tab picker elsewhere.</p></div>
         <div class="card"><span class="k">Subspaces</span><h3>Groups inside a space</h3><p>Collapse related tabs under a header, drop tabs onto it, rename or dissolve it. Pages can manage a subspace of their own through <code>navigator.chord</code>: a dashboard keeps one tab per job and tidies up after itself.</p></div>
@@ -278,6 +280,29 @@ if ('chord' in navigator &amp;&amp; await navigator.chord.requestTabs()) {
   navigator.chord.addEventListener('tabclosed',
     (e) =&gt; console.log('closed', e.detail.id));
   await navigator.chord.closeTab(tab.id);
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="mcp">
+    <div class="wrap">
+      <h2>MCP server</h2>
+      <p class="sub">Let Claude Desktop, or any MCP client on your computer, work in your browser.</p>
+      <div class="two">
+        <div>
+          <p>Settings → Add-ins → Local MCP server starts a Streamable HTTP endpoint on <code>127.0.0.1:23120/mcp</code>, protected by a token Chord keeps in its profile folder. One button copies a ready Claude Desktop configuration; paste it into <code>claude_desktop_config.json</code> and restart Claude Desktop.</p>
+          <p>Tools: list spaces and tabs, read a page's text, open, navigate, focus and close tabs, fetch a URL, search history, list downloads, and whatever the focused page exposes through WebMCP. Locked private spaces stay closed. Off by default, loopback only.</p>
+        </div>
+<pre><code>{
+  "mcpServers": {
+    "chord": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote",
+        "http://127.0.0.1:23120/mcp",
+        "--header", "Authorization: Bearer &lt;token&gt;"]
+    }
+  }
 }</code></pre>
       </div>
     </div>

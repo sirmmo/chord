@@ -153,6 +153,16 @@ export class AiManager {
 
   // ---- tools ----
 
+  /** The tool definitions the assistant gets for a space; the MCP server reuses the page tools. */
+  toolDefs(spaceId: SpaceId): ToolDef[] {
+    return this.tools(spaceId);
+  }
+
+  /** Run one of the space tools on behalf of the MCP server. */
+  runToolFor(spaceId: SpaceId, name: string, input: unknown): Promise<{ result: unknown }> {
+    return this.runTool(spaceId, name, input);
+  }
+
   private tools(spaceId: SpaceId): ToolDef[] {
     const base: ToolDef[] = [
       { name: 'list_tabs', description: 'List the tabs of the current space with their ids, titles and URLs. The focused tab is marked.', parameters: { type: 'object', properties: {}, additionalProperties: false } },
@@ -185,7 +195,7 @@ export class AiManager {
         const url = String(args.url ?? '');
         if (!/^https?:\/\//i.test(url)) throw new Error('url must be http(s)');
         const id = randomUUID();
-        this.c.apply({ type: 'tab.new', url, spaceId: space.id, id, activate: true });
+        this.c.apply({ type: 'tab.new', url, spaceId: space.id, id, activate: args.activate !== false });
         await this.settle(id);
         return { result: { tabId: id, ...(await this.readTab(id, 4000)) } };
       }

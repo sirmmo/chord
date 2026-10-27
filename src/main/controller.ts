@@ -16,6 +16,7 @@ import { ChordWindow } from './window.ts';
 import { CaptureManager } from './capture.ts';
 import { PageTabsManager } from './pagetabs.ts';
 import { UpdateManager } from './updater.ts';
+import { McpManager } from './mcp.ts';
 import { setShields } from './session.ts';
 import { buildAppMenu, spaceContextMenu, tabContextMenu, groupContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
@@ -56,6 +57,7 @@ export class Controller {
   readonly capture = new CaptureManager(this);
   readonly pageTabs = new PageTabsManager(this);
   readonly updates = new UpdateManager(this);
+  readonly mcp = new McpManager(this);
   readonly smart = new SmartManager(this);
   readonly tray = new TrayManager(this);
   /** set once the app is really quitting, so close-to-tray does not swallow the window close */
@@ -168,6 +170,7 @@ export class Controller {
     this.capture.init();
     this.pageTabs.init();
     this.updates.init();
+    this.mcp.init();
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -179,6 +182,7 @@ export class Controller {
     ipcMain.handle('extensions', (event) => (this.trusted(event) ? this.extensions.getStatus() : {}));
     ipcMain.handle('info', (event) => (this.trusted(event) ? this.appInfo() : null));
     ipcMain.handle('updates', (event) => (this.trusted(event) ? this.updates.status : null));
+    ipcMain.handle('mcp', (event) => (this.trusted(event) ? this.mcp.status : null));
     ipcMain.handle('smart', (event) => (this.trusted(event) ? this.smart.getStatus() : {}));
     ipcMain.handle('downloads', (event) => (this.trusted(event) ? this.downloads.status() : { items: [], active: 0 }));
 
@@ -440,6 +444,7 @@ export class Controller {
     if (soundChanged) this.tray.refresh();
     this.pageTabs.diff(prev, next);
     if (prev.settings.updates.check !== next.settings.updates.check) this.updates.schedule();
+    if (prev.settings.mcp.enabled !== next.settings.mcp.enabled || prev.settings.mcp.port !== next.settings.mcp.port) this.mcp.sync();
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
@@ -698,6 +703,12 @@ export class Controller {
         return;
       case 'update.openPage':
         this.updates.openPage();
+        return;
+      case 'mcp.copyConfig':
+        this.mcp.copyConfig();
+        return;
+      case 'mcp.regenerate':
+        this.mcp.regenerateToken();
         return;
       case 'window.new': {
         const free = this.freeSpace();

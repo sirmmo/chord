@@ -235,6 +235,22 @@ export interface Settings {
   /** origins allowed to open and close tabs of their own through navigator.chord */
   pageTabs: string[];
   updates: UpdateSettings;
+  /** local MCP server for Claude Desktop and other MCP clients */
+  mcp: McpSettings;
+}
+
+export interface McpSettings {
+  enabled: boolean;
+  port: number;
+}
+
+export interface McpStatus {
+  running: boolean;
+  port: number;
+  token: string;
+  /** distinct clients seen since the token was created */
+  clients: number;
+  error?: string;
 }
 
 export interface UpdateSettings {
@@ -430,7 +446,9 @@ export type Command =
   | { type: 'update.install' }
   | { type: 'update.openPage' }
   | { type: 'window.new' }
-  | { type: 'space.openInWindow'; id: SpaceId };
+  | { type: 'space.openInWindow'; id: SpaceId }
+  | { type: 'mcp.copyConfig' }
+  | { type: 'mcp.regenerate' };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
@@ -439,7 +457,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate',
 ]);
 
 export type Message = Action | Command;
@@ -592,6 +610,8 @@ export interface ChordApi {
   getInfo(): Promise<AppInfo>;
   onUpdates(cb: (status: UpdateStatus) => void): () => void;
   getUpdates(): Promise<UpdateStatus>;
+  onMcp(cb: (status: McpStatus) => void): () => void;
+  getMcp(): Promise<McpStatus>;
   onPasswords(cb: (status: PasswordsStatus) => void): () => void;
   getPasswords(): Promise<PasswordsStatus>;
   revealPassword(id: string): Promise<string | null>;

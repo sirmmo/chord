@@ -25,7 +25,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', flags: {}, pageTabs: [], updates: { check: true, auto: true } };
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', flags: {}, pageTabs: [], updates: { check: true, auto: true }, mcp: { enabled: false, port: 23120 } };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -49,7 +49,9 @@ export function mergeSettings(raw: unknown): Settings {
   const pageTabs = Array.isArray(r.pageTabs) ? r.pageTabs.filter((o): o is string => typeof o === 'string' && /^https?:\/\/[^/]+$/.test(o)) : [];
   const ru = (typeof r.updates === 'object' && r.updates !== null ? r.updates : {}) as Partial<Settings['updates']>;
   const updates = { check: ru.check !== false, auto: ru.auto !== false };
-  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags, pageTabs, updates };
+  const rm = (typeof r.mcp === 'object' && r.mcp !== null ? r.mcp : {}) as Partial<Settings['mcp']>;
+  const mcp = { enabled: rm.enabled === true, port: typeof rm.port === 'number' && rm.port >= 1024 && rm.port <= 65535 ? Math.round(rm.port) : 23120 };
+  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags, pageTabs, updates, mcp };
   merged.panelWidth = clampPanel(typeof merged.panelWidth === 'number' ? merged.panelWidth : 360);
   return merged;
 }

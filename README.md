@@ -220,6 +220,20 @@ cookies and settings live in a `ChordData` folder beside it. The earlier single-
 portable `.exe` is gone: it re-extracted the whole application on every launch, which
 made starting it take ages. Quit with `Ctrl+Q` or the window's close button.
 
+## MCP server for Claude Desktop and friends
+
+Settings → Add-ins → Local MCP server starts an MCP endpoint on `http://127.0.0.1:23120/mcp`
+(Streamable HTTP, JSON responses) protected by a bearer token kept in the profile folder.
+"Copy Claude Desktop config" puts a ready `mcpServers` entry on the clipboard that goes
+through `npx mcp-remote`; merge it into `claude_desktop_config.json` and restart Claude
+Desktop. Clients that speak Streamable HTTP themselves connect to the URL with
+`Authorization: Bearer <token>`.
+
+Tools: `list_spaces`, `list_tabs`, `read_page`, `open_tab`, `navigate`, `activate_tab`,
+`close_tab`, `fetch_url`, `search_history`, `list_downloads`, plus `page_<name>` for the
+WebMCP tools of the focused page. Locked private spaces stay closed to it. The server is
+off by default and only ever listens on the loopback interface.
+
 ## Updates
 
 Chord checks for new releases about half a minute after launch and every six hours

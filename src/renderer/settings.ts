@@ -1,7 +1,7 @@
 // chord://settings — the settings page.
 
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
-import type { AiStatus, Boost, ExtensionsStatus, Message, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
+import type { AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { SEARCH_ENGINES } from '../shared/url.ts';
@@ -93,6 +93,34 @@ $('#s-flags').replaceChildren(
   }),
 );
 $('#s-relaunch').onclick = () => dispatch({ type: 'app.relaunch' });
+
+// ---- MCP server ----
+const sMcp = $<HTMLInputElement>('#s-mcp');
+const sMcpPort = $<HTMLInputElement>('#s-mcp-port');
+sMcp.onchange = () => state && dispatch({ type: 'settings.update', patch: { mcp: { ...state.settings.mcp, enabled: sMcp.checked } } });
+sMcpPort.onchange = () => {
+  const port = Math.round(Number(sMcpPort.value));
+  if (state && port >= 1024 && port <= 65535) dispatch({ type: 'settings.update', patch: { mcp: { ...state.settings.mcp, port } } });
+};
+$('#s-mcp-copy').onclick = () => dispatch({ type: 'mcp.copyConfig' });
+$('#s-mcp-regen').onclick = () => dispatch({ type: 'mcp.regenerate' });
+let mcp: McpStatus | null = null;
+function renderMcp(): void {
+  if (!mcp || !state) return;
+  const port = state.settings.mcp.port;
+  $('#s-mcp-status').textContent = mcp.error ? `Not running: ${mcp.error}` : mcp.running ? `Running on 127.0.0.1:${mcp.port}${mcp.clients ? ` · ${mcp.clients} client${mcp.clients === 1 ? '' : 's'} seen` : ''}` : 'Off';
+  $('#s-mcp-url').textContent = `http://127.0.0.1:${port}/mcp\nAuthorization: Bearer ${mcp.token}`;
+}
+api.onMcp((m) => {
+  mcp = m;
+  renderMcp();
+});
+void api.getMcp().then((m) => {
+  if (m) {
+    mcp = m;
+    renderMcp();
+  }
+});
 
 // ---- updates ----
 const sUpdCheck = $<HTMLInputElement>('#s-upd-check');
@@ -245,6 +273,9 @@ function fillSettings(): void {
   sAutoPip.checked = s.settings.autoPip;
   for (const [k, input] of flagInputs) input.checked = s.settings.flags[k] === true;
   sUpdCheck.checked = s.settings.updates.check;
+  sMcp.checked = s.settings.mcp.enabled;
+  if (document.activeElement !== sMcpPort) sMcpPort.value = String(s.settings.mcp.port);
+  renderMcp();
   sUpdAuto.checked = s.settings.updates.auto;
   $('#s-pagetabs').replaceChildren(
     ...(s.settings.pageTabs.length
