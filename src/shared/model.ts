@@ -1,7 +1,7 @@
 // Pure state model: no Electron, no side effects. Every transition takes a
 // State and returns a new State, so it can be unit-tested in plain Node.
 
-import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabGroup, TabId, Theme } from './types.ts';
+import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabGroup, TabId, Theme, WindowState } from './types.ts';
 import { titleFor } from './url.ts';
 import { importConfig } from './config.ts';
 import { cellCount, parseTiling, presetsFor } from './tiling.ts';
@@ -102,6 +102,11 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     recentlyClosed: r.recentlyClosed ?? [],
     settings: mergeSettings(r.settings),
   };
+  if (Array.isArray(r.windows)) {
+    const seen = new Set<string>();
+    s.windows = r.windows.filter((w): w is WindowState => typeof w === 'object' && w !== null && typeof w.spaceId === 'string' && !seen.has(w.spaceId) && !!seen.add(w.spaceId));
+    if (s.windows.length === 0) delete s.windows;
+  }
   const exists = (id: TabId) => id in s.tabs;
   s.favorites = s.favorites.filter(exists);
   for (const sp of s.spaces) {
@@ -162,7 +167,10 @@ export function isLocked(sp: Space): boolean {
 
 /** The side panel is visible when the space has modes, is unlocked and the panel is open. */
 export function panelVisible(s: State): boolean {
-  const sp = activeSpace(s);
+  return panelVisibleFor(s, activeSpace(s));
+}
+
+export function panelVisibleFor(s: State, sp: Space): boolean {
   return s.settings.panelOpen && (sp.modes?.length ?? 0) > 0 && !isLocked(sp);
 }
 
@@ -539,6 +547,12 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
         else delete s.tabs[id]?.groupId;
       }
       if (findGroup(s, a.id)) dropGroup(s, f.space, a.id);
+      return s;
+    }
+    case 'windows.set': {
+      const windows = a.windows.filter((w) => spaceById(s, w.spaceId));
+      if (JSON.stringify(windows) === JSON.stringify(s.windows ?? [])) return prev;
+      s.windows = windows;
       return s;
     }
     case 'tab.setGroup': {

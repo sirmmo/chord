@@ -2,15 +2,17 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell, typ
 import { readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import type { Action, AppInfo, Command, Message, SidebarMessage, State, TabId } from '../shared/types.ts';
+import type { Action, AppInfo, Command, Message, SidebarMessage, SpaceId, State, TabId, WindowState } from '../shared/types.ts';
 import { isCommand } from '../shared/types.ts';
-import { activeSpace, focusedTab, hydrate, isLocked, panelVisible, reduce, spaceOfTab, visiblePanes, type Ctx } from '../shared/model.ts';
+import { activeSpace, focusedTab, hydrate, isLocked, panelVisibleFor, reduce, spaceOfTab, visiblePanes, type Ctx } from '../shared/model.ts';
 import { makeLock, verifyLock } from './locks.ts';
 import { titleFor } from '../shared/url.ts';
 import { exportConfig, exportFileName, parseConfig } from '../shared/config.ts';
 import { Store } from './store.ts';
 import { TabManager } from './tabs.ts';
-import { Overlay } from './overlay.ts';
+import type { Overlay } from './overlay.ts';
+import type { PanelManager } from './panel.ts';
+import { ChordWindow } from './window.ts';
 import { CaptureManager } from './capture.ts';
 import { PageTabsManager } from './pagetabs.ts';
 import { UpdateManager } from './updater.ts';
@@ -29,7 +31,6 @@ import { BoostManager } from './boosts.ts';
 import { PasswordManager } from './passwords.ts';
 import { PIP_JS } from './pip.ts';
 import { installSpace } from './installer.ts';
-import { PanelManager } from './panel.ts';
 import { ResearchManager } from './research.ts';
 import { AiManager } from './ai.ts';
 import { modesMenu } from './menu.ts';
@@ -45,10 +46,13 @@ export class Controller {
   state!: State;
   /** true when no state.json existed at launch: the guide opens as the first tab */
   firstRun = false;
-  win: BrowserWindow | null = null;
+  readonly windows = new Map<number, ChordWindow>();
+  private activeWindowId: number | null = null;
+  private lastSignature = '';
+  private windowsSaveTimer: NodeJS.Timeout | null = null;
+  private heavyScheduled = false;
   readonly store: Store<State>;
   readonly tabs = new TabManager(this);
-  readonly overlay = new Overlay(this);
   readonly capture = new CaptureManager(this);
   readonly pageTabs = new PageTabsManager(this);
   readonly updates = new UpdateManager(this);
@@ -60,7 +64,6 @@ export class Controller {
   readonly history = new HistoryManager(this);
   readonly boosts = new BoostManager(this);
   readonly passwords = new PasswordManager(this);
-  readonly panel = new PanelManager(this);
   readonly research = new ResearchManager(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
@@ -83,6 +86,72 @@ export class Controller {
     return { now: Date.now(), newId: randomUUID };
   }
 
+  // ---- windows ----
+
+  /** The window the user is working in: the focused one, else the last focused, else any. */
+  get active(): ChordWindow | undefined {
+    const w = this.activeWindowId !== null ? this.windows.get(this.activeWindowId) : undefined;
+    if (w && w.alive()) return w;
+    for (const other of this.windows.values()) if (other.alive()) return other;
+    return undefined;
+  }
+
+  /** The active window's BrowserWindow, for dialogs and menus. */
+  get win(): BrowserWindow | null {
+    return this.active?.win ?? null;
+  }
+
+  get overlay(): Overlay | undefined {
+    return this.active?.overlay;
+  }
+
+  get panel(): PanelManager | undefined {
+    return this.active?.panel;
+  }
+
+  windowForSpace(spaceId: SpaceId | null | undefined): ChordWindow | undefined {
+    if (!spaceId) return undefined;
+    for (const w of this.windows.values()) if (w.alive() && w.spaceId === spaceId) return w;
+    return undefined;
+  }
+
+  /** The window a chrome page or tab view belongs to. */
+  windowOf(wc: WebContents): ChordWindow | undefined {
+    for (const w of this.windows.values()) {
+      if (!w.alive()) continue;
+      if (w.win.webContents === wc || w.overlay.webContents === wc || w.panel.webContents === wc) return w;
+    }
+    const tabId = this.tabs.tabIdOf(wc);
+    return tabId ? this.tabs.windowOfView(tabId) : undefined;
+  }
+
+  /** Make `w` the window whose space is the active space. */
+  setActive(w: ChordWindow): void {
+    if (!w.alive()) return;
+    this.activeWindowId = w.id;
+    if (this.state.activeSpaceId !== w.spaceId) this.apply({ type: 'space.activate', id: w.spaceId });
+  }
+
+  /** State as one window's pages see it: its own space is the active one. */
+  stateFor(w: ChordWindow | undefined): State {
+    return !w || w.spaceId === this.state.activeSpaceId ? this.state : { ...this.state, activeSpaceId: w.spaceId };
+  }
+
+  /** A space nobody is showing yet, for a new window. */
+  private freeSpace(): SpaceId | undefined {
+    return this.state.spaces.find((sp) => !this.windowForSpace(sp.id))?.id;
+  }
+
+  private saveWindows(): void {
+    if (this.windowsSaveTimer) return;
+    this.windowsSaveTimer = setTimeout(() => {
+      this.windowsSaveTimer = null;
+      const windows: WindowState[] = [];
+      for (const w of this.windows.values()) if (w.alive()) windows.push({ spaceId: w.spaceId, bounds: w.win.getNormalBounds() });
+      this.apply({ type: 'windows.set', windows });
+    }, 500);
+  }
+
   init(): void {
     const stored = this.store.load();
     this.firstRun = stored === null;
@@ -102,9 +171,11 @@ export class Controller {
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
+      const w = this.windowOf(event.sender);
+      if (w && w !== this.active) this.setActive(w);
       this.dispatch(message);
     });
-    ipcMain.handle('state', (event) => (this.trusted(event) ? this.state : null));
+    ipcMain.handle('state', (event) => (this.trusted(event) ? this.stateFor(this.windowOf(event.sender)) : null));
     ipcMain.handle('extensions', (event) => (this.trusted(event) ? this.extensions.getStatus() : {}));
     ipcMain.handle('info', (event) => (this.trusted(event) ? this.appInfo() : null));
     ipcMain.handle('updates', (event) => (this.trusted(event) ? this.updates.status : null));
@@ -119,17 +190,33 @@ export class Controller {
   }
 
   private trusted(event: IpcMainInvokeEvent): boolean {
-    if (event.sender === this.win?.webContents || event.sender === this.overlay.webContents || event.sender === this.panel.webContents) return true;
+    for (const w of this.windows.values()) {
+      if (!w.alive()) continue;
+      if (event.sender === w.win.webContents || event.sender === w.overlay.webContents || event.sender === w.panel.webContents) return true;
+    }
     // One of Chord's own pages in a tab view: only while it shows a chord:// document.
     return this.tabs.tabIdOf(event.sender) !== undefined && isInternal(event.senderFrame?.url ?? '');
   }
 
-  createWindow(): void {
-    if (this.win) return;
-    mark('window-created');
+  /** Open the windows of the last session (one per remembered space), or a single one. */
+  openInitialWindows(): void {
+    const remembered = (this.state.windows ?? []).filter((w) => this.state.spaces.some((sp) => sp.id === w.spaceId));
+    const list: WindowState[] = remembered.length ? remembered : [{ spaceId: this.state.activeSpaceId }];
+    let first: ChordWindow | undefined;
+    for (const entry of list) {
+      const w = this.openWindow(entry.spaceId, entry.bounds);
+      if (!first || entry.spaceId === this.state.activeSpaceId) first = w;
+    }
+    if (first) this.setActive(first);
+  }
+
+  openWindow(spaceId: SpaceId = this.state.activeSpaceId, bounds?: WindowState['bounds']): ChordWindow {
+    if (this.windows.size === 0) mark('window-created');
     const win = new BrowserWindow({
-      width: 1280,
-      height: 820,
+      width: bounds?.width ?? 1280,
+      height: bounds?.height ?? 820,
+      x: bounds?.x,
+      y: bounds?.y,
       minWidth: 640,
       minHeight: 420,
       show: false,
@@ -139,49 +226,81 @@ export class Controller {
       titleBarOverlay: isMac ? undefined : this.titleBarOverlay(),
       webPreferences: { preload: PRELOAD, sandbox: true, contextIsolation: true },
     });
-    this.win = win;
+    const w = new ChordWindow(this, win, spaceId);
+    this.windows.set(w.id, w);
+    if (this.activeWindowId === null) this.activeWindowId = w.id;
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     this.wireKeys(win.webContents);
     win.loadFile(join(RENDERER_DIR, 'index.html'));
     win.once('ready-to-show', () => {
       win.show();
-      mark('window-shown');
-      this.tabs.reconcile(this.state);
-      this.panel.sync();
+      if (this.windows.size === 1) mark('window-shown');
+      this.reconcileViews();
       this.broadcast();
       if (this.firstRun) {
         this.firstRun = false;
         this.openInternal('chord://guide/');
       }
-      // Filter lists and extensions are heavy to load: let the first page start first.
-      setTimeout(() => {
-        void setShields(this.state.settings.shields).then(() => mark('shields-ready'));
-        void this.extensions.sync(this.state);
-      }, 400);
+      if (!this.heavyScheduled) {
+        this.heavyScheduled = true;
+        // Filter lists and extensions are heavy to load: let the first page start first.
+        setTimeout(() => {
+          void setShields(this.state.settings.shields).then(() => mark('shields-ready'));
+          void this.extensions.sync(this.state);
+        }, 400);
+      }
+      this.saveWindows();
     });
     win.webContents.on('did-finish-load', () => this.broadcast());
-    const relayout = () => this.relayout();
+    win.on('focus', () => this.setActive(w));
     win.on('hide', () => this.apply({ type: 'space.lockAll' }));
+    const relayout = () => {
+      this.relayoutWindow(w);
+      this.saveWindows();
+    };
     win.on('resize', relayout);
+    win.on('move', () => this.saveWindows());
     win.on('enter-full-screen', relayout);
     win.on('leave-full-screen', relayout);
     const onTheme = () => this.applyChromeColors();
     nativeTheme.on('updated', onTheme);
-    win.on('closed', () => nativeTheme.off('updated', onTheme));
+    win.on('closed', () => {
+      nativeTheme.off('updated', onTheme);
+      this.windows.delete(w.id);
+    });
     // Tear the page views down while the window still exists: child views that
     // outlive their window keep the process alive on Windows.
     win.on('close', (e) => {
-      if (this.state.settings.closeToTray && !this.quitting) {
+      const last = [...this.windows.values()].filter((x) => x.alive()).length <= 1;
+      if (last && this.state.settings.closeToTray && !this.quitting) {
         e.preventDefault();
         win.hide();
         return;
       }
-      this.tabs.reset();
-      this.overlay.dispose();
-      this.panel.dispose();
-      this.win = null; // nothing may reconcile views onto a closing window
+      if (last) this.tabs.reset();
+      else this.tabs.releaseWindow(w);
+      w.overlay.dispose();
+      w.panel.dispose();
+      this.windows.delete(w.id);
+      if (this.activeWindowId === w.id) {
+        this.activeWindowId = null;
+        const next = this.active;
+        if (next) this.setActive(next);
+      }
+      if (!last) this.saveWindows();
       this.store.flush();
     });
+    return w;
+  }
+
+  /** Views and panels of every window follow the state. */
+  private reconcileViews(): void {
+    this.tabs.reconcile(this.state);
+    for (const w of this.windows.values()) {
+      if (!w.alive()) continue;
+      w.panel.sync();
+      if (w.overlay.isShown()) w.overlay.layout();
+    }
   }
 
   /** Whether the sidebar currently takes up space in the layout. */
@@ -208,25 +327,33 @@ export class Controller {
   }
 
   private applyChromeColors(): void {
-    const win = this.win;
-    if (!win || win.isDestroyed()) return;
-    win.setBackgroundColor(this.chromeColor());
-    if (!isMac) win.setTitleBarOverlay(this.titleBarOverlay());
+    for (const w of this.windows.values()) {
+      if (!w.alive()) continue;
+      w.win.setBackgroundColor(this.chromeColor());
+      if (!isMac) w.win.setTitleBarOverlay(this.titleBarOverlay());
+    }
   }
 
   private relayout(): void {
+    for (const w of this.windows.values()) this.relayoutWindow(w);
+  }
+
+  private relayoutWindow(w: ChordWindow): void {
+    if (!w.alive()) return;
     this.tabs.layout();
-    this.panel.layout();
-    this.overlay.layout();
+    w.panel.layout();
+    w.overlay.layout();
   }
 
   focusWindow(): void {
-    if (!this.win) this.createWindow();
-    else {
-      if (!this.win.isVisible()) this.win.show();
-      if (this.win.isMinimized()) this.win.restore();
-      this.win.focus();
+    const w = this.active;
+    if (!w) {
+      this.openWindow();
+      return;
     }
+    if (!w.win.isVisible()) w.win.show();
+    if (w.win.isMinimized()) w.win.restore();
+    w.win.focus();
   }
 
   openInternalFromTray(url: string): void {
@@ -278,12 +405,22 @@ export class Controller {
     const next = reduce(prev, action, this.ctx());
     if (next === prev) return;
     this.state = next;
+    // The active space changed: if another window already shows it, that window takes
+    // over; otherwise the active window switches to it.
+    if (next.activeSpaceId !== prev.activeSpaceId) {
+      const active = this.active;
+      const other = this.windowForSpace(next.activeSpaceId);
+      if (other && other !== active) {
+        this.activeWindowId = other.id;
+        if (!other.win.isFocused()) other.win.focus();
+      } else if (active) active.spaceId = next.activeSpaceId;
+    }
     // Title, favicon and loading updates arrive many times per second while pages
     // load; they change nothing about which views exist or where they go.
-    if (viewSignature(prev) !== viewSignature(next)) {
-      this.tabs.reconcile(next);
-      this.panel.sync();
-      if (this.overlay.isShown()) this.overlay.layout();
+    const signature = viewSignature(next, this.windows);
+    if (signature !== this.lastSignature) {
+      this.lastSignature = signature;
+      this.reconcileViews();
     }
     this.store.save(next);
     this.broadcast();
@@ -325,8 +462,15 @@ export class Controller {
     if (this.broadcastTimer) return;
     this.broadcastTimer = setTimeout(() => {
       this.broadcastTimer = null;
-      const targets = [this.win?.webContents, this.overlay.webContents, this.panel.webContents, ...this.tabs.internalWebContents()];
-      for (const wc of targets) if (wc && !wc.isDestroyed()) wc.send('state', this.state);
+      for (const w of this.windows.values()) {
+        if (!w.alive()) continue;
+        const projected = this.stateFor(w);
+        for (const wc of [w.win.webContents, w.overlay.webContents, w.panel.webContents]) if (wc && !wc.isDestroyed()) wc.send('state', projected);
+      }
+      for (const wc of this.tabs.internalWebContents()) {
+        const id = this.tabs.tabIdOf(wc);
+        wc.send('state', this.stateFor(id ? this.tabs.windowOfView(id) : undefined));
+      }
     }, BROADCAST_INTERVAL_MS);
   }
 
@@ -335,7 +479,10 @@ export class Controller {
   }
 
   sendAll(channel: string, payload: unknown): void {
-    for (const wc of [this.win?.webContents, this.overlay.webContents, this.panel.webContents, ...this.tabs.internalWebContents()]) if (wc && !wc.isDestroyed()) wc.send(channel, payload);
+    const targets: (WebContents | undefined)[] = [];
+    for (const w of this.windows.values()) if (w.alive()) targets.push(w.win.webContents, w.overlay.webContents, w.panel.webContents);
+    targets.push(...this.tabs.internalWebContents());
+    for (const wc of targets) if (wc && !wc.isDestroyed()) wc.send(channel, payload);
   }
 
   dispatch(message: Message): void {
@@ -397,11 +544,11 @@ export class Controller {
       case 'palette.open': {
         const tab = focusedTab(this.state);
         const query = cmd.intent === 'current' && tab ? tab.url : '';
-        this.overlay.show({ kind: 'show', mode: 'palette', intent: tab ? cmd.intent : 'new', query });
+        this.overlay?.show({ kind: 'show', mode: 'palette', intent: tab ? cmd.intent : 'new', query });
         return;
       }
       case 'palette.close':
-        this.overlay.hide();
+        this.overlay?.hide();
         return;
       case 'settings.open':
         this.openInternal('chord://settings/', cmd.page);
@@ -415,14 +562,14 @@ export class Controller {
         this.relayout();
         return;
       case 'find.open':
-        if (wc()) this.overlay.show({ kind: 'show', mode: 'find' });
+        if (wc()) this.overlay?.show({ kind: 'show', mode: 'find' });
         return;
       case 'find.query': {
         const w = wc();
         if (!w) return;
         if (!cmd.text) {
           w.stopFindInPage('clearSelection');
-          this.overlay.send({ kind: 'find:result', active: 0, matches: 0 });
+          this.overlay?.send({ kind: 'find:result', active: 0, matches: 0 });
           return;
         }
         w.findInPage(cmd.text, { forward: cmd.forward, findNext: cmd.findNext });
@@ -430,7 +577,7 @@ export class Controller {
       }
       case 'find.close':
         wc()?.stopFindInPage('keepSelection');
-        this.overlay.hide();
+        this.overlay?.hide();
         return;
       case 'url.copy': {
         const tab = focusedTab(this.state);
@@ -477,8 +624,8 @@ export class Controller {
         return;
       }
       case 'downloads.panel':
-        if (this.overlay.mode === 'downloads') this.overlay.hide();
-        else this.overlay.show({ kind: 'show', mode: 'downloads' });
+        if (this.overlay?.mode === 'downloads') this.overlay?.hide();
+        else this.overlay?.show({ kind: 'show', mode: 'downloads' });
         return;
       case 'password.delete':
         this.passwords.remove(cmd.id);
@@ -552,6 +699,31 @@ export class Controller {
       case 'update.openPage':
         this.updates.openPage();
         return;
+      case 'window.new': {
+        const free = this.freeSpace();
+        if (free) {
+          this.openWindow(free);
+          return;
+        }
+        const current = this.active;
+        const before = this.state.activeSpaceId;
+        this.apply({ type: 'space.create' });
+        const created = this.state.activeSpaceId;
+        if (created === before) return;
+        if (current) {
+          current.spaceId = before;
+          this.lastSignature = '';
+          this.reconcileViews();
+        }
+        this.openWindow(created);
+        return;
+      }
+      case 'space.openInWindow': {
+        const shown = this.windowForSpace(cmd.id);
+        if (shown) shown.win.focus();
+        else if (this.state.spaces.some((sp) => sp.id === cmd.id)) this.openWindow(cmd.id);
+        return;
+      }
       case 'pageTabs.forget':
         this.apply({ type: 'settings.update', patch: { pageTabs: this.state.settings.pageTabs.filter((o) => o !== cmd.origin) } });
         return;
@@ -621,7 +793,7 @@ export class Controller {
         const sp = this.state.spaces.find((x) => x.id === cmd.id);
         if (!sp) return;
         if (cmd.purpose !== 'set' && !sp.lock) return;
-        this.overlay.show({ kind: 'show', mode: 'password', spaceId: sp.id, purpose: cmd.purpose, name: sp.name });
+        this.overlay?.show({ kind: 'show', mode: 'password', spaceId: sp.id, purpose: cmd.purpose, name: sp.name });
         return;
       }
       case 'space.password': {
@@ -630,11 +802,11 @@ export class Controller {
         if (cmd.purpose === 'set') {
           if (!cmd.password) return;
           this.apply({ type: 'space.setLock', id: sp.id, lock: makeLock(cmd.password) });
-          this.overlay.hide();
+          this.overlay?.hide();
           return;
         }
         if (!sp.lock || !verifyLock(sp.lock, cmd.password)) {
-          this.overlay.send({ kind: 'password:error' });
+          this.overlay?.send({ kind: 'password:error' });
           return;
         }
         if (cmd.purpose === 'remove') this.apply({ type: 'space.setLock', id: sp.id, lock: null });
@@ -642,7 +814,7 @@ export class Controller {
           this.apply({ type: 'space.unlocked', id: sp.id });
           this.apply({ type: 'space.activate', id: sp.id });
         }
-        this.overlay.hide();
+        this.overlay?.hide();
         return;
       }
       case 'history.remove':
@@ -744,7 +916,7 @@ export class Controller {
     const token = randomUUID();
     return new Promise((resolve) => {
       this.prompts.set(token, resolve);
-      this.overlay.show({ kind: 'show', mode: 'prompt', token, title, placeholder, value });
+      this.overlay?.show({ kind: 'show', mode: 'prompt', token, title, placeholder, value });
     });
   }
 
@@ -757,7 +929,7 @@ export class Controller {
     const tab = this.state.tabs[tabId];
     if (!tab || !tab.spaceId) return;
     const name = await this.prompt('New subspace', 'Subspace name', tab.title.slice(0, 30));
-    this.overlay.hide();
+    this.overlay?.hide();
     if (name && name.trim()) this.apply({ type: 'group.create', spaceId: tab.spaceId, name: name.trim(), tabIds: [tabId] });
   }
 
@@ -765,7 +937,7 @@ export class Controller {
     const group = this.state.spaces.flatMap((sp) => sp.groups ?? []).find((g) => g.id === id);
     if (!group) return;
     const name = await this.prompt('Rename subspace', 'Subspace name', group.name);
-    this.overlay.hide();
+    this.overlay?.hide();
     if (name && name.trim()) this.apply({ type: 'group.rename', id, name: name.trim() });
   }
 
@@ -773,7 +945,7 @@ export class Controller {
     const sp = this.state.spaces.find((x) => x.id === spaceId);
     if (!sp) return;
     const name = await this.prompt(`Profile for “${sp.name}”`, 'Profile name, e.g. Work');
-    this.overlay.hide();
+    this.overlay?.hide();
     if (name && name.trim()) this.apply({ type: 'space.profile', id: spaceId, profile: name.trim() });
   }
 
@@ -842,11 +1014,16 @@ export class Controller {
 }
 
 /** Everything that decides which views exist, where they are and which one has focus. */
-function viewSignature(s: State): string {
-  const space = activeSpace(s);
+function viewSignature(s: State, windows: Map<number, ChordWindow>): string {
   const awake: string[] = [];
   for (const t of Object.values(s.tabs)) if (t.awake) awake.push(t.id + (t.muted ? '!' : ''));
-  return [s.activeSpaceId, s.spaces.map((sp) => sp.profile ?? '').join(','), visiblePanes(space).join(','), isLocked(space), panelVisible(s) ? s.settings.panelWidth : 0, space.tiling ?? '', space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
+  const perWindow: string[] = [];
+  for (const w of windows.values()) {
+    if (!w.alive()) continue;
+    const space = w.space;
+    perWindow.push([w.id, space.id, visiblePanes(space).join(','), isLocked(space), panelVisibleFor(s, space) ? s.settings.panelWidth : 0, space.tiling ?? '', space.focused ?? ''].join(':'));
+  }
+  return [s.activeSpaceId, s.spaces.map((sp) => sp.profile ?? '').join(','), perWindow.join('#'), s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
 }
 
 function isMessage(m: unknown): m is Message {

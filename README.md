@@ -159,6 +159,14 @@ URL strings or objects with `url`, `title` and `favicon`:
 }
 ```
 
+## Windows
+
+File → New Window (`⌘N` / `Ctrl+N`) opens a second window. Each window shows one space,
+and a space is shown in at most one window: right-click a space dot → Open in New Window
+moves you there, and activating a space that another window shows focuses that window.
+Tabs can be moved between spaces as usual, so between windows too. Chord remembers which
+windows and spaces were open, with their positions, and restores them at launch.
+
 ## Subspaces
 
 A subspace is a named group of tabs inside a space, shown under a collapsible header in

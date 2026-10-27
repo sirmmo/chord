@@ -40,6 +40,7 @@ export function buildAppMenu(c: Controller): void {
       label: 'File',
       submenu: [
         { label: 'New Tab…', accelerator: 'CmdOrCtrl+T', click: d({ type: 'palette.open', intent: 'new' }) },
+        { label: 'New Window', accelerator: 'CmdOrCtrl+N', click: d({ type: 'window.new' }) },
         { label: 'New Space', accelerator: 'CmdOrCtrl+Shift+N', click: d({ type: 'space.create' }) },
         { label: 'Reopen Closed Tab', accelerator: 'CmdOrCtrl+Shift+T', click: d({ type: 'closed.reopen' }) },
         sep,
@@ -244,6 +245,7 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
   const d = (m: Message) => () => c.dispatch(m);
   const items: MenuItemConstructorOptions[] = [
     { label: 'Rename…', click: () => c.sendSidebar({ kind: 'space.renameStart', id }) },
+    { label: c.windowForSpace(id) && c.windowForSpace(id) !== c.active ? 'Show Its Window' : 'Open in New Window', enabled: c.windowForSpace(id) !== c.active, click: d({ type: 'space.openInWindow', id }) },
     {
       label: 'Icon',
       submenu: [

@@ -1,7 +1,8 @@
 import { WebContentsView, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { State, Tab, TabId } from '../shared/types.ts';
-import { activeSpace, isLocked, spaceOfTab, visiblePanes } from '../shared/model.ts';
+import { isLocked, spaceOfTab, visiblePanes } from '../shared/model.ts';
+import type { ChordWindow } from './window.ts';
 import { computeLayout } from '../shared/layout.ts';
 import { parseTiling } from '../shared/tiling.ts';
 import { PARTITION, configureSession, partitionFor } from './session.ts';
@@ -22,8 +23,9 @@ const CONTENT_RADIUS = 10;
  */
 export class TabManager {
   readonly views = new Map<TabId, WebContentsView>();
+  /** which window each view is attached to */
+  private readonly parents = new Map<TabId, number>();
   fullscreenTab: TabId | null = null;
-  private lastFocused: TabId | null = null;
 
   private readonly c: Controller;
 
@@ -51,21 +53,47 @@ export class TabManager {
     return undefined;
   }
 
+  /** The focused pane of the active window. */
   focusedView(): WebContentsView | undefined {
-    const sp = activeSpace(this.c.state);
+    const w = this.c.active;
+    return w ? this.focusedViewIn(w) : undefined;
+  }
+
+  /** The focused pane of one window. */
+  focusedViewIn(w: ChordWindow): WebContentsView | undefined {
+    const sp = w.space;
     if (isLocked(sp)) return undefined;
     return sp.focused ? this.views.get(sp.focused) : undefined;
   }
 
+  /** The window a tab's view belongs in: the one showing its space, else the active window. */
+  windowOfTab(id: TabId, state: State = this.c.state): ChordWindow | undefined {
+    const tab = state.tabs[id];
+    return (tab?.spaceId ? this.c.windowForSpace(tab.spaceId) : undefined) ?? this.c.active;
+  }
+
+  /** The window a view is currently attached to. */
+  windowOfView(id: TabId): ChordWindow | undefined {
+    const wid = this.parents.get(id);
+    return wid === undefined ? undefined : this.c.windows.get(wid);
+  }
+
   reset(): void {
     for (const id of [...this.views.keys()]) this.destroy(id);
-    this.lastFocused = null;
     this.fullscreenTab = null;
   }
 
+  /** A window is closing: drop its views and put their tabs to sleep. */
+  releaseWindow(w: ChordWindow): void {
+    for (const [id, wid] of [...this.parents]) {
+      if (wid !== w.id) continue;
+      this.destroy(id);
+      if (this.c.state.tabs[id]?.awake) this.c.apply({ type: 'tab.sleep', id });
+    }
+  }
+
   reconcile(state: State): void {
-    const win = this.c.win;
-    if (!win || win.isDestroyed()) return;
+    if (this.c.windows.size === 0) return;
 
     for (const [id] of [...this.views]) {
       const tab = state.tabs[id];
@@ -74,33 +102,49 @@ export class TabManager {
     }
     for (const tab of Object.values(state.tabs)) {
       if (tab.awake && !this.views.has(tab.id)) {
-        const view = this.create(tab.id, undefined, tab.url, partitionFor(spaceOfTab(state, tab).profile));
+        const view = this.create(tab.id, undefined, tab.url, partitionFor(spaceOfTab(state, tab).profile), this.windowOfTab(tab.id, state));
         view.webContents.loadURL(tab.url).catch(() => {});
       }
     }
     for (const [id, view] of this.views) {
       const muted = Boolean(state.tabs[id]?.muted);
       if (view.webContents.isAudioMuted() !== muted) view.webContents.setAudioMuted(muted);
+      // A tab whose space now lives in another window follows it there.
+      const wanted = this.windowOfTab(id, state);
+      const current = this.windowOfView(id);
+      if (wanted && wanted.alive() && current !== wanted) {
+        if (current?.alive()) current.win.contentView.removeChildView(view);
+        wanted.win.contentView.addChildView(view);
+        this.parents.set(id, wanted.id);
+        wanted.overlay.raise();
+      }
     }
 
-    const space = activeSpace(state);
-    const visible = visiblePanes(space).filter((id) => this.views.has(id));
-    for (const [id, view] of this.views) view.setVisible(visible.includes(id));
+    const visible = new Set<TabId>();
+    for (const w of this.c.windows.values()) for (const id of visiblePanes(w.space)) if (this.views.has(id) && this.parents.get(id) === w.id) visible.add(id);
+    for (const [id, view] of this.views) view.setVisible(visible.has(id));
     this.layout(state);
 
-    const focus = space.focused && visible.includes(space.focused) ? space.focused : null;
-    if (focus && focus !== this.lastFocused && !this.c.overlay.isShown()) this.views.get(focus)!.webContents.focus();
-    this.lastFocused = focus;
+    for (const w of this.c.windows.values()) {
+      const sp = w.space;
+      const focus = sp.focused && visible.has(sp.focused) ? sp.focused : null;
+      if (focus && focus !== w.lastFocused && !w.overlay.isShown() && w === this.c.active) this.views.get(focus)!.webContents.focus();
+      w.lastFocused = focus;
+    }
   }
 
   layout(state: State = this.c.state): void {
-    const win = this.c.win;
-    if (!win || win.isDestroyed()) return;
-    const { width, height } = win.getContentBounds();
+    for (const w of this.c.windows.values()) this.layoutWindow(w, state);
+  }
 
-    if (this.fullscreenTab && this.views.has(this.fullscreenTab)) {
+  private layoutWindow(w: ChordWindow, state: State): void {
+    if (!w.alive()) return;
+    const { width, height } = w.win.getContentBounds();
+
+    if (this.fullscreenTab && this.views.has(this.fullscreenTab) && this.parents.get(this.fullscreenTab) === w.id) {
       const { panes } = computeLayout({ width, height, sidebarOpen: false, sidebarWidth: 0, panes: 1, fullscreen: true });
       for (const [id, view] of this.views) {
+        if (this.parents.get(id) !== w.id) continue;
         const isFull = id === this.fullscreenTab;
         view.setVisible(isFull);
         if (isFull) view.setBounds(panes[0]);
@@ -108,8 +152,8 @@ export class TabManager {
       return;
     }
 
-    const space = activeSpace(state);
-    const visible = visiblePanes(space).filter((id) => this.views.has(id));
+    const space = w.space;
+    const visible = visiblePanes(space).filter((id) => this.views.has(id) && this.parents.get(id) === w.id);
     const { panes } = computeLayout({
       width,
       height,
@@ -118,7 +162,7 @@ export class TabManager {
       panes: visible.length,
       topInset: this.c.topInset(),
       tiling: space.tiling ? parseTiling(space.tiling) : null,
-      panelWidth: this.c.panel.width(),
+      panelWidth: w.panel.width(),
     });
     visible.forEach((id, k) => this.views.get(id)!.setBounds(panes[k]));
   }
@@ -131,8 +175,7 @@ export class TabManager {
     return tab ? partitionFor(spaceOfTab(this.c.state, tab).profile) : PARTITION;
   }
 
-  create(id: TabId, existing?: WebContentsView, url = '', partition = PARTITION): WebContentsView {
-    const win = this.c.win!;
+  create(id: TabId, existing?: WebContentsView, url = '', partition = PARTITION, w: ChordWindow | undefined = this.windowOfTab(id)): WebContentsView {
     configureSession(partition);
     this.partitions.set(id, partition);
     const view =
@@ -153,8 +196,12 @@ export class TabManager {
     view.setBackgroundColor('#ffffff');
     view.setVisible(false);
     this.views.set(id, view);
-    win.contentView.addChildView(view);
-    this.c.overlay.raise();
+    const host = w && w.alive() ? w : this.c.active;
+    if (host && host.alive()) {
+      host.win.contentView.addChildView(view);
+      this.parents.set(id, host.id);
+      host.overlay.raise();
+    }
     this.wire(id, view.webContents);
     this.c.wireKeys(view.webContents);
     return view;
@@ -167,9 +214,10 @@ export class TabManager {
     this.partitions.delete(id);
     this.c.smart.clear(id);
     if (this.fullscreenTab === id) this.fullscreenTab = null;
-    if (this.lastFocused === id) this.lastFocused = null;
-    const win = this.c.win;
-    if (win && !win.isDestroyed()) win.contentView.removeChildView(view);
+    const parent = this.windowOfView(id);
+    this.parents.delete(id);
+    for (const w of this.c.windows.values()) if (w.lastFocused === id) w.lastFocused = null;
+    if (parent?.alive()) parent.win.contentView.removeChildView(view);
     if (!view.webContents.isDestroyed()) view.webContents.close();
   }
 
@@ -232,7 +280,7 @@ export class TabManager {
       this.layout();
     });
     wc.on('found-in-page', (_e, result) => {
-      this.c.overlay.send({ kind: 'find:result', active: result.activeMatchOrdinal, matches: result.matches });
+      this.windowOfView(id)?.overlay.send({ kind: 'find:result', active: result.activeMatchOrdinal, matches: result.matches });
     });
     wc.on('console-message', (event) => {
       if (event.level === 'error' || event.level === 'warning') pageLine(id, `${event.level}: ${event.message} (${event.sourceId.split('/').pop() ?? ''}:${event.lineNumber})`);
@@ -247,6 +295,7 @@ export class TabManager {
       this.c.smart.clear(id);
       if (!this.views.has(id)) return; // we closed it ourselves
       this.views.delete(id);
+      this.parents.delete(id);
       if (this.c.state.tabs[id]?.awake) this.c.apply({ type: 'tab.sleep', id });
     });
     wc.on('did-fail-load', (_e, code, description, url, isMainFrame) => {
@@ -293,7 +342,7 @@ export class TabManager {
           const guest = (options as { webContents?: WebContents }).webContents;
           const view = guest ? new WebContentsView({ webContents: guest }) : new WebContentsView({ webPreferences: options.webPreferences });
           const newId = randomUUID();
-          this.create(newId, view, '', this.partitions.get(id) ?? PARTITION);
+          this.create(newId, view, '', this.partitions.get(id) ?? PARTITION, this.windowOfView(id));
           this.c.apply({
             type: 'tab.new',
             id: newId,

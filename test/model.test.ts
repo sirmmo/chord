@@ -390,3 +390,19 @@ test('subspaces: dissolve keeps tabs, close removes them, hydrate drops dangling
   const exported = exportConfig(back, 1);
   assert.equal(exported.spaces[0].today.find((t) => t.url === 'https://b.example/')?.group, 'Docs');
 });
+
+test('windows: remembered per space, deduplicated and pruned on hydrate', () => {
+  const ctx: Ctx = { now: 1, newId: (() => { let n = 0; return () => `w${++n}`; })() };
+  let s = initialState(ctx);
+  const first = s.activeSpaceId;
+  s = reduce(s, { type: 'space.create' }, ctx);
+  const second = s.activeSpaceId;
+  s = reduce(s, { type: 'windows.set', windows: [{ spaceId: first, bounds: { x: 0, y: 0, width: 800, height: 600 } }, { spaceId: second }, { spaceId: 'missing' }] }, ctx);
+  assert.deepEqual(s.windows?.map((w) => w.spaceId), [first, second]);
+  const same = reduce(s, { type: 'windows.set', windows: s.windows! }, ctx);
+  assert.equal(same, s);
+  const raw = JSON.parse(JSON.stringify(s)) as State;
+  raw.windows!.push({ spaceId: first });
+  const back = hydrate(raw, ctx);
+  assert.deepEqual(back.windows?.map((w) => w.spaceId), [first, second]);
+});

@@ -277,6 +277,13 @@ export interface State {
   archived: ArchivedTab[];
   recentlyClosed: ArchivedTab[];
   settings: Settings;
+  /** open windows and the space each shows, restored at launch */
+  windows?: WindowState[];
+}
+
+export interface WindowState {
+  spaceId: SpaceId;
+  bounds?: { x: number; y: number; width: number; height: number };
 }
 
 export type ListName = 'favorites' | 'pinned' | 'today';
@@ -303,6 +310,7 @@ export type Action =
   | { type: 'group.dissolve'; id: string }
   | { type: 'group.close'; id: string }
   | { type: 'tab.setGroup'; id: TabId; groupId: string | null }
+  | { type: 'windows.set'; windows: WindowState[] }
   | { type: 'space.tiling'; spec: string | null; spaceId?: SpaceId }
   | { type: 'space.modes'; id: SpaceId; modes: ModeId[] }
   | { type: 'space.profile'; id: SpaceId; profile: string | null }
@@ -420,7 +428,9 @@ export type Command =
   | { type: 'update.check' }
   | { type: 'update.download' }
   | { type: 'update.install' }
-  | { type: 'update.openPage' };
+  | { type: 'update.openPage' }
+  | { type: 'window.new' }
+  | { type: 'space.openInWindow'; id: SpaceId };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
@@ -429,7 +439,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow',
 ]);
 
 export type Message = Action | Command;

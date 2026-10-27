@@ -56,7 +56,7 @@ if (!app.requestSingleInstanceLock()) {
     configureSession();
     controller = new Controller();
     controller.init();
-    controller.createWindow();
+    controller.openInitialWindows();
     warnIfTranslated(controller);
     const url = pendingUrl ?? urlFromArgv(process.argv.slice(1));
     if (url) controller.openUrl(url);

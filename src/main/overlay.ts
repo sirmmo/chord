@@ -3,14 +3,16 @@ import { join } from 'node:path';
 import type { OverlayMessage } from '../shared/types.ts';
 import { computeLayout } from '../shared/layout.ts';
 import type { Controller } from './controller.ts';
+import type { ChordWindow } from './window.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
 
 type ShowMessage = Extract<OverlayMessage, { kind: 'show' }>;
 
 /**
- * A transparent web view layered above the tabs. It hosts the command bar and
- * the find bar, which could not be drawn by the sidebar page because native
- * child views always paint above the window's own page.
+ * A transparent web view layered above the tabs of one window. It hosts the
+ * command bar, the find bar, prompts and pickers, which could not be drawn by
+ * the sidebar page because native child views always paint above the window's
+ * own page.
  */
 export class Overlay {
   private view: WebContentsView | null = null;
@@ -20,9 +22,11 @@ export class Overlay {
   mode: 'palette' | 'find' | 'password' | 'prompt' | 'downloads' | 'sources' | null = null;
 
   private readonly c: Controller;
+  private readonly w: ChordWindow;
 
-  constructor(c: Controller) {
+  constructor(c: Controller, w: ChordWindow) {
     this.c = c;
+    this.w = w;
   }
 
   get webContents() {
@@ -52,8 +56,7 @@ export class Overlay {
   }
 
   show(message: ShowMessage): void {
-    const win = this.c.win;
-    if (!win) return;
+    if (!this.w.alive()) return;
     const view = this.ensure();
     this.mode = message.mode;
     this.layout();
@@ -70,28 +73,27 @@ export class Overlay {
     this.mode = null;
     this.send({ kind: 'hide' });
     this.view.setVisible(false);
-    if (this.attached && this.c.win) {
-      this.c.win.contentView.removeChildView(this.view);
+    if (this.attached && this.w.alive()) {
+      this.w.win.contentView.removeChildView(this.view);
       this.attached = false;
     }
-    this.c.tabs.focusedView()?.webContents.focus();
+    this.c.tabs.focusedViewIn(this.w)?.webContents.focus();
   }
 
   /** Keep the overlay above tab views that were added after it. */
   raise(): void {
-    const win = this.c.win;
-    if (!this.view || !this.mode || !win) return;
+    if (!this.view || !this.mode || !this.w.alive()) return;
+    const win = this.w.win;
     if (this.attached) win.contentView.removeChildView(this.view);
     win.contentView.addChildView(this.view);
     this.attached = true;
   }
 
   layout(): void {
-    const win = this.c.win;
-    if (!this.view || !this.mode || !win) return;
-    const { width, height } = win.getContentBounds();
+    if (!this.view || !this.mode || !this.w.alive()) return;
+    const { width, height } = this.w.win.getContentBounds();
     const { settings } = this.c.state;
-    const { content } = computeLayout({ width, height, sidebarOpen: this.c.sidebarVisible(), sidebarWidth: settings.sidebarWidth, panes: 1, topInset: this.c.topInset(), panelWidth: this.c.panel.width() });
+    const { content } = computeLayout({ width, height, sidebarOpen: this.c.sidebarVisible(), sidebarWidth: settings.sidebarWidth, panes: 1, topInset: this.c.topInset(), panelWidth: this.w.panel.width() });
     if (this.mode !== 'find') {
       this.view.setBounds(content);
     } else {

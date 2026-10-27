@@ -23,6 +23,7 @@ interface Pending {
 export class CaptureManager {
   private readonly c: Controller;
   private pending = new Map<string, Pending>();
+  private pendingOverlay: { hide(): void } | null = null;
 
   constructor(c: Controller) {
     this.c = c;
@@ -44,7 +45,12 @@ export class CaptureManager {
     const sources = await this.listSources(frame);
     if (!this.pending.has(token)) return;
     const needsPermission = isMac && systemPreferences.getMediaAccessStatus('screen') !== 'granted';
-    this.c.overlay.show({ kind: 'show', mode: 'sources', token, origin: prettyOrigin(origin), audio, sources, needsPermission });
+    const requesterWc = frame ? webContents.fromFrame(frame) : undefined;
+    const tabId = requesterWc ? this.c.tabs.tabIdOf(requesterWc) : undefined;
+    const overlay = (tabId ? this.c.tabs.windowOfView(tabId)?.overlay : undefined) ?? this.c.overlay;
+    if (!overlay) return reply(null);
+    this.pendingOverlay = overlay;
+    overlay.show({ kind: 'show', mode: 'sources', token, origin: prettyOrigin(origin), audio, sources, needsPermission });
   }
 
   private async listSources(requester: WebFrameMain | null): Promise<CaptureSource[]> {
@@ -82,7 +88,8 @@ export class CaptureManager {
     const p = this.pending.get(token);
     if (!p) return;
     this.pending.delete(token);
-    this.c.overlay.hide();
+    this.pendingOverlay?.hide();
+    this.pendingOverlay = null;
     if (!id) return p.reply(null);
     try {
       if (id.startsWith('tab:')) {
