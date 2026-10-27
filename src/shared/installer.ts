@@ -16,6 +16,8 @@ export interface SpaceManifestResult {
   /** boosts the manifest ships; they run code on pages, so the user confirms them separately */
   boosts: Boost[];
   name: string;
+  /** the manifest asks to manage tabs through navigator.chord; granted for the source origin on install */
+  dynamic: boolean;
 }
 export type ParsedManifest = SpaceManifestResult | { ok: false; error: string };
 
@@ -64,7 +66,7 @@ export function parseSpaceManifest(text: string, sourceHost: string): ParsedMani
       boosts.push({ id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, name: typeof b.name === 'string' && b.name ? b.name : `${parsed.config.spaces[0].name} boost`, sites, css, js, enabled: true });
     }
   }
-  return { ok: true, config: parsed.config, boosts, name: parsed.config.spaces[0].name };
+  return { ok: true, config: parsed.config, boosts, name: parsed.config.spaces[0].name, dynamic: raw.dynamic === true };
 }
 
 /** The manifest URL carried by a chord://install link, if valid. */

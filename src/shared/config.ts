@@ -2,7 +2,7 @@
 // favorites and settings. No internal ids, so a file can be hand-edited,
 // shared, or imported into another Chord.
 
-import type { ModeId, Settings, SpaceId, State, Tab, TabId, Theme } from './types.ts';
+import type { ModeId, Settings, Space, SpaceId, State, Tab, TabId, Theme } from './types.ts';
 import { isModeId } from './modes.ts';
 import { SPACE_COLORS, MAX_ARCHIVED, clampTint, makeSpace, spaceById, type Ctx } from './model.ts';
 import { titleFor } from './url.ts';
@@ -15,6 +15,8 @@ export interface ConfigTab {
   url: string;
   title?: string;
   favicon?: string;
+  /** subspace the tab belongs to, by name */
+  group?: string;
 }
 
 export interface ConfigSpace {
@@ -47,8 +49,16 @@ function tabToConfig(tab: Tab): ConfigTab {
   return out;
 }
 
-function tabsToConfig(s: State, ids: TabId[]): ConfigTab[] {
-  return ids.map((id) => s.tabs[id]).filter(Boolean).map(tabToConfig);
+function tabsToConfig(s: State, ids: TabId[], space?: Space): ConfigTab[] {
+  return ids
+    .map((id) => s.tabs[id])
+    .filter(Boolean)
+    .map((t) => {
+      const c = tabToConfig(t);
+      const group = space?.groups?.find((g) => g.id === t.groupId);
+      if (group) c.group = group.name;
+      return c;
+    });
 }
 
 /** Export everything, or a single space when `spaceId` is given. */
@@ -65,8 +75,8 @@ export function exportConfig(s: State, now: number, spaceId?: SpaceId): ChordCon
       icon: sp.icon,
       modes: sp.modes && sp.modes.length ? sp.modes : undefined,
       profile: sp.profile,
-      pinned: tabsToConfig(s, sp.pinned),
-      today: tabsToConfig(s, sp.today),
+      pinned: tabsToConfig(s, sp.pinned, sp),
+      today: tabsToConfig(s, sp.today, sp),
     })),
   };
   if (!spaceId) {
@@ -93,6 +103,7 @@ function parseTabs(v: unknown, where: string): ConfigTab[] {
     const tab: ConfigTab = { url };
     if (typeof raw.title === 'string' && raw.title) tab.title = raw.title;
     if (typeof raw.favicon === 'string' && /^(https?|data):/i.test(raw.favicon)) tab.favicon = raw.favicon;
+    if (typeof raw.group === 'string' && raw.group.trim()) tab.group = raw.group.trim().slice(0, 60);
     out.push(tab);
   });
   return out;
@@ -237,15 +248,30 @@ export function importConfig(s: State, config: ChordConfig, mode: ImportMode, ct
       if (!space.panelMode) space.panelMode = space.modes[0];
     }
     const have = urlsIn(s, [...space.pinned, ...space.today]);
+    const groupFor = (name: string | undefined): string | undefined => {
+      if (!name) return undefined;
+      let g = space.groups?.find((x) => x.name.toLowerCase() === name.toLowerCase());
+      if (!g) {
+        g = { id: ctx.newId(), name };
+        space.groups = [...(space.groups ?? []), g];
+      }
+      return g.id;
+    };
     for (const c of cs.pinned) {
       if (have.has(c.url)) continue;
       have.add(c.url);
-      space.pinned.push(addTab(s, ctx, c, space.id, 'pinned'));
+      const id = addTab(s, ctx, c, space.id, 'pinned');
+      space.pinned.push(id);
+      const gid = groupFor(c.group);
+      if (gid) s.tabs[id].groupId = gid;
     }
     for (const c of cs.today) {
       if (have.has(c.url)) continue;
       have.add(c.url);
-      space.today.push(addTab(s, ctx, c, space.id, 'today'));
+      const id = addTab(s, ctx, c, space.id, 'today');
+      space.today.push(id);
+      const gid = groupFor(c.group);
+      if (gid) s.tabs[id].groupId = gid;
     }
   }
 

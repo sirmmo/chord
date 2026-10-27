@@ -26,13 +26,14 @@ export async function installSpace(c: Controller, manifestUrl: string): Promise<
     dialog.showErrorBox('Could not install space', `${manifestUrl}: ${parsed.error}.`);
     return;
   }
-  const { config, boosts, name } = parsed;
+  const { config, boosts, name, dynamic } = parsed;
   const tabs = config.spaces.reduce((n, sp) => n + sp.pinned.length + sp.today.length, 0);
   const existing = c.state.spaces.find((sp) => sp.name.toLowerCase() === name.toLowerCase());
   const lines = [
     `${config.spaces.length === 1 ? `Space “${name}”` : `${config.spaces.length} spaces`} with ${tabs} tab${tabs === 1 ? '' : 's'}${config.favorites.length ? ` and ${config.favorites.length} favorites` : ''}.`,
     existing ? `You already have a space named “${existing.name}”: missing tabs will be added to it.` : '',
     boosts.length ? `Includes ${boosts.length} boost${boosts.length === 1 ? '' : 's'} (CSS/JavaScript that runs on ${sourceHost} pages): ${boosts.map((b) => b.name).join(', ')}.` : '',
+    dynamic ? `The site asks to manage tabs of its own in the space (open and close them through navigator.chord). Installing allows that for ${sourceHost}; Settings → General can revoke it.` : '',
     'Only sites you trust should install spaces.',
   ].filter(Boolean);
   const buttons = boosts.length ? ['Install', 'Install without Boosts', 'Cancel'] : ['Install', 'Cancel'];
@@ -50,6 +51,10 @@ export async function installSpace(c: Controller, manifestUrl: string): Promise<
     const current = c.state.settings.boosts;
     const fresh = boosts.filter((b) => !current.some((x) => x.sites === b.sites && x.css === b.css && x.js === b.js));
     if (fresh.length) c.apply({ type: 'settings.update', patch: { boosts: [...current, ...fresh] } });
+  }
+  if (dynamic) {
+    const origin = `https://${sourceHost}`;
+    if (!c.state.settings.pageTabs.includes(origin)) c.apply({ type: 'settings.update', patch: { pageTabs: [...c.state.settings.pageTabs, origin] } });
   }
   const installed = c.state.spaces.find((sp) => sp.name.toLowerCase() === name.toLowerCase());
   if (installed) c.apply({ type: 'space.activate', id: installed.id });

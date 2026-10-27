@@ -197,6 +197,11 @@ function fillSettings(): void {
   sTray.checked = s.settings.closeToTray;
   sAutoPip.checked = s.settings.autoPip;
   for (const [k, input] of flagInputs) input.checked = s.settings.flags[k] === true;
+  $('#s-pagetabs').replaceChildren(
+    ...(s.settings.pageTabs.length
+      ? s.settings.pageTabs.map((origin) => h('div', { class: 'row' }, h('span', {}, origin), h('button', { class: 'btn', onclick: () => dispatch({ type: 'pageTabs.forget', origin }) }, 'Forget')))
+      : [h('span', { class: 'muted' }, 'None yet. A site that calls navigator.chord asks the first time; sites you allow are listed here.')]),
+  );
   renderBoosts();
   renderAiSettings();
   sDlDir.textContent = s.settings.downloadDir ?? 'System Downloads folder';

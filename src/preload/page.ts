@@ -273,12 +273,69 @@ function smartHook(reportKey: string, actionKey: string): void {
     if (elementPlaying()) schedule();
   }, 5000);
 
+  // ---- navigator.chord: a page may open and close tabs of its own (a subspace) ----
+  const pageCalls = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+  const chordEvents = new EventTarget();
+  let callSeq = 0;
+  const call = (method: string, args?: Record<string, unknown>): Promise<unknown> =>
+    new Promise((resolve, reject) => {
+      const callId = `${Date.now().toString(36)}-${++callSeq}`;
+      pageCalls.set(callId, { resolve, reject });
+      post({ kind: 'pagetabs', callId, method, args });
+      setTimeout(() => {
+        if (pageCalls.delete(callId)) reject(new Error('Chord did not answer'));
+      }, 120_000);
+    });
+  const chordApi = {
+    version: 1,
+    /** Ask once; resolves true when this origin may manage tabs in the space. */
+    requestTabs: () => call('request').then((r) => Boolean((r as { granted?: boolean })?.granted)),
+    /** Whether the permission was already granted, without asking. */
+    tabsGranted: () => call('status').then((r) => Boolean((r as { granted?: boolean })?.granted)),
+    openTab: (opts: { url: string; activate?: boolean }) => call('open', { url: opts?.url, activate: opts?.activate === true }),
+    closeTab: (id: string) => call('close', { id }).then(() => undefined),
+    focusTab: (id: string) => call('focus', { id }).then(() => undefined),
+    navigateTab: (id: string, url: string) => call('navigate', { id, url }).then(() => undefined),
+    listTabs: () => call('list'),
+    setSubspaceName: (name: string) => call('name', { name }).then(() => undefined),
+    addEventListener: chordEvents.addEventListener.bind(chordEvents),
+    removeEventListener: chordEvents.removeEventListener.bind(chordEvents),
+  };
+  Object.freeze(chordApi);
+  try {
+    Object.defineProperty(navigator, 'chord', { value: chordApi, configurable: false, enumerable: false, writable: false });
+  } catch {
+    /* already defined */
+  }
+
   window.addEventListener('message', (e: MessageEvent) => {
     if (e.source !== window || !e.data || typeof e.data[actionKey] !== 'string') return;
     const raw = e.data[actionKey] as string;
     const sep = raw.indexOf(':');
     const kind = raw.slice(0, sep);
     const action = raw.slice(sep + 1);
+    if (kind === 'pagetabs') {
+      try {
+        const r = JSON.parse(action) as { callId: string; ok: boolean; result?: unknown; error?: string };
+        const p = pageCalls.get(r.callId);
+        pageCalls.delete(r.callId);
+        if (!p) return;
+        if (r.ok) p.resolve(r.result);
+        else p.reject(new Error(r.error ?? 'failed'));
+      } catch {
+        /* malformed */
+      }
+      return;
+    }
+    if (kind === 'pagetabsevent') {
+      try {
+        const ev = JSON.parse(action) as { type: string } & Record<string, unknown>;
+        chordEvents.dispatchEvent(new CustomEvent(ev.type, { detail: ev }));
+      } catch {
+        /* malformed */
+      }
+      return;
+    }
     if (kind === 'webmcp') {
       try {
         const { callId, name, args } = JSON.parse(action) as { callId: string; name: string; args: unknown };
@@ -326,10 +383,22 @@ if (process.isMainFrame) {
 
   window.addEventListener('message', (e: MessageEvent) => {
     if (e.source !== window || !e.data || typeof e.data !== 'object' || !(REPORT_KEY in e.data)) return;
-    ipcRenderer.send('smart', e.data[REPORT_KEY]);
+    const payload = e.data[REPORT_KEY] as { kind?: string; callId?: string; method?: string; args?: unknown } | null;
+    if (payload && payload.kind === 'pagetabs') {
+      const callId = String(payload.callId ?? '');
+      ipcRenderer
+        .invoke('pagetabs', { method: payload.method, args: payload.args })
+        .then((r: { ok: boolean; result?: unknown; error?: string }) => window.postMessage({ [ACTION_KEY]: `pagetabs:${JSON.stringify({ callId, ...r })}` }, '*'))
+        .catch((err: Error) => window.postMessage({ [ACTION_KEY]: `pagetabs:${JSON.stringify({ callId, ok: false, error: err.message })}` }, '*'));
+      return;
+    }
+    ipcRenderer.send('smart', payload);
   });
   ipcRenderer.on('smart:action', (_event, action: string) => {
     window.postMessage({ [ACTION_KEY]: action }, '*');
+  });
+  ipcRenderer.on('pagetabs:event', (_event, ev: unknown) => {
+    window.postMessage({ [ACTION_KEY]: `pagetabsevent:${JSON.stringify(ev)}` }, '*');
   });
 
   // ---- installable spaces: a site declares <link rel="chord-space" href="…"> ----

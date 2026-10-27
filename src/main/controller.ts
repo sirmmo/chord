@@ -12,8 +12,9 @@ import { Store } from './store.ts';
 import { TabManager } from './tabs.ts';
 import { Overlay } from './overlay.ts';
 import { CaptureManager } from './capture.ts';
+import { PageTabsManager } from './pagetabs.ts';
 import { setShields } from './session.ts';
-import { buildAppMenu, spaceContextMenu, tabContextMenu } from './menu.ts';
+import { buildAppMenu, spaceContextMenu, tabContextMenu, groupContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
 import { isMac, TITLEBAR_HEIGHT, TOP_INSET, ADDRESS_BAR_HEIGHT } from './platform.ts';
 import { ExtensionManager } from './extensions.ts';
@@ -48,6 +49,7 @@ export class Controller {
   readonly tabs = new TabManager(this);
   readonly overlay = new Overlay(this);
   readonly capture = new CaptureManager(this);
+  readonly pageTabs = new PageTabsManager(this);
   readonly smart = new SmartManager(this);
   readonly tray = new TrayManager(this);
   /** set once the app is really quitting, so close-to-tray does not swallow the window close */
@@ -93,6 +95,7 @@ export class Controller {
     this.research.init();
     this.ai.init();
     this.capture.init();
+    this.pageTabs.init();
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -294,6 +297,7 @@ export class Controller {
       if (!!prev.tabs[id]?.muted !== !!tab.muted) soundChanged = true;
     }
     if (soundChanged) this.tray.refresh();
+    this.pageTabs.diff(prev, next);
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
@@ -522,6 +526,18 @@ export class Controller {
       case 'guide.open':
         this.openInternal('chord://guide/');
         return;
+      case 'group.contextmenu':
+        groupContextMenu(this, cmd.id);
+        return;
+      case 'group.new':
+        void this.newGroup(cmd.tabId);
+        return;
+      case 'group.renamePrompt':
+        void this.renameGroup(cmd.id);
+        return;
+      case 'pageTabs.forget':
+        this.apply({ type: 'settings.update', patch: { pageTabs: this.state.settings.pageTabs.filter((o) => o !== cmd.origin) } });
+        return;
       case 'space.install':
         void installSpace(this, cmd.url);
         return;
@@ -718,6 +734,22 @@ export class Controller {
   cancelPrompts(): void {
     for (const resolve of this.prompts.values()) resolve(null);
     this.prompts.clear();
+  }
+
+  private async newGroup(tabId: string): Promise<void> {
+    const tab = this.state.tabs[tabId];
+    if (!tab || !tab.spaceId) return;
+    const name = await this.prompt('New subspace', 'Subspace name', tab.title.slice(0, 30));
+    this.overlay.hide();
+    if (name && name.trim()) this.apply({ type: 'group.create', spaceId: tab.spaceId, name: name.trim(), tabIds: [tabId] });
+  }
+
+  private async renameGroup(id: string): Promise<void> {
+    const group = this.state.spaces.flatMap((sp) => sp.groups ?? []).find((g) => g.id === id);
+    if (!group) return;
+    const name = await this.prompt('Rename subspace', 'Subspace name', group.name);
+    this.overlay.hide();
+    if (name && name.trim()) this.apply({ type: 'group.rename', id, name: name.trim() });
   }
 
   private async newProfile(spaceId: string): Promise<void> {

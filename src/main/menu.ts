@@ -184,6 +184,18 @@ export function tabContextMenu(c: Controller, id: TabId): void {
       })),
     });
   }
+  if (tab.kind !== 'favorite' && tab.spaceId) {
+    const groups = c.state.spaces.find((sp) => sp.id === tab.spaceId)?.groups ?? [];
+    items.push({
+      label: 'Subspace',
+      submenu: [
+        { label: 'New Subspace from This Tab…', click: d({ type: 'group.new', tabId: id }) },
+        ...(groups.length ? [sep] : []),
+        ...groups.map((g) => ({ label: g.name, type: 'radio' as const, checked: tab.groupId === g.id, click: d({ type: 'tab.setGroup', id, groupId: g.id }) })),
+        ...(tab.groupId ? [sep, { label: 'Remove from Subspace', click: d({ type: 'tab.setGroup', id, groupId: null }) }] : []),
+      ],
+    });
+  }
   items.push(sep);
   if (tab.awake) {
     items.push({ label: tab.muted ? 'Unmute' : 'Mute', click: d({ type: 'tab.mute', id }) });
@@ -206,6 +218,23 @@ export function volumeMenu(c: Controller, tab: Tab): MenuItemConstructorOptions 
       .sort((a, b) => b - a)
       .map((pct) => ({ label: `${pct}%`, type: 'radio' as const, checked: cur === pct, click: () => c.dispatch({ type: 'tab.volume', id: tab.id, volume: pct / 100 }) })),
   };
+}
+
+export function groupContextMenu(c: Controller, id: string): void {
+  const space = c.state.spaces.find((sp) => sp.groups?.some((g) => g.id === id));
+  const group = space?.groups?.find((g) => g.id === id);
+  if (!space || !group || !c.win) return;
+  const d = (m: Message) => () => c.dispatch(m);
+  const owner = group.owner ? c.state.tabs[group.owner] : undefined;
+  const items: MenuItemConstructorOptions[] = [
+    { label: 'Rename…', click: d({ type: 'group.renamePrompt', id }) },
+    { label: group.collapsed ? 'Expand' : 'Collapse', click: d({ type: 'group.toggle', id }) },
+    sep,
+    ...(owner ? [{ label: `Managed by ${hostOf(owner.url) || owner.title}`, enabled: false }, sep] : []),
+    { label: 'Dissolve Subspace (keep tabs)', click: d({ type: 'group.dissolve', id }) },
+    { label: 'Close Subspace', click: d({ type: 'group.close', id }) },
+  ];
+  Menu.buildFromTemplate(items).popup({ window: c.win });
 }
 
 export function spaceContextMenu(c: Controller, id: SpaceId): void {

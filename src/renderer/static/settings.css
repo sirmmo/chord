@@ -111,3 +111,8 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 /* troubleshooting flags */
 #s-flags { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 #s-flags label.check .help { color: var(--muted); font-size: 12px; }
+
+/* sites allowed to manage tabs */
+.s-list { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.s-list .row { justify-content: space-between; }
+.s-list .muted { color: var(--muted); font-size: 12px; }

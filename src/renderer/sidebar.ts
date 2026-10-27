@@ -2,7 +2,7 @@
 // around the tab views (native children painted above it). Rendering is
 // keyed: existing elements are updated in place, never rebuilt.
 
-import type { CallAction, CallInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TimerInfo, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
+import type { CallAction, CallInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabGroup, TimerInfo, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace, isLocked, panelVisible, visiblePanes } from '../shared/model.ts';
 import { clampPanel } from '../shared/modes.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
@@ -562,10 +562,12 @@ function render(): void {
   syncChildren($('#favorites'), s.favorites.map((id) => s.tabs[id]).filter(Boolean), (t) => t.id, makeFavorite, (el, t) => updateFavorite(el, t, space));
   setText($('#space-icon'), space.icon ?? '');
   renderSpaceName(space);
-  const tabsOf = (ids: TabId[]) => ids.map((id) => s.tabs[id]).filter(Boolean);
-  syncChildren($('#pinned'), tabsOf(space.pinned), (t) => t.id, makeTab, (el, t) => updateTab(el, t, space));
+  const rows = (ids: TabId[]) => listRows(s, space, ids);
+  const makeRow = (r: Row) => (r.kind === 'tab' ? makeTab(r.tab) : makeGroupHeader(r.group));
+  const updateRow = (el: HTMLElement, r: Row) => (r.kind === 'tab' ? updateTab(el, r.tab, space) : updateGroupHeader(el, r.group, r.count));
+  syncChildren($('#pinned'), rows(space.pinned), rowKey, makeRow, updateRow);
   $('#pinned-divider').classList.toggle('hidden', space.pinned.length === 0);
-  syncChildren($('#today'), tabsOf(space.today), (t) => t.id, makeTab, (el, t) => updateTab(el, t, space));
+  syncChildren($('#today'), rows(space.today), rowKey, makeRow, updateRow);
 
   const spaceKey = s.spaces.map((sp) => `${sp.id}${sp.name}${sp.color}${sp.icon ?? ''}${sp.lock ? (isLocked(sp) ? 'L' : 'U') : ''}`).join('|') + s.activeSpaceId;
   if (spaceKey !== lastSpaceKey) {
@@ -662,6 +664,76 @@ function startRename(id: SpaceId): void {
   render();
 }
 
+// ---- subspaces: a group's members render together under a header, at the first member's slot ----
+
+type Row = { kind: 'tab'; tab: Tab } | { kind: 'group'; group: TabGroup; count: number };
+const rowKey = (r: Row) => (r.kind === 'tab' ? r.tab.id : `g:${r.group.id}`);
+
+function listRows(s: State, space: Space, ids: TabId[]): Row[] {
+  const out: Row[] = [];
+  const done = new Set<string>();
+  const tabs = ids.map((id) => s.tabs[id]).filter(Boolean);
+  for (const tab of tabs) {
+    const group = tab.groupId ? space.groups?.find((g) => g.id === tab.groupId) : undefined;
+    if (!group) {
+      if (!tab.groupId) out.push({ kind: 'tab', tab });
+      continue;
+    }
+    if (done.has(group.id)) continue;
+    done.add(group.id);
+    const members = tabs.filter((t) => t.groupId === group.id);
+    out.push({ kind: 'group', group, count: members.length });
+    if (!group.collapsed) for (const m of members) out.push({ kind: 'tab', tab: m });
+  }
+  return out;
+}
+
+function makeGroupHeader(group: TabGroup): HTMLElement {
+  const el = h(
+    'div',
+    { class: 'group-header', 'data-group': group.id },
+    h('button', { class: 'chev', onclick: () => dispatch({ type: 'group.toggle', id: group.id }) }, svg(ICONS.forward)),
+    h('span', { class: 'name' }),
+    h('span', { class: 'count' }),
+    h('button', { class: 'close', title: 'Close subspace', onclick: () => dispatch({ type: 'group.close', id: group.id }) }, svg(ICONS.close)),
+  );
+  el.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    dispatch({ type: 'group.toggle', id: group.id });
+  });
+  el.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dispatch({ type: 'group.contextmenu', id: group.id });
+  });
+  // dropping a tab on the header puts it into the subspace
+  el.addEventListener('dragover', (e) => {
+    if (!e.dataTransfer?.types.includes(TAB_MIME)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    clearDropMarks();
+    el.classList.add('drop-target');
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
+  el.addEventListener('drop', (e) => {
+    const id = e.dataTransfer?.getData(TAB_MIME);
+    if (!id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    clearDropMarks();
+    dispatch({ type: 'tab.setGroup', id, groupId: group.id });
+  });
+  return el;
+}
+
+function updateGroupHeader(el: HTMLElement, group: TabGroup, count: number): void {
+  setText(el.querySelector('.name') as HTMLElement, group.name);
+  setText(el.querySelector('.count') as HTMLElement, String(count));
+  setClass(el, 'collapsed', Boolean(group.collapsed));
+  setClass(el, 'managed', Boolean(group.owner));
+}
+
 // ---- tab rows and favorite tiles ----
 
 function tabId(el: HTMLElement): TabId {
@@ -716,6 +788,7 @@ function makeTab(tab: Tab): HTMLElement {
 
 function updateTab(el: HTMLElement, tab: Tab, space: Space): void {
   setClass(el, 'active', space.panes.includes(tab.id));
+  setClass(el, 'grouped', Boolean(tab.groupId));
   setClass(el, 'asleep', !tab.awake);
   setClass(el, 'crashed', Boolean(tab.crashed));
   if (el.title !== tab.url) el.title = tab.url;
@@ -809,6 +882,12 @@ function dropIndex(list: HTMLElement, e: DragEvent): number {
   return index;
 }
 
+/** The position in the space's id list that corresponds to a DOM slot (group headers take no slot). */
+function listIndex(list: HTMLElement, domIndex: number): number {
+  const items = [...list.children].filter((c) => (c as HTMLElement).dataset.id !== dragging) as HTMLElement[];
+  return items.slice(0, domIndex).filter((c) => c.dataset.id).length;
+}
+
 function dropZone(list: HTMLElement, name: ListName): void {
   list.addEventListener('dragover', (e) => {
     const types = e.dataTransfer?.types ?? [];
@@ -829,7 +908,7 @@ function dropZone(list: HTMLElement, name: ListName): void {
   });
   list.addEventListener('drop', (e) => {
     e.preventDefault();
-    const index = dropIndex(list, e);
+    const index = listIndex(list, dropIndex(list, e));
     clearDropMarks();
     const spaceId = state?.activeSpaceId;
     const id = e.dataTransfer?.getData(TAB_MIME);

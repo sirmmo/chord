@@ -159,6 +159,17 @@ URL strings or objects with `url`, `title` and `favicon`:
 }
 ```
 
+## Subspaces
+
+A subspace is a named group of tabs inside a space, shown under a collapsible header in
+the sidebar. Right-click a tab → Subspace → New Subspace from This Tab…, then drop other
+tabs onto the header or pick the subspace from the same submenu. The header's menu
+renames, collapses, dissolves (tabs stay) or closes the subspace (tabs go). Subspaces
+export with the configuration as a `group` name on each tab.
+
+Pages can manage a subspace of their own: see "Dynamic pages" below. A dashboard such as
+Stairway can keep one tab per running experiment and close it when the experiment ends.
+
 ## LCARS
 
 Settings → Appearance → Skin switches the whole chrome (sidebar, command bar, chord://
@@ -251,6 +262,34 @@ A whole `chord-config` file works too. Chord shows what the manifest contains an
 before installing; a space with the same name receives the missing tabs instead of being
 duplicated. Boosts in a manifest may only target the publishing domain and are listed in
 the prompt, with an "Install without Boosts" choice.
+
+### Dynamic pages: the page API
+
+Inside Chord, https pages (and `http://localhost`) get `navigator.chord`. A page may open
+and close tabs **of its own**, grouped under it as a subspace; it never sees or touches
+the user's other tabs. The first call asks the user once per origin (Settings → General
+lists and revokes grants); a manifest with `"dynamic": true` grants it on install.
+
+```js
+if ('chord' in navigator && (await navigator.chord.requestTabs())) {
+  await navigator.chord.setSubspaceName('Experiments');
+  const tab = await navigator.chord.openTab({ url: 'https://stairway.example/exp/42', activate: false });
+  navigator.chord.addEventListener('tabclosed', (e) => console.log('closed', e.detail.id));
+  // later
+  await navigator.chord.closeTab(tab.id);
+}
+```
+
+| Method | Does |
+| --- | --- |
+| `requestTabs()` → `boolean` | Ask once; true when allowed. `tabsGranted()` checks silently. |
+| `openTab({ url, activate? })` → `{ id, url, title }` | Open an http(s) page in the page's subspace (max 24). |
+| `closeTab(id)` · `focusTab(id)` · `navigateTab(id, url)` | Only for tabs the page opened. |
+| `listTabs()` → `[{ id, url, title }]` | The page's open tabs. |
+| `setSubspaceName(name)` | Rename the subspace (defaults to the page title). |
+| events `tabclosed` · `tabchanged` | `e.detail` carries `id` (and `url`, `title`). |
+
+Closing the page closes its subspace. Type declarations: [`docs/chord-page-api.d.ts`](docs/chord-page-api.d.ts).
 
 ## Something slow or broken?
 

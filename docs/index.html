@@ -118,6 +118,7 @@
         <a href="#features">Features</a>
         <a href="#shortcuts">Shortcuts</a>
         <a href="#install">Install</a>
+        <a href="#sites">For sites</a>
         <a href="#config">Config files</a>
         <a href="#architecture">How it works</a>
         <a href="#contribute">Contribute</a>
@@ -167,7 +168,8 @@
       <div class="grid">
         <div class="card"><span class="k">Profiles</span><h3>Separate logins per space</h3><p>Give a space its own profile and its cookies and logins stay apart from the rest; give several spaces the same profile and they share it. Two Google accounts, two spaces.</p></div>
 <div class="card"><span class="k">Modes</span><h3>Research and AI, per space</h3><p>Turn on Research for notes, clips, sources and one-click saving to Zotero, or AI for a side-panel assistant on a local or remote model that reads and drives the tabs of that space and calls the tools pages expose through WebMCP.</p></div>
-<div class="card"><span class="k">Add to Chord</span><h3>Installable spaces</h3><p>A site can publish a space manifest: one click sets up a space with all its pages, and optional boosts for that site. Declare it with a link tag or an “Add to Chord” link.</p></div>
+<div class="card"><span class="k">Subspaces</span><h3>Groups inside a space</h3><p>Collapse related tabs under a header, drop tabs onto it, rename or dissolve it. Pages can manage a subspace of their own through <code>navigator.chord</code>: a dashboard keeps one tab per job and tidies up after itself.</p></div>
+        <div class="card"><span class="k">Add to Chord</span><h3>Installable spaces</h3><p>A site can publish a space manifest: one click sets up a space with all its pages, and optional boosts for that site. Declare it with a link tag or an “Add to Chord” link.</p></div>
 <div class="card"><span class="k">CSS · JS</span><h3>Boosts</h3><p>Your own CSS and JavaScript per site, applied live. Passwords saved with the OS keychain, picture in picture that follows you between tabs.</p></div>
 <div class="card"><span class="k">🔒</span><h3>Private spaces</h3><p>Give a space a password: it locks on launch and when you leave it, and its tabs are never exported, archived, or written to history.</p></div>
 <div class="card"><span class="k">♪ · ☎ · ⏱</span><h3>Smart pages</h3><p>Players get a now-playing card with play, pause, previous and next. Screen sharing works with the system picker on macOS 15+ and Chord's own screen/window/tab picker elsewhere. Calls on Meet, Zoom or Jitsi get a card with duration, mute, camera and leave. Timers, unread counts and notifications show as chips and badges. All of it from every space.</p></div>
@@ -246,6 +248,36 @@ npm run dist:mac   # .dmg in release/</code></pre>
     </div>
   </section>
 
+  <section id="sites">
+    <div class="wrap">
+      <h2>For site owners</h2>
+      <p class="sub">Two ways a site can meet Chord halfway: an installable space, and a page that manages tabs of its own.</p>
+      <div class="two">
+        <div>
+          <h3>Installable spaces</h3>
+          <p>Publish a <code>chord-space</code> manifest over https and declare it with <code>&lt;link rel="chord-space" href="…"&gt;</code> or an <code>&lt;a href="chord://install/?url=…"&gt;Add to Chord&lt;/a&gt;</code> link. Chord shows what it contains and asks before installing. Boosts in a manifest may only target the publishing domain. Add <code>"dynamic": true</code> to grant the page API below on install.</p>
+          <h3>Dynamic pages</h3>
+          <p>Inside Chord, https pages get <code>navigator.chord</code>. A page may open and close tabs <em>of its own</em>, grouped under it as a subspace, and is told when the user closes one. It never sees the user's other tabs. The first call asks once per origin; Settings → General lists and revokes grants. Closing the page closes its subspace. <a href="chord-page-api.d.ts">Type declarations</a>.</p>
+        </div>
+<pre><code>{
+  "format": "chord-space", "version": 1,
+  "name": "Stairway", "icon": "🪜", "dynamic": true,
+  "pinned": [{ "url": "https://stairway.example/", "title": "Experiments" }]
+}
+
+// on the page
+if ('chord' in navigator &amp;&amp; await navigator.chord.requestTabs()) {
+  await navigator.chord.setSubspaceName('Experiments');
+  const tab = await navigator.chord.openTab({
+    url: 'https://stairway.example/exp/42', activate: false });
+  navigator.chord.addEventListener('tabclosed',
+    (e) =&gt; console.log('closed', e.detail.id));
+  await navigator.chord.closeTab(tab.id);
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
   <section id="config">
     <div class="wrap">
       <h2>Configuration files</h2>
@@ -254,7 +286,7 @@ npm run dist:mac   # .dmg in release/</code></pre>
         <div>
           <p><strong>Merge</strong> adds what is missing: Spaces with the same name receive the tabs they do not have yet, other Spaces are created, favorites are added, settings are left alone.</p>
           <p><strong>Replace</strong> rebuilds Spaces, favorites and settings from the file. Your current tabs are moved to the archive, so nothing is lost.</p>
-          <p>The format has no internal ids and is meant to be written by hand too. A tab is a URL string or an object with <code>url</code>, <code>title</code> and <code>favicon</code>. Imported tabs stay asleep until you open them.</p>
+          <p>The format has no internal ids and is meant to be written by hand too. A tab is a URL string or an object with <code>url</code>, <code>title</code>, <code>favicon</code> and an optional <code>group</code> (its subspace). Imported tabs stay asleep until you open them.</p>
         </div>
 <pre><code>{
   "format": "chord-config",

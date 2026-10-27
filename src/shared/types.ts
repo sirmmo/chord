@@ -29,6 +29,17 @@ export interface Tab {
   /** 0–1 applied to the page's media elements; 1 (or unset) is the page's own level */
   volume?: number;
   crashed?: boolean;
+  /** subspace (tab group) within the tab's space */
+  groupId?: string;
+}
+
+/** A subspace: a named group of tabs inside a space, optionally managed by a page */
+export interface TabGroup {
+  id: string;
+  name: string;
+  collapsed?: boolean;
+  /** the tab whose page created this group through the page API; it may add and remove members */
+  owner?: TabId;
 }
 
 export interface Boost {
@@ -138,6 +149,8 @@ export interface Space {
   panelMode?: ModeId;
   /** private space: password protected, never exported, never archived */
   lock?: SpaceLock;
+  /** subspaces */
+  groups?: TabGroup[];
   /** runtime: a private space starts locked and locks again when left alone */
   locked?: boolean;
   /** when the user last switched away from this space */
@@ -219,6 +232,8 @@ export interface Settings {
   searchEngine: SearchEngine;
   /** Chromium troubleshooting switches applied at the next launch */
   flags: TroubleFlags;
+  /** origins allowed to open and close tabs of their own through navigator.chord */
+  pageTabs: string[];
 }
 
 export interface TroubleFlags {
@@ -258,6 +273,12 @@ export type Action =
   | { type: 'tab.unfavorite'; id: TabId }
   | { type: 'tab.move'; id: TabId; list: ListName; spaceId?: SpaceId; index: number }
   | { type: 'tab.split'; id: TabId }
+  | { type: 'group.create'; spaceId?: SpaceId; name: string; tabIds?: TabId[]; owner?: TabId; id?: string }
+  | { type: 'group.rename'; id: string; name: string }
+  | { type: 'group.toggle'; id: string }
+  | { type: 'group.dissolve'; id: string }
+  | { type: 'group.close'; id: string }
+  | { type: 'tab.setGroup'; id: TabId; groupId: string | null }
   | { type: 'space.tiling'; spec: string | null; spaceId?: SpaceId }
   | { type: 'space.modes'; id: SpaceId; modes: ModeId[] }
   | { type: 'space.profile'; id: SpaceId; profile: string | null }
@@ -367,7 +388,11 @@ export type Command =
   | { type: 'capture.pick'; token: string; id: string | null }
   | { type: 'capture.settings' }
   | { type: 'app.relaunch' }
-  | { type: 'guide.open' };
+  | { type: 'guide.open' }
+  | { type: 'group.contextmenu'; id: string }
+  | { type: 'group.new'; tabId: TabId }
+  | { type: 'group.renamePrompt'; id: string }
+  | { type: 'pageTabs.forget'; origin: string };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
@@ -376,7 +401,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget',
 ]);
 
 export type Message = Action | Command;

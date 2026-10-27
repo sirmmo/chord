@@ -341,3 +341,52 @@ test('skin setting defaults to chord and only accepts known skins', () => {
   raw.settings.theme.skin = 'holodeck';
   assert.equal(hydrate(raw, ctx).settings.theme.skin, 'chord');
 });
+
+test('subspaces: members are grouped, owners take their subspace along, leaving the space drops it', () => {
+  const ctx: Ctx = { now: 1, newId: (() => { let n = 0; return () => `t${++n}`; })() };
+  let s = initialState(ctx);
+  const space = activeSpace(s);
+  s = reduce(s, { type: 'tab.new', url: 'https://stairway.example/', id: 'owner', spaceId: space.id }, ctx);
+  s = reduce(s, { type: 'tab.new', url: 'https://a.example/', id: 'a', spaceId: space.id, activate: false }, ctx);
+  s = reduce(s, { type: 'tab.new', url: 'https://b.example/', id: 'b', spaceId: space.id, activate: false }, ctx);
+  s = reduce(s, { type: 'group.create', spaceId: space.id, name: 'Experiments', owner: 'owner', id: 'g1', tabIds: ['owner', 'a'] }, ctx);
+  assert.equal(activeSpace(s).groups?.length, 1);
+  assert.equal(s.tabs.a.groupId, 'g1');
+  s = reduce(s, { type: 'tab.setGroup', id: 'b', groupId: 'g1' }, ctx);
+  // b is placed right after the last member in the today list
+  const today = activeSpace(s).today;
+  assert.equal(today.indexOf('b'), today.indexOf('a') + 1);
+  // a second space: moving a member there removes it from the group
+  s = reduce(s, { type: 'space.create' }, ctx);
+  const other = activeSpace(s);
+  s = reduce(s, { type: 'tab.move', id: 'b', list: 'today', spaceId: other.id, index: 0 }, ctx);
+  assert.equal(s.tabs.b.groupId, undefined);
+  // closing the owner closes the remaining member and the group
+  s = reduce(s, { type: 'tab.close', id: 'owner' }, ctx);
+  assert.equal(s.tabs.a, undefined);
+  assert.equal(s.spaces[0].groups, undefined);
+});
+
+test('subspaces: dissolve keeps tabs, close removes them, hydrate drops dangling groups', () => {
+  const ctx: Ctx = { now: 1, newId: (() => { let n = 0; return () => `u${++n}`; })() };
+  let s = initialState(ctx);
+  const space = activeSpace(s);
+  s = reduce(s, { type: 'tab.new', url: 'https://a.example/', id: 'a', spaceId: space.id, activate: false }, ctx);
+  s = reduce(s, { type: 'tab.new', url: 'https://b.example/', id: 'b', spaceId: space.id, activate: false }, ctx);
+  s = reduce(s, { type: 'group.create', spaceId: space.id, name: 'Docs', id: 'g', tabIds: ['a', 'b'] }, ctx);
+  const dissolved = reduce(s, { type: 'group.dissolve', id: 'g' }, ctx);
+  assert.equal(dissolved.tabs.a.groupId, undefined);
+  assert.ok(dissolved.tabs.b);
+  const closed = reduce(s, { type: 'group.close', id: 'g' }, ctx);
+  assert.equal(closed.tabs.a, undefined);
+  assert.equal(closed.tabs.b, undefined);
+  const raw = JSON.parse(JSON.stringify(s)) as State;
+  (raw.tabs.a as { groupId?: string }).groupId = 'missing';
+  raw.spaces[0].groups!.push({ id: 'empty', name: 'Empty' });
+  const back = hydrate(raw, ctx);
+  assert.equal(back.tabs.a.groupId, undefined);
+  assert.deepEqual(back.spaces[0].groups?.map((g) => g.id), ['g']);
+  // export carries the group by name and import recreates it
+  const exported = exportConfig(back, 1);
+  assert.equal(exported.spaces[0].today.find((t) => t.url === 'https://b.example/')?.group, 'Docs');
+});

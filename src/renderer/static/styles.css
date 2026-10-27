@@ -372,6 +372,24 @@ body.space-locked .lists { display: none; }
 .now { flex-wrap: wrap; }
 .now .vol { flex-basis: 100%; width: 100%; margin: 4px 2px 0; height: 14px; accent-color: var(--accent); }
 
+/* subspaces */
+.group-header { display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 2px; margin-top: 4px; border-radius: 7px; color: var(--muted); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.group-header:hover { background: var(--hover); }
+.group-header.drop-target { background: var(--selected); color: var(--fg); }
+.group-header .chev, .group-header .close { border: 0; background: transparent; color: inherit; width: 20px; height: 20px; border-radius: 5px; display: grid; place-items: center; padding: 0; }
+.group-header .chev svg, .group-header .close svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.group-header .chev svg { transform: rotate(90deg); }
+.group-header.collapsed .chev svg { transform: rotate(0deg); }
+.group-header .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-header .count { font-size: 10.5px; opacity: .8; }
+.group-header .close { opacity: 0; }
+.group-header:hover .close { opacity: 1; }
+.group-header .close:hover { background: var(--active); color: var(--fg); }
+.group-header.managed .name::after { content: " ·"; opacity: .6; }
+.tab.grouped { margin-left: 14px; }
+:root[data-skin="lcars"] .group-header { color: var(--lc-blue); border-left: 4px solid var(--lc-blue); border-radius: 0 10px 10px 0; }
+:root[data-skin="lcars"] .tab.grouped { margin-left: 10px; }
+
 /* ---------------------------------------------------------------------------
    LCARS skin: black chrome, the classic peach/lavender/periwinkle palette,
    pill-shaped controls, a framed sidebar and condensed uppercase type.

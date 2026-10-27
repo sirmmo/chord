@@ -1,7 +1,7 @@
 // Pure state model: no Electron, no side effects. Every transition takes a
 // State and returns a new State, so it can be unit-tested in plain Node.
 
-import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabId, Theme } from './types.ts';
+import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabGroup, TabId, Theme } from './types.ts';
 import { titleFor } from './url.ts';
 import { importConfig } from './config.ts';
 import { cellCount, parseTiling, presetsFor } from './tiling.ts';
@@ -25,7 +25,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', flags: {}};
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', flags: {}, pageTabs: [] };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -46,7 +46,8 @@ export function mergeSettings(raw: unknown): Settings {
   const rawFlags = (typeof r.flags === 'object' && r.flags !== null ? r.flags : {}) as Record<string, unknown>;
   const flags: Settings['flags'] = {};
   for (const k of ['noHwVideoDecode', 'noMacOverlays', 'noGraphite', 'noGpuCompositing', 'noGpu'] as const) if (rawFlags[k] === true) flags[k] = true;
-  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags };
+  const pageTabs = Array.isArray(r.pageTabs) ? r.pageTabs.filter((o): o is string => typeof o === 'string' && /^https?:\/\/[^/]+$/.test(o)) : [];
+  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags, pageTabs };
   merged.panelWidth = clampPanel(typeof merged.panelWidth === 'number' ? merged.panelWidth : 360);
   return merged;
 }
@@ -108,6 +109,16 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     sp.focused = sp.focused && exists(sp.focused) ? sp.focused : sp.panes[0] ?? null;
   }
   if (!spaceById(s, s.activeSpaceId)) s.activeSpaceId = s.spaces[0].id;
+  for (const sp of s.spaces) {
+    const groups = (Array.isArray(sp.groups) ? sp.groups : []).filter((g): g is TabGroup => typeof g === 'object' && g !== null && typeof g.id === 'string' && typeof g.name === 'string');
+    for (const g of groups) if (g.owner && !exists(g.owner)) delete g.owner;
+    for (const id of [...sp.pinned, ...sp.today]) {
+      const t = s.tabs[id];
+      if (t.groupId && !groups.some((g) => g.id === t.groupId)) delete t.groupId;
+    }
+    sp.groups = groups.filter((g) => g.owner || membersOf(s, sp, g.id).length > 0);
+    if (sp.groups.length === 0) delete sp.groups;
+  }
   for (const t of Object.values(s.tabs)) {
     t.awake = false;
     t.loading = false;
@@ -247,6 +258,55 @@ function newTab(s: State, ctx: Ctx, url: string, spaceId: SpaceId, opts: { id?: 
   return tab;
 }
 
+// ---- subspaces (tab groups) ----
+
+export function membersOf(s: State, space: Space, groupId: string): TabId[] {
+  return [...space.pinned, ...space.today].filter((id) => s.tabs[id]?.groupId === groupId);
+}
+
+export function groupOf(s: State, tab: Tab): TabGroup | undefined {
+  if (!tab.groupId || !tab.spaceId) return undefined;
+  return spaceById(s, tab.spaceId)?.groups?.find((g) => g.id === tab.groupId);
+}
+
+/** Put `id` into `groupId` of its own space, placed right after the group's last member. */
+function setGroup(s: State, id: TabId, groupId: string | null): void {
+  const tab = s.tabs[id];
+  if (!tab || !tab.spaceId || tab.kind === 'favorite') return;
+  const space = spaceById(s, tab.spaceId);
+  if (!space) return;
+  if (!groupId) {
+    delete tab.groupId;
+    return;
+  }
+  if (!space.groups?.some((g) => g.id === groupId)) return;
+  const members = membersOf(s, space, groupId).filter((m) => m !== id);
+  tab.groupId = groupId;
+  const last = members[members.length - 1];
+  if (!last) return;
+  const lastTab = s.tabs[last];
+  const list: 'pinned' | 'today' = lastTab?.kind === 'pinned' ? 'pinned' : 'today';
+  if (tab.kind !== list) return; // kinds stay as they are; rendering pulls the group together anyway
+  const arr = space[list];
+  const from = arr.indexOf(id);
+  if (from >= 0) arr.splice(from, 1);
+  arr.splice(arr.indexOf(last) + 1, 0, id);
+}
+
+function dropGroup(s: State, space: Space, groupId: string): void {
+  for (const id of membersOf(s, space, groupId)) delete s.tabs[id]?.groupId;
+  space.groups = (space.groups ?? []).filter((g) => g.id !== groupId);
+  if (space.groups.length === 0) delete space.groups;
+}
+
+function findGroup(s: State, groupId: string): { space: Space; group: TabGroup } | undefined {
+  for (const space of s.spaces) {
+    const group = space.groups?.find((g) => g.id === groupId);
+    if (group) return { space, group };
+  }
+  return undefined;
+}
+
 /** After `closedId` left the panes of `space`, decide what to show instead. */
 function replaceFocus(s: State, space: Space, closedId: TabId, formerTodayIndex: number, now: number): void {
   if (space.panes.length > 0) {
@@ -263,6 +323,19 @@ function replaceFocus(s: State, space: Space, closedId: TabId, formerTodayIndex:
 function closeTab(s: State, id: TabId, now: number): void {
   const tab = s.tabs[id];
   if (!tab) return;
+  // A page that manages a subspace takes it along when it closes.
+  if (tab.spaceId) {
+    const sp = spaceById(s, tab.spaceId);
+    for (const g of (sp?.groups ?? []).filter((g) => g.owner === id)) {
+      for (const member of membersOf(s, sp!, g.id)) {
+        if (member === id) continue;
+        if (s.tabs[member]?.kind === 'today') closeTab(s, member, now);
+        else delete s.tabs[member]?.groupId;
+      }
+      sp!.groups = sp!.groups!.filter((x) => x.id !== g.id);
+      if (sp!.groups.length === 0) delete sp!.groups;
+    }
+  }
   const affected = s.spaces.filter((sp) => sp.panes.includes(id));
   const formerIndexes = new Map(affected.map((sp) => [sp.id, sp.today.indexOf(id)]));
   if (tab.kind === 'today') {
@@ -290,6 +363,7 @@ function closeTab(s: State, id: TabId, now: number): void {
 function insertInto(s: State, id: TabId, list: 'favorites' | 'pinned' | 'today', space: Space, index: number): void {
   const tab = s.tabs[id];
   if (!tab) return;
+  if (list === 'favorites' || tab.spaceId !== space.id) delete tab.groupId;
   removeEverywhere(s, id);
   const clamp = (arr: TabId[]) => Math.max(0, Math.min(index, arr.length));
   if (list === 'favorites') {
@@ -422,6 +496,52 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       const target = spaceById(s, a.spaceId) ?? space;
       if (isLocked(target)) return prev;
       insertInto(s, a.id, a.list, target, a.index);
+      return s;
+    }
+    case 'group.create': {
+      const target = spaceById(s, a.spaceId) ?? (a.owner ? spaceById(s, s.tabs[a.owner]?.spaceId) : undefined) ?? space;
+      if (isLocked(target)) return prev;
+      const name = a.name.trim().slice(0, 60) || 'Subspace';
+      const id = a.id ?? ctx.newId();
+      if (target.groups?.some((g) => g.id === id)) return prev;
+      const group: TabGroup = { id, name };
+      if (a.owner && s.tabs[a.owner]?.spaceId === target.id) group.owner = a.owner;
+      target.groups = [...(target.groups ?? []), group];
+      for (const t of a.tabIds ?? []) if (s.tabs[t]?.spaceId === target.id) setGroup(s, t, id);
+      return s;
+    }
+    case 'group.rename': {
+      const f = findGroup(s, a.id);
+      if (!f) return prev;
+      f.group.name = a.name.trim().slice(0, 60) || f.group.name;
+      return s;
+    }
+    case 'group.toggle': {
+      const f = findGroup(s, a.id);
+      if (!f) return prev;
+      if (f.group.collapsed) delete f.group.collapsed;
+      else f.group.collapsed = true;
+      return s;
+    }
+    case 'group.dissolve': {
+      const f = findGroup(s, a.id);
+      if (!f) return prev;
+      dropGroup(s, f.space, a.id);
+      return s;
+    }
+    case 'group.close': {
+      const f = findGroup(s, a.id);
+      if (!f) return prev;
+      for (const id of membersOf(s, f.space, a.id)) {
+        if (s.tabs[id]?.kind === 'today') closeTab(s, id, now);
+        else delete s.tabs[id]?.groupId;
+      }
+      if (findGroup(s, a.id)) dropGroup(s, f.space, a.id);
+      return s;
+    }
+    case 'tab.setGroup': {
+      if (!s.tabs[a.id]) return prev;
+      setGroup(s, a.id, a.groupId);
       return s;
     }
     case 'tab.split': {
