@@ -216,7 +216,22 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
       ],
     },
     sep,
-    { label: 'Export Space…', click: d({ type: 'config.export', spaceId: id }) },
+    {
+      label: 'Private',
+      submenu: space.lock
+        ? [
+            { label: `${space.name} is private`, enabled: false },
+            { label: 'Lock Now', enabled: space.locked === false, click: d({ type: 'space.lock', id }) },
+            { label: 'Unlock…', enabled: space.locked !== false, click: d({ type: 'space.passwordPrompt', id, purpose: 'unlock' }) },
+            { label: 'Change Password…', enabled: space.locked === false, click: d({ type: 'space.passwordPrompt', id, purpose: 'set' }) },
+            { label: 'Remove Password…', click: d({ type: 'space.passwordPrompt', id, purpose: 'remove' }) },
+          ]
+        : [
+            { label: 'Make Private…', click: d({ type: 'space.passwordPrompt', id, purpose: 'set' }) },
+            { label: 'Private spaces need a password, are never exported and leave no trace in the archive or history.', enabled: false },
+          ],
+    },
+    { label: 'Export Space…', enabled: !space.lock, click: d({ type: 'config.export', spaceId: id }) },
     { label: 'New Space', click: d({ type: 'space.create' }) },
     {
       label: 'Delete Space…',

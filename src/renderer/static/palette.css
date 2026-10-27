@@ -165,3 +165,11 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 .layout-form input#s-layout-name { width: 130px; }
 .layout-form input#s-layout-spec { width: 150px; }
 .layout-form input.bad { border-color: #ff5f57; }
+
+/* password prompt for private spaces */
+#pw-help { display: none; padding: 8px 14px 10px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); }
+body.mode-password #pw-help { display: block; }
+body.mode-password #results { display: none; }
+body.mode-password #backdrop { display: flex; }
+#box.shake { animation: shake 0.35s; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }

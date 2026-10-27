@@ -3,7 +3,7 @@
 // keyed: existing elements are updated in place, never rebuilt.
 
 import type { CallAction, CallInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TimerInfo, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
-import { activeSpace } from '../shared/model.ts';
+import { activeSpace, isLocked, visiblePanes } from '../shared/model.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
 import { applyTheme } from './theme.ts';
@@ -123,8 +123,14 @@ dropZone($('#today'), 'today');
 function focused(): Tab | undefined {
   if (!state) return undefined;
   const sp = activeSpace(state);
+  if (isLocked(sp)) return undefined;
   return sp.focused ? state.tabs[sp.focused] : undefined;
 }
+
+$('#locked .lock-icon').append(svg(ICONS.lock, 28));
+$('#unlock').onclick = () => {
+  if (state) dispatch({ type: 'space.passwordPrompt', id: state.activeSpaceId, purpose: 'unlock' });
+};
 
 // ---- rendering ----
 
@@ -490,6 +496,7 @@ function render(): void {
   document.body.classList.toggle('sidebar-closed', !s.settings.sidebarOpen);
   if (s.settings.sidebarOpen && peeking) setPeek(false);
 
+  document.body.classList.toggle('space-locked', isLocked(space));
   const tab = focused();
   back.disabled = !tab?.canGoBack;
   forward.disabled = !tab?.canGoForward;
@@ -522,12 +529,12 @@ function render(): void {
   $('#pinned-divider').classList.toggle('hidden', space.pinned.length === 0);
   syncChildren($('#today'), tabsOf(space.today), (t) => t.id, makeTab, (el, t) => updateTab(el, t, space));
 
-  const spaceKey = s.spaces.map((sp) => `${sp.id}${sp.name}${sp.color}${sp.icon ?? ''}`).join('|') + s.activeSpaceId;
+  const spaceKey = s.spaces.map((sp) => `${sp.id}${sp.name}${sp.color}${sp.icon ?? ''}${sp.lock ? (isLocked(sp) ? 'L' : 'U') : ''}`).join('|') + s.activeSpaceId;
   if (spaceKey !== lastSpaceKey) {
     lastSpaceKey = spaceKey;
     syncChildren($('#spaces'), s.spaces, (sp) => sp.id, makeSpaceDot, (el, sp) => updateSpaceDot(el, sp, s));
   }
-  $('#stage').classList.toggle('empty', space.panes.length === 0);
+  $('#stage').classList.toggle('empty', visiblePanes(space).length === 0);
   renderGutters(s, space);
   renderSmart();
 }
@@ -732,9 +739,12 @@ function makeSpaceDot(space: Space): HTMLElement {
 
 function updateSpaceDot(el: HTMLElement, space: Space, s: State): void {
   setClass(el, 'active', space.id === s.activeSpaceId);
+  setClass(el, 'private', Boolean(space.lock));
+  setClass(el, 'open', Boolean(space.lock) && !isLocked(space));
   if (el.title !== space.name) el.title = space.name;
   el.style.setProperty('--dot', space.color);
   setIconKey(el, space.icon ? `emoji:${space.icon}` : 'initial', () => (space.icon ? document.createTextNode(space.icon) : h('span', { class: 'initial' })));
+  if (space.lock && !el.querySelector('.lockmark')) el.append(h('span', { class: 'lockmark' }, svg(ICONS.lock)));
 }
 
 // ---- drag and drop between lists ----
@@ -810,7 +820,7 @@ function effectiveTiling(space: Space): Tiling {
 
 function renderGutters(s: State, space: Space): void {
   if (draggingGutter) return;
-  const n = space.panes.length;
+  const n = visiblePanes(space).length;
   if (n < 2) {
     if (gutters.childElementCount) gutters.replaceChildren();
     return;

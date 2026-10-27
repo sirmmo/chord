@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { Action, AppInfo, Command, Message, SidebarMessage, State, TabId } from '../shared/types.ts';
 import { isCommand } from '../shared/types.ts';
-import { activeSpace, focusedTab, hydrate, reduce, type Ctx } from '../shared/model.ts';
+import { activeSpace, focusedTab, hydrate, isLocked, reduce, visiblePanes, type Ctx } from '../shared/model.ts';
+import { makeLock, verifyLock } from './locks.ts';
 import { titleFor } from '../shared/url.ts';
 import { exportConfig, exportFileName, parseConfig } from '../shared/config.ts';
 import { Store } from './store.ts';
@@ -119,6 +120,7 @@ export class Controller {
     });
     win.webContents.on('did-finish-load', () => this.broadcast());
     const relayout = () => this.relayout();
+    win.on('hide', () => this.apply({ type: 'space.lockAll' }));
     win.on('resize', relayout);
     win.on('enter-full-screen', relayout);
     win.on('leave-full-screen', relayout);
@@ -444,6 +446,34 @@ export class Controller {
       case 'history.open':
         this.openInternal('chord://history/');
         return;
+      case 'space.passwordPrompt': {
+        const sp = this.state.spaces.find((x) => x.id === cmd.id);
+        if (!sp) return;
+        if (cmd.purpose !== 'set' && !sp.lock) return;
+        this.overlay.show({ kind: 'show', mode: 'password', spaceId: sp.id, purpose: cmd.purpose, name: sp.name });
+        return;
+      }
+      case 'space.password': {
+        const sp = this.state.spaces.find((x) => x.id === cmd.id);
+        if (!sp) return;
+        if (cmd.purpose === 'set') {
+          if (!cmd.password) return;
+          this.apply({ type: 'space.setLock', id: sp.id, lock: makeLock(cmd.password) });
+          this.overlay.hide();
+          return;
+        }
+        if (!sp.lock || !verifyLock(sp.lock, cmd.password)) {
+          this.overlay.send({ kind: 'password:error' });
+          return;
+        }
+        if (cmd.purpose === 'remove') this.apply({ type: 'space.setLock', id: sp.id, lock: null });
+        else {
+          this.apply({ type: 'space.unlocked', id: sp.id });
+          this.apply({ type: 'space.activate', id: sp.id });
+        }
+        this.overlay.hide();
+        return;
+      }
       case 'history.remove':
         this.history.remove(cmd.id);
         return;
@@ -460,6 +490,10 @@ export class Controller {
     const now = Date.now();
     const space = spaceId ? this.state.spaces.find((sp) => sp.id === spaceId) : undefined;
     if (spaceId && !space) return;
+    if (space?.lock) {
+      dialog.showErrorBox('Private space', `“${space.name}” is private: private spaces are never exported.`);
+      return;
+    }
     const { canceled, filePath } = await dialog.showSaveDialog(this.win, {
       title: space ? `Export space “${space.name}”` : 'Export Chord configuration',
       defaultPath: join(app.getPath('documents'), exportFileName(now, space?.name)),
@@ -560,7 +594,7 @@ function viewSignature(s: State): string {
   const space = activeSpace(s);
   const awake: string[] = [];
   for (const t of Object.values(s.tabs)) if (t.awake) awake.push(t.id + (t.muted ? '!' : ''));
-  return [s.activeSpaceId, space.panes.join(','), space.tiling ?? '', space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
+  return [s.activeSpaceId, visiblePanes(space).join(','), isLocked(space), space.tiling ?? '', space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
 }
 
 function isMessage(m: unknown): m is Message {

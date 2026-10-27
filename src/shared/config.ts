@@ -49,7 +49,7 @@ function tabsToConfig(s: State, ids: TabId[]): ConfigTab[] {
 
 /** Export everything, or a single space when `spaceId` is given. */
 export function exportConfig(s: State, now: number, spaceId?: SpaceId): ChordConfig {
-  const spaces = spaceId ? [spaceById(s, spaceId)].filter((sp) => sp !== undefined) : s.spaces;
+  const spaces = (spaceId ? [spaceById(s, spaceId)].filter((sp) => sp !== undefined) : s.spaces).filter((sp) => !sp.lock);
   const config: ChordConfig = {
     format: CONFIG_FORMAT,
     version: CONFIG_VERSION,
@@ -183,14 +183,16 @@ function urlsIn(s: State, ids: TabId[]): Set<string> {
  */
 export function importConfig(s: State, config: ChordConfig, mode: ImportMode, ctx: Ctx): void {
   if (mode === 'replace') {
-    const all = Object.values(s.tabs);
+    // Private spaces are untouched: they are neither exported nor replaced.
+    const privateIds = new Set(s.spaces.filter((sp) => sp.lock).map((sp) => sp.id));
+    const all = Object.values(s.tabs).filter((t) => !(t.spaceId && privateIds.has(t.spaceId)));
     for (const t of all) {
       s.archived.unshift({ id: t.id, url: t.url, title: t.title, favicon: t.favicon, spaceId: t.spaceId, archivedAt: ctx.now });
+      delete s.tabs[t.id];
     }
     if (s.archived.length > MAX_ARCHIVED) s.archived.length = MAX_ARCHIVED;
-    s.tabs = {};
     s.favorites = [];
-    s.spaces = [];
+    s.spaces = s.spaces.filter((sp) => sp.lock);
     if (config.settings) {
       for (const key of SETTING_KEYS) {
         const v = config.settings[key];

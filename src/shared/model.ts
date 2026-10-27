@@ -103,8 +103,9 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     t.audible = false;
     t.crashed = false;
   }
-  // Wake the panes of the active space so the window is not empty on launch.
-  for (const id of activeSpace(s).panes) s.tabs[id].awake = true;
+  // Private spaces start locked; everything else wakes the panes of the active space.
+  for (const sp of s.spaces) if (sp.lock) sp.locked = true;
+  if (!isLocked(activeSpace(s))) for (const id of activeSpace(s).panes) s.tabs[id].awake = true;
   return s;
 }
 
@@ -122,8 +123,36 @@ export function spaceOfTab(s: State, tab: Tab): Space {
 
 export function focusedTab(s: State): Tab | undefined {
   const sp = activeSpace(s);
+  if (isLocked(sp)) return undefined;
   return sp.focused ? s.tabs[sp.focused] : undefined;
 }
+
+/** A private space counts as locked unless it was explicitly unlocked this session. */
+export function isLocked(sp: Space): boolean {
+  return Boolean(sp.lock) && sp.locked !== false;
+}
+
+/** Panes to show: none while the space is locked. */
+export function visiblePanes(sp: Space): TabId[] {
+  return isLocked(sp) ? [] : sp.panes;
+}
+
+/** Private spaces lock again after this long away from them. */
+export const AUTO_LOCK_MS = 15 * 60_000;
+
+function lockSpace(s: State, sp: Space): void {
+  sp.locked = true;
+  for (const id of [...sp.pinned, ...sp.today]) {
+    const t = s.tabs[id];
+    if (!t) continue;
+    t.awake = false;
+    t.loading = false;
+    t.audible = false;
+  }
+}
+
+/** Actions that act on the active space and must wait until it is unlocked. */
+const NEEDS_UNLOCKED = new Set<Action['type']>(['tab.closeActive', 'tab.next', 'tab.prev', 'tab.jump', 'tab.split', 'tab.unsplit', 'pane.focus', 'today.clear', 'space.tiling', 'space.tilingNext', 'closed.reopen', 'tab.togglePin']);
 
 /** The sidebar order used by "next tab", "previous tab" and Cmd+1..9. */
 export function orderedTabs(space: Space): TabId[] {
@@ -167,8 +196,10 @@ function toArchive(tab: Tab, now: number): ArchivedTab {
 function archiveTab(s: State, id: TabId, now: number): void {
   const tab = s.tabs[id];
   if (!tab) return;
-  s.archived.unshift(toArchive(tab, now));
-  if (s.archived.length > MAX_ARCHIVED) s.archived.length = MAX_ARCHIVED;
+  if (!spaceOfTab(s, tab).lock) {
+    s.archived.unshift(toArchive(tab, now));
+    if (s.archived.length > MAX_ARCHIVED) s.archived.length = MAX_ARCHIVED;
+  }
   removeEverywhere(s, id);
   delete s.tabs[id];
 }
@@ -214,8 +245,10 @@ function closeTab(s: State, id: TabId, now: number): void {
   const affected = s.spaces.filter((sp) => sp.panes.includes(id));
   const formerIndexes = new Map(affected.map((sp) => [sp.id, sp.today.indexOf(id)]));
   if (tab.kind === 'today') {
-    s.recentlyClosed.unshift(toArchive(tab, now));
-    if (s.recentlyClosed.length > MAX_RECENTLY_CLOSED) s.recentlyClosed.length = MAX_RECENTLY_CLOSED;
+    if (!spaceOfTab(s, tab).lock) {
+      s.recentlyClosed.unshift(toArchive(tab, now));
+      if (s.recentlyClosed.length > MAX_RECENTLY_CLOSED) s.recentlyClosed.length = MAX_RECENTLY_CLOSED;
+    }
     removeEverywhere(s, id);
     delete s.tabs[id];
   } else {
@@ -274,16 +307,20 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
   const s: State = structuredClone(prev);
   const now = ctx.now;
   const space = activeSpace(s);
+  if (isLocked(space) && NEEDS_UNLOCKED.has(a.type)) return prev;
 
   switch (a.type) {
     case 'tab.new': {
-      newTab(s, ctx, a.url, a.spaceId ?? s.activeSpaceId, { id: a.id, activate: a.activate ?? true, adopt: a.adopt });
+      const target = spaceById(s, a.spaceId) ?? space;
+      if (isLocked(target)) return prev;
+      newTab(s, ctx, a.url, target.id, { id: a.id, activate: a.activate ?? true, adopt: a.adopt });
       return s;
     }
     case 'tab.activate': {
       const tab = s.tabs[a.id];
       if (!tab) return prev;
       const target = spaceOfTab(s, tab);
+      if (isLocked(target)) return prev;
       s.activeSpaceId = target.id;
       show(s, target, a.id, now);
       return s;
@@ -354,6 +391,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
     }
     case 'tab.move': {
       const target = spaceById(s, a.spaceId) ?? space;
+      if (isLocked(target)) return prev;
       insertInto(s, a.id, a.list, target, a.index);
       return s;
     }
@@ -381,6 +419,41 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
         if (!t) return prev;
         target.tiling = a.spec;
       }
+      return s;
+    }
+    case 'space.setLock': {
+      const sp = spaceById(s, a.id);
+      if (!sp) return prev;
+      if (a.lock) {
+        sp.lock = a.lock;
+        sp.locked = false;
+      } else {
+        delete sp.lock;
+        delete sp.locked;
+      }
+      return s;
+    }
+    case 'space.lock': {
+      const sp = spaceById(s, a.id);
+      if (!sp || !sp.lock || isLocked(sp)) return prev;
+      lockSpace(s, sp);
+      return s;
+    }
+    case 'space.lockAll': {
+      let changed = false;
+      for (const sp of s.spaces) {
+        if (sp.lock && !isLocked(sp)) {
+          lockSpace(s, sp);
+          changed = true;
+        }
+      }
+      return changed ? s : prev;
+    }
+    case 'space.unlocked': {
+      const sp = spaceById(s, a.id);
+      if (!sp || !sp.lock) return prev;
+      sp.locked = false;
+      if (sp.id === s.activeSpaceId) for (const id of sp.panes) show(s, sp, id, now);
       return s;
     }
     case 'space.tilingNext': {
@@ -433,8 +506,10 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
     }
     case 'space.activate': {
       if (!spaceById(s, a.id)) return prev;
+      if (space.id !== a.id) space.leftAt = now;
       s.activeSpaceId = a.id;
-      for (const id of activeSpace(s).panes) show(s, activeSpace(s), id, now);
+      const next = activeSpace(s);
+      if (!isLocked(next)) for (const id of next.panes) show(s, next, id, now);
       return s;
     }
     case 'space.next':
@@ -456,7 +531,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
     }
     case 'space.delete': {
       const sp = spaceById(s, a.id);
-      if (!sp || s.spaces.length <= 1) return prev;
+      if (!sp || s.spaces.length <= 1 || isLocked(sp)) return prev;
       for (const id of [...sp.pinned, ...sp.today]) archiveTab(s, id, now);
       const idx = s.spaces.indexOf(sp);
       s.spaces.splice(idx, 1);
@@ -537,10 +612,17 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       return s;
     }
     case 'tick': {
-      const ttl = s.settings.archiveAfterHours * 3600_000;
-      if (!(ttl > 0)) return prev;
       let changed = false;
       for (const sp of s.spaces) {
+        if (sp.lock && !isLocked(sp) && sp.id !== s.activeSpaceId && now - (sp.leftAt ?? now) >= AUTO_LOCK_MS) {
+          lockSpace(s, sp);
+          changed = true;
+        }
+      }
+      const ttl = s.settings.archiveAfterHours * 3600_000;
+      if (!(ttl > 0)) return changed ? s : prev;
+      for (const sp of s.spaces) {
+        if (sp.lock) continue; // private spaces leave no trace in the archive
         for (const id of [...sp.today]) {
           const tab = s.tabs[id];
           if (!tab || sp.panes.includes(id)) continue;

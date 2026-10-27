@@ -1,7 +1,7 @@
 import { WebContentsView, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { State, Tab, TabId } from '../shared/types.ts';
-import { activeSpace } from '../shared/model.ts';
+import { activeSpace, isLocked, spaceOfTab, visiblePanes } from '../shared/model.ts';
 import { computeLayout } from '../shared/layout.ts';
 import { parseTiling } from '../shared/tiling.ts';
 import { PARTITION } from './session.ts';
@@ -52,6 +52,7 @@ export class TabManager {
 
   focusedView(): WebContentsView | undefined {
     const sp = activeSpace(this.c.state);
+    if (isLocked(sp)) return undefined;
     return sp.focused ? this.views.get(sp.focused) : undefined;
   }
 
@@ -81,7 +82,7 @@ export class TabManager {
     }
 
     const space = activeSpace(state);
-    const visible = space.panes.filter((id) => this.views.has(id));
+    const visible = visiblePanes(space).filter((id) => this.views.has(id));
     for (const [id, view] of this.views) view.setVisible(visible.includes(id));
     this.layout(state);
 
@@ -106,7 +107,7 @@ export class TabManager {
     }
 
     const space = activeSpace(state);
-    const visible = space.panes.filter((id) => this.views.has(id));
+    const visible = visiblePanes(space).filter((id) => this.views.has(id));
     const { panes } = computeLayout({
       width,
       height,
@@ -175,7 +176,8 @@ export class TabManager {
     });
     wc.on('did-navigate', (_e, url) => {
       patch({ url, favicon: undefined, ...navState() });
-      this.c.history.record(url, wc.getTitle());
+      const owner = this.c.state.tabs[id];
+      if (!owner || !spaceOfTab(this.c.state, owner).lock) this.c.history.record(url, wc.getTitle());
     });
     wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
       if (isMainFrame) patch({ url, ...navState() });

@@ -29,6 +29,11 @@ export interface Tab {
   crashed?: boolean;
 }
 
+export interface SpaceLock {
+  salt: string;
+  hash: string;
+}
+
 export interface Space {
   id: SpaceId;
   name: string;
@@ -42,6 +47,12 @@ export interface Space {
   panes: TabId[];
   /** split-view tiling spec (see shared/tiling.ts); equal columns when unset */
   tiling?: string;
+  /** private space: password protected, never exported, never archived */
+  lock?: SpaceLock;
+  /** runtime: a private space starts locked and locks again when left alone */
+  locked?: boolean;
+  /** when the user last switched away from this space */
+  leftAt?: number;
   focused: TabId | null;
 }
 
@@ -136,6 +147,10 @@ export type Action =
   | { type: 'tab.move'; id: TabId; list: ListName; spaceId?: SpaceId; index: number }
   | { type: 'tab.split'; id: TabId }
   | { type: 'space.tiling'; spec: string | null; spaceId?: SpaceId }
+  | { type: 'space.setLock'; id: SpaceId; lock: SpaceLock | null }
+  | { type: 'space.lock'; id: SpaceId }
+  | { type: 'space.lockAll' }
+  | { type: 'space.unlocked'; id: SpaceId }
   | { type: 'space.tilingNext' }
   | { type: 'tab.unsplit'; id: TabId }
   | { type: 'pane.focus'; id: TabId }
@@ -208,6 +223,8 @@ export type Command =
   | { type: 'downloads.openFolder' }
   | { type: 'downloads.chooseFolder' }
   | { type: 'downloads.open' }
+  | { type: 'space.passwordPrompt'; id: SpaceId; purpose: LockPurpose }
+  | { type: 'space.password'; id: SpaceId; purpose: LockPurpose; password: string }
   | { type: 'history.open' }
   | { type: 'history.remove'; id: string }
   | { type: 'history.clear' };
@@ -219,7 +236,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'history.open', 'history.remove', 'history.clear',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear',
 ]);
 
 export type Message = Action | Command;
@@ -229,9 +246,13 @@ export function isCommand(m: Message): m is Command {
 }
 
 /** Messages from main to the overlay page */
+export type LockPurpose = 'unlock' | 'set' | 'remove';
+
 export type OverlayMessage =
   | { kind: 'show'; mode: 'palette'; intent: 'new' | 'current'; query: string }
   | { kind: 'show'; mode: 'find' }
+  | { kind: 'show'; mode: 'password'; spaceId: SpaceId; purpose: LockPurpose; name: string }
+  | { kind: 'password:error' }
   | { kind: 'hide' }
   | { kind: 'find:result'; active: number; matches: number };
 

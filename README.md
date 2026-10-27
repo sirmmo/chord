@@ -33,6 +33,11 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   across the bottom; `2:50/50 | 1:100` makes the top row twice as tall). Drag the gap
   between two panes to adjust the layout live. Each space remembers its layout.
   or use "Open in Split View" from a tab's or a link's context menu.
+- **Private spaces**: right-click a space → Private → Make Private… and set a password.
+  The space locks on launch, when the window is hidden, and after 15 minutes away from
+  it; unlock from the sidebar or the space menu. Its tabs are never exported, never
+  archived, never recorded in history, and hidden from the command bar while locked.
+  Passwords are stored as scrypt hashes; the tabs themselves are not encrypted on disk.
 - **Smart pages**: what a tab gives away is shown from every space, and you can act on it.
   - Players (YouTube Music, Spotify, Amazon Music, anything with a Media Session or a
     plain audio/video element): one now-playing card per player above the spaces strip,

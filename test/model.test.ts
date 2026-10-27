@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reduce, initialState, activeSpace, hydrate, MAX_PANES, type Ctx } from '../src/shared/model.ts';
+import { reduce, initialState, activeSpace, hydrate, isLocked, spaceById, visiblePanes, AUTO_LOCK_MS, MAX_PANES, type Ctx } from '../src/shared/model.ts';
+import { exportConfig } from '../src/shared/config.ts';
 import type { Action, State } from '../src/shared/types.ts';
 import { toUrl, titleFor } from '../src/shared/url.ts';
 import { computeLayout } from '../src/shared/layout.ts';
@@ -264,4 +265,44 @@ test('extensions are added once, toggled, annotated and removed', () => {
   raw.settings.extensions = [{ path: '/ext/b', enabled: true }, 'junk', { enabled: true }];
   assert.equal(hydrate(raw, ctx()).settings.extensions.length, 1);
   assert.equal(hydrate(raw, ctx()).settings.addressBar, false);
+});
+
+test('private spaces: lock, unlock, no traces, never exported', () => {
+  let s = initialState(ctx());
+  const first = s.spaces[0];
+  s = reduce(s, { type: 'space.create' }, ctx());
+  const priv = s.spaces[1];
+  s = reduce(s, { type: 'space.activate', id: priv.id }, ctx());
+  s = reduce(s, { type: 'tab.new', url: 'https://secret.test/' }, ctx());
+  const secretId = activeSpace(s).today[0];
+  s = reduce(s, { type: 'space.setLock', id: priv.id, lock: { salt: 'x', hash: 'y' } }, ctx());
+  assert.equal(isLocked(spaceById(s, priv.id)!), false, 'setting a password leaves the space open');
+
+  s = reduce(s, { type: 'space.lock', id: priv.id }, ctx());
+  assert.equal(isLocked(spaceById(s, priv.id)!), true);
+  assert.equal(s.tabs[secretId].awake, false, 'locking puts its tabs to sleep');
+  assert.deepEqual(visiblePanes(spaceById(s, priv.id)!), []);
+  assert.equal(reduce(s, { type: 'tab.activate', id: secretId }, ctx()), s, 'tabs of a locked space cannot be activated');
+  assert.equal(reduce(s, { type: 'tab.new', url: 'https://x.test/' }, ctx()), s, 'no new tabs in a locked space');
+  assert.equal(reduce(s, { type: 'space.delete', id: priv.id }, ctx()), s, 'a locked space cannot be deleted');
+
+  const exported = exportConfig(s, Date.now());
+  assert.deepEqual(exported.spaces.map((sp) => sp.name), [first.name], 'private spaces are not exported');
+
+  s = reduce(s, { type: 'space.unlocked', id: priv.id }, ctx());
+  assert.equal(isLocked(spaceById(s, priv.id)!), false);
+  assert.equal(s.tabs[secretId].awake, true, 'unlocking the active space wakes its panes');
+
+  s = reduce(s, { type: 'tab.close', id: secretId }, ctx());
+  assert.equal(s.recentlyClosed.length, 0, 'closed private tabs are not kept for reopening');
+
+  // auto-lock after being left alone
+  s = reduce(s, { type: 'space.activate', id: first.id }, ctx());
+  const later = { now: Date.now() + AUTO_LOCK_MS + 1000, newId: ctx().newId };
+  s = reduce(s, { type: 'tick' }, later);
+  assert.equal(isLocked(spaceById(s, priv.id)!), true, 'locks again after 15 minutes away');
+
+  const persisted = reduce(s, { type: 'space.unlocked', id: priv.id }, ctx());
+  const reloaded = hydrate(structuredClone(persisted), ctx());
+  assert.equal(isLocked(spaceById(reloaded, priv.id)!), true, 'private spaces start locked on launch');
 });

@@ -1,8 +1,8 @@
 // The overlay page: command bar (⌘T / ⌘L) and find bar (⌘F).
 
 import { presetsFor } from '../shared/tiling.ts';
-import type { Message, State, Tab } from '../shared/types.ts';
-import { activeSpace, focusedTab } from '../shared/model.ts';
+import type { LockPurpose, Message, SpaceId, State, Tab } from '../shared/types.ts';
+import { activeSpace, focusedTab, isLocked } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { hostOf, searchUrl, SEARCH_ENGINES, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
@@ -27,7 +27,8 @@ const findInput = $<HTMLInputElement>('#find-input');
 const findCount = $('#find-count');
 
 let state: State | null = null;
-let mode: 'palette' | 'find' | null = null;
+let mode: 'palette' | 'find' | 'password' | null = null;
+let lockTarget: { spaceId: SpaceId; purpose: LockPurpose } | null = null;
 let intent: 'new' | 'current' = 'new';
 let items: Item[] = [];
 let selected = 0;
@@ -50,10 +51,23 @@ api.onOverlay((m) => {
   switch (m.kind) {
     case 'show':
       if (m.mode === 'palette') showPalette(m.intent, m.query);
+      else if (m.mode === 'password') showPassword(m.spaceId, m.purpose, m.name);
       else showFind();
       break;
+    case 'password:error': {
+      const box = $('#box');
+      box.classList.remove('shake');
+      void box.offsetWidth;
+      box.classList.add('shake');
+      input.value = '';
+      input.focus();
+      break;
+    }
     case 'hide':
       mode = null;
+      lockTarget = null;
+      input.type = 'text';
+      input.placeholder = 'Search, enter a URL, or type a command…';
       document.body.className = '';
       break;
     case 'find:result':
@@ -64,8 +78,26 @@ api.onOverlay((m) => {
 
 // ---- command bar ----
 
+function showPassword(spaceId: SpaceId, purpose: LockPurpose, name: string): void {
+  mode = 'password';
+  lockTarget = { spaceId, purpose };
+  document.body.className = 'mode-password';
+  input.type = 'password';
+  input.value = '';
+  input.placeholder = purpose === 'set' ? `New password for “${name}”` : `Password for “${name}”`;
+  intentHint.textContent = purpose === 'set' ? 'make private' : purpose === 'remove' ? 'remove password' : 'unlock';
+  $('#pw-help').textContent =
+    purpose === 'set'
+      ? 'The space will lock on launch, when the window is hidden, and after 15 minutes away from it. Its tabs are never exported, archived or recorded in history. Note: tabs are still stored unencrypted in the profile folder.'
+      : purpose === 'remove'
+        ? 'Enter the current password to make this space ordinary again.'
+        : 'Enter the password to open this space. Esc to leave it locked.';
+  input.focus();
+}
+
 function showPalette(i: 'new' | 'current', query: string): void {
   mode = 'palette';
+  input.type = 'text';
   intent = i;
   document.body.className = 'mode-palette';
   input.value = query;
@@ -78,8 +110,20 @@ function showPalette(i: 'new' | 'current', query: string): void {
 $('#backdrop').addEventListener('mousedown', (e) => {
   if (e.target === e.currentTarget) dispatch({ type: 'palette.close' });
 });
-input.addEventListener('input', update);
+input.addEventListener('input', () => {
+  if (mode === 'palette') update();
+});
 input.addEventListener('keydown', (e) => {
+  if (mode === 'password') {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (lockTarget && input.value) dispatch({ type: 'space.password', id: lockTarget.spaceId, purpose: lockTarget.purpose, password: input.value });
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      dispatch({ type: 'palette.close' });
+    }
+    return;
+  }
   switch (e.key) {
     case 'ArrowDown':
       e.preventDefault();
@@ -182,8 +226,9 @@ function compute(raw: string): Item[] {
 
   const kind = (t: Tab) => (t.kind === 'favorite' ? 'Favorite' : t.kind === 'pinned' ? 'Pinned' : 'Today');
   const spaceName = (t: Tab) => (t.spaceId ? s.spaces.find((sp) => sp.id === t.spaceId)?.name ?? '' : 'All spaces');
+  const lockedSpaces = new Set(s.spaces.filter((sp) => isLocked(sp)).map((sp) => sp.id));
   const tabs = Object.values(s.tabs)
-    .filter((t) => t.id !== current?.id)
+    .filter((t) => t.id !== current?.id && !(t.spaceId && lockedSpaces.has(t.spaceId)))
     .map((t) => ({ t, score: score(query, t.title, t.url) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score || b.t.lastActiveAt - a.t.lastActiveAt)
@@ -247,7 +292,7 @@ function compute(raw: string): Item[] {
   for (const c of matched) out.push({ group: 'Commands', icon: '⌘', title: c.title, subtitle: c.subtitle, run: c.run });
 
   if (query) {
-    const archived = s.archived.filter((a) => score(query, a.title, a.url) > 0).slice(0, 4);
+    const archived = s.archived.filter((a) => !(a.spaceId && lockedSpaces.has(a.spaceId)) && score(query, a.title, a.url) > 0).slice(0, 4);
     for (const a of archived) {
       out.push({ group: 'Archived', icon: faviconOf(a), title: a.title || hostOf(a.url), subtitle: hostOf(a.url), hint: 'Restore', run: () => dispatch({ type: 'archived.restore', id: a.id }) });
     }

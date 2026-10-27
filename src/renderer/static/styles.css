@@ -339,3 +339,16 @@ footer { flex: none; display: flex; align-items: center; gap: 4px; padding-top: 
 .gutter.v::after { width: 3px; height: 36px; }
 .gutter.h::after { width: 36px; height: 3px; }
 .gutter:hover::after, .gutter.dragging::after { opacity: 1; }
+
+/* private spaces */
+.locked-panel { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--muted); }
+body.space-locked .locked-panel { display: flex; }
+body.space-locked .lists { display: none; }
+.locked-panel .lock-icon svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.locked-panel .lock-title { font-size: 13px; }
+.btn-unlock { font: inherit; font-size: 13px; color: var(--fg); background: var(--hover); border: 0; border-radius: 8px; padding: 6px 14px; cursor: default; }
+.btn-unlock:hover { background: var(--active); }
+.space-dot .lockmark { display: none; position: absolute; right: -3px; bottom: -3px; width: 13px; height: 13px; border-radius: 50%; background: var(--chrome); color: var(--muted); place-items: center; }
+.space-dot .lockmark svg { width: 8px; height: 8px; fill: none; stroke: currentColor; stroke-width: 2.5; }
+.space-dot.private .lockmark { display: grid; }
+.space-dot.private.open .lockmark { color: var(--accent); }
