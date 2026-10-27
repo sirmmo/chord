@@ -33,6 +33,10 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   Music, most players) gets a now-playing card above the spaces strip and a pill in the
   title bar, visible from every space, with play/pause, previous and next. Click the
   title to jump to the tab. Toggle in Settings → General.
+- **Downloads** (`⌘⇧J`): files go straight to your Downloads folder (or ask every time,
+  from Settings). The title bar shows a progress ring and a count while anything is in
+  flight, a row above the player shows the current file, and the `chord://downloads`
+  page lists everything with pause, resume, cancel, retry, open and show-in-folder.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
 - **Find in page** `⌘F`, tab sleep, mute, reopen closed tab `⌘⇧T`, per-site

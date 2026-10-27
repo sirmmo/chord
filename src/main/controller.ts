@@ -18,6 +18,9 @@ import { ExtensionManager } from './extensions.ts';
 import { copyDiagnostics, startLagMonitor } from './diagnostics.ts';
 import { MediaManager } from './media.ts';
 import { confirmImport, importFromBrowser } from './importers.ts';
+import { DownloadManager } from './downloads.ts';
+import { browsingSession } from './session.ts';
+import { isInternal } from '../shared/url.ts';
 
 const CHROME_DARK = '#1b1b22';
 const CHROME_LIGHT = '#f4f4f7';
@@ -30,6 +33,7 @@ export class Controller {
   readonly tabs = new TabManager(this);
   readonly overlay = new Overlay(this);
   readonly media = new MediaManager(this);
+  readonly downloads = new DownloadManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
     onStatus: (status) => this.sendAll('extensions', status),
@@ -55,6 +59,7 @@ export class Controller {
     setInterval(() => this.apply({ type: 'tick' }), 60_000).unref();
     startLagMonitor();
     this.media.init();
+    this.downloads.init(browsingSession());
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -62,6 +67,7 @@ export class Controller {
     });
     ipcMain.handle('state', (event) => (this.trusted(event) ? this.state : null));
     ipcMain.handle('extensions', (event) => (this.trusted(event) ? this.extensions.getStatus() : {}));
+    ipcMain.handle('downloads', (event) => (this.trusted(event) ? this.downloads.status() : { items: [], active: 0 }));
 
     void setShields(this.state.settings.shields);
     void this.extensions.sync(this.state);
@@ -69,7 +75,9 @@ export class Controller {
   }
 
   private trusted(event: IpcMainInvokeEvent): boolean {
-    return event.sender === this.win?.webContents || event.sender === this.overlay.webContents;
+    if (event.sender === this.win?.webContents || event.sender === this.overlay.webContents) return true;
+    // One of Chord's own pages in a tab view: only while it shows a chord:// document.
+    return this.tabs.tabIdOf(event.sender) !== undefined && isInternal(event.senderFrame?.url ?? '');
   }
 
   createWindow(): void {
@@ -159,6 +167,7 @@ export class Controller {
   }
 
   flush(): void {
+    this.downloads.flush();
     this.store.save(this.state);
     this.store.flush();
   }
@@ -216,7 +225,7 @@ export class Controller {
     if (this.broadcastTimer) return;
     this.broadcastTimer = setTimeout(() => {
       this.broadcastTimer = null;
-      const targets = [this.win?.webContents, this.overlay.webContents];
+      const targets = [this.win?.webContents, this.overlay.webContents, ...this.tabs.internalWebContents()];
       for (const wc of targets) if (wc && !wc.isDestroyed()) wc.send('state', this.state);
     }, BROADCAST_INTERVAL_MS);
   }
@@ -226,7 +235,7 @@ export class Controller {
   }
 
   sendAll(channel: string, payload: unknown): void {
-    for (const wc of [this.win?.webContents, this.overlay.webContents]) if (wc && !wc.isDestroyed()) wc.send(channel, payload);
+    for (const wc of [this.win?.webContents, this.overlay.webContents, ...this.tabs.internalWebContents()]) if (wc && !wc.isDestroyed()) wc.send(channel, payload);
   }
 
   dispatch(message: Message): void {
@@ -365,6 +374,36 @@ export class Controller {
       case 'import.browser':
         void importFromBrowser(this);
         return;
+      case 'download.pause':
+        this.downloads.pause(cmd.id);
+        return;
+      case 'download.resume':
+        this.downloads.resume(cmd.id);
+        return;
+      case 'download.cancel':
+        this.downloads.cancel(cmd.id);
+        return;
+      case 'download.open':
+        this.downloads.open(cmd.id);
+        return;
+      case 'download.show':
+        this.downloads.show(cmd.id);
+        return;
+      case 'download.retry':
+        this.downloads.retry(cmd.id);
+        return;
+      case 'download.remove':
+        this.downloads.remove(cmd.id);
+        return;
+      case 'downloads.clear':
+        this.downloads.clearFinished();
+        return;
+      case 'downloads.openFolder':
+        void shell.openPath(app.getPath('downloads'));
+        return;
+      case 'downloads.open':
+        this.openInternal('chord://downloads/');
+        return;
     }
   }
 
@@ -412,12 +451,26 @@ export class Controller {
     await confirmImport(this, parsed.config, 'a Chord configuration');
   }
 
+  /** Show one of Chord's own pages: reuse it if the active space already has it open. */
+  openInternal(url: string): void {
+    const space = activeSpace(this.state);
+    const existing = [...space.pinned, ...space.today].map((id) => this.state.tabs[id]).find((t) => t && t.url === url);
+    if (existing) this.apply({ type: 'tab.activate', id: existing.id });
+    else this.apply({ type: 'tab.new', url });
+  }
+
   private navigate(id: TabId, url: string): void {
     const tab = this.state.tabs[id];
     if (!tab) return;
-    const live = tab.awake ? this.tabs.get(id) : undefined;
+    let live = tab.awake ? this.tabs.get(id) : undefined;
+    // Chord pages and web pages run with different preloads, so a view cannot carry a tab across that line.
+    if (live && isInternal(url) !== isInternal(tab.url)) {
+      this.tabs.destroy(id);
+      live = undefined;
+    }
     this.apply({ type: 'tab.patch', id, patch: { url, title: titleFor(url), awake: true, favicon: undefined } });
     if (live) live.webContents.loadURL(url).catch(() => {});
+    else this.tabs.reconcile(this.state);
     this.apply({ type: 'tab.activate', id });
   }
 }

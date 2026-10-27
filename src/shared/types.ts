@@ -85,6 +85,8 @@ export interface Settings {
   theme: Theme;
   /** show media controls for pages that expose a Media Session (YouTube Music, Spotify…) */
   smartPages: boolean;
+  /** show a save dialog for every download instead of saving to the Downloads folder */
+  askDownloadPath: boolean;
   /** editable address bar across the top of the page */
   addressBar: boolean;
   extensions: ExtensionEntry[];
@@ -183,7 +185,17 @@ export type Command =
   | { type: 'config.importFile' }
   | { type: 'diagnostics.copy' }
   | { type: 'media.action'; id: TabId; action: MediaAction }
-  | { type: 'import.browser' };
+  | { type: 'import.browser' }
+  | { type: 'download.pause'; id: string }
+  | { type: 'download.resume'; id: string }
+  | { type: 'download.cancel'; id: string }
+  | { type: 'download.open'; id: string }
+  | { type: 'download.show'; id: string }
+  | { type: 'download.retry'; id: string }
+  | { type: 'download.remove'; id: string }
+  | { type: 'downloads.clear' }
+  | { type: 'downloads.openFolder' }
+  | { type: 'downloads.open' };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
@@ -191,6 +203,8 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'import.browser',
+  'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
+  'downloads.clear', 'downloads.openFolder', 'downloads.open',
 ]);
 
 export type Message = Action | Command;
@@ -228,6 +242,29 @@ export interface MediaInfo {
 }
 export type MediaStatus = Record<TabId, MediaInfo>;
 
+export type DownloadState = 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+export interface DownloadEntry {
+  id: string;
+  url: string;
+  filename: string;
+  path: string;
+  total: number;
+  received: number;
+  state: DownloadState;
+  paused: boolean;
+  canResume: boolean;
+  startedAt: number;
+  finishedAt?: number;
+  bytesPerSecond: number;
+  /** for completed downloads: whether the file is still on disk */
+  exists?: boolean;
+}
+export interface DownloadsStatus {
+  /** newest first */
+  items: DownloadEntry[];
+  active: number;
+}
+
 export interface ChordApi {
   platform: string;
   dispatch(message: Message): Promise<void>;
@@ -239,4 +276,6 @@ export interface ChordApi {
   getExtensions(): Promise<ExtensionsStatus>;
   onMedia(cb: (status: MediaStatus) => void): () => void;
   getMedia(): Promise<MediaStatus>;
+  onDownloads(cb: (status: DownloadsStatus) => void): () => void;
+  getDownloads(): Promise<DownloadsStatus>;
 }

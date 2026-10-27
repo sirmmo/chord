@@ -34,7 +34,7 @@ export interface ChordConfig {
 
 export type ImportMode = 'merge' | 'replace';
 
-const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
+const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine'];
 
 function tabToConfig(tab: Tab): ConfigTab {
   const out: ConfigTab = { url: tab.homeUrl ?? tab.url };
@@ -119,6 +119,7 @@ export function parseConfig(text: string): ParseResult {
       if (typeof r.shields === 'boolean') settings.shields = r.shields;
       if (typeof r.addressBar === 'boolean') settings.addressBar = r.addressBar;
       if (typeof r.smartPages === 'boolean') settings.smartPages = r.smartPages;
+      if (typeof r.askDownloadPath === 'boolean') settings.askDownloadPath = r.askDownloadPath;
       if (typeof r.searchEngine === 'string' && ['duckduckgo', 'google', 'brave', 'kagi', 'startpage'].includes(r.searchEngine)) {
         settings.searchEngine = r.searchEngine as Settings['searchEngine'];
       }

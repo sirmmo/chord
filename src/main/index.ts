@@ -3,8 +3,10 @@ import { join } from 'node:path';
 import { Controller } from './controller.ts';
 import { configureSession } from './session.ts';
 import { warnIfTranslated } from './diagnostics.ts';
+import { registerInternalScheme } from './internal.ts';
 
 app.setName('Chord');
+registerInternalScheme();
 
 // The Windows portable build (electron-builder "portable" target) sets this to the
 // folder holding the .exe. Keep profile, cookies and settings next to it so the

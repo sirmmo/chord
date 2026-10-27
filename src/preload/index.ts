@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { ChordApi, ExtensionsStatus, MediaStatus, Message, OverlayMessage, SidebarMessage, State } from '../shared/types.ts';
+import type { ChordApi, DownloadsStatus, ExtensionsStatus, MediaStatus, Message, OverlayMessage, SidebarMessage, State } from '../shared/types.ts';
 
 const listen =
   <T>(channel: string) =>
@@ -22,6 +22,8 @@ const api: ChordApi = {
   getExtensions: () => ipcRenderer.invoke('extensions'),
   onMedia: listen<MediaStatus>('media'),
   getMedia: () => ipcRenderer.invoke('media'),
+  onDownloads: listen<DownloadsStatus>('downloads'),
+  getDownloads: () => ipcRenderer.invoke('downloads'),
 };
 
 contextBridge.exposeInMainWorld('chord', api);

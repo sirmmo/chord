@@ -4,7 +4,8 @@ import type { State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace } from '../shared/model.ts';
 import { computeLayout } from '../shared/layout.ts';
 import { PARTITION } from './session.ts';
-import { PAGE_PRELOAD } from './paths.ts';
+import { PAGE_PRELOAD, PRELOAD } from './paths.ts';
+import { isInternal } from '../shared/url.ts';
 import { pageContextMenu } from './menu.ts';
 import type { Controller } from './controller.ts';
 import { navDomReady, navFinished, navStarted } from './diagnostics.ts';
@@ -29,6 +30,16 @@ export class TabManager {
 
   get(id: TabId): WebContentsView | undefined {
     return this.views.get(id);
+  }
+
+  /** Views currently showing one of Chord's own pages; they receive state like the sidebar does. */
+  internalWebContents(): WebContents[] {
+    const out: WebContents[] = [];
+    for (const view of this.views.values()) {
+      const wc = view.webContents;
+      if (!wc.isDestroyed() && isInternal(wc.getURL())) out.push(wc);
+    }
+    return out;
   }
 
   /** The tab whose page view owns this WebContents, if it is one of ours. */
@@ -58,7 +69,7 @@ export class TabManager {
     }
     for (const tab of Object.values(state.tabs)) {
       if (tab.awake && !this.views.has(tab.id)) {
-        const view = this.create(tab.id);
+        const view = this.create(tab.id, undefined, tab.url);
         view.webContents.loadURL(tab.url).catch(() => {});
       }
     }
@@ -105,14 +116,15 @@ export class TabManager {
     visible.forEach((id, k) => this.views.get(id)!.setBounds(panes[k]));
   }
 
-  create(id: TabId, existing?: WebContentsView): WebContentsView {
+  create(id: TabId, existing?: WebContentsView, url = ''): WebContentsView {
     const win = this.c.win!;
     const view =
       existing ??
       new WebContentsView({
         webPreferences: {
           partition: PARTITION,
-          preload: PAGE_PRELOAD,
+          // Chord's own pages get the chrome API; web pages only the media bridge.
+          preload: isInternal(url) ? PRELOAD : PAGE_PRELOAD,
           sandbox: true,
           contextIsolation: true,
           nodeIntegration: false,
@@ -200,6 +212,11 @@ export class TabManager {
       if (isMainFrame && code !== -3) this.showError(wc, code, description, url);
     });
     wc.on('will-navigate', (e, url) => {
+      // Web pages may not navigate into Chord's own pages; the user does that from the chrome.
+      if (isInternal(url) && !isInternal(wc.getURL())) {
+        e.preventDefault();
+        return;
+      }
       if (/^(mailto|tel|sms|facetime):/i.test(url)) {
         e.preventDefault();
         shell.openExternal(url).catch(() => {});

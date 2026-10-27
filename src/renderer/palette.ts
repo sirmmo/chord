@@ -230,6 +230,7 @@ function compute(raw: string): Item[] {
     { title: 'Clear Archive', keywords: 'archive delete', when: s.archived.length > 0, run: () => dispatch({ type: 'archived.clear' }) },
     { title: 'Export Configuration', keywords: 'export json backup spaces', subtitle: 'Save spaces, tabs and settings to a JSON file', run: () => dispatch({ type: 'config.export' }) },
     { title: `Export Space: ${space.name}`, keywords: 'export json space', run: () => dispatch({ type: 'config.export', spaceId: space.id }) },
+    { title: 'Downloads', keywords: 'downloads files progress', subtitle: '⌘⇧J', run: () => dispatch({ type: 'downloads.open' }) },
     { title: 'Import from Arc, Chrome, Brave…', keywords: 'import arc chrome brave edge bookmarks migrate browser', subtitle: 'Spaces and bookmarks from another browser', run: () => dispatch({ type: 'import.browser' }) },
     { title: 'Import Configuration', keywords: 'import json restore spaces', subtitle: 'Merge or replace from a JSON file', run: () => dispatch({ type: 'config.importFile' }) },
     { title: 'Settings…', keywords: 'settings preferences appearance theme add-ins extensions address bar', subtitle: 'General, appearance, add-ins', run: () => dispatch({ type: 'settings.open' }) },
@@ -300,6 +301,7 @@ const sEngine = $<HTMLSelectElement>('#s-engine');
 const sShields = $<HTMLInputElement>('#s-shields');
 const sAddressBar = $<HTMLInputElement>('#s-addressbar');
 const sSmart = $<HTMLInputElement>('#s-smart');
+const sAskDl = $<HTMLInputElement>('#s-askdl');
 const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = {};
@@ -312,6 +314,7 @@ const showPage = (page: string) => {
 $('#s-tabs').querySelectorAll('button').forEach((b) => (b.onclick = () => showPage(b.dataset.v ?? 'general')));
 sAddressBar.onchange = () => dispatch({ type: 'settings.update', patch: { addressBar: sAddressBar.checked } });
 sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages: sSmart.checked } });
+sAskDl.onchange = () => dispatch({ type: 'settings.update', patch: { askDownloadPath: sAskDl.checked } });
 $('#s-default').onclick = () => dispatch({ type: 'app.setDefaultBrowser' });
 $('#s-export').onclick = () => dispatch({ type: 'config.export' });
 $('#s-import').onclick = () => {
@@ -419,6 +422,7 @@ function fillSettings(): void {
   sShields.checked = s.settings.shields;
   sAddressBar.checked = s.settings.addressBar;
   sSmart.checked = s.settings.smartPages;
+  sAskDl.checked = s.settings.askDownloadPath;
   renderExtensions();
 }
 

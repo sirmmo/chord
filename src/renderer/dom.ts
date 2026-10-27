@@ -36,6 +36,7 @@ export function svg(paths: string, size = 16): SVGSVGElement {
 
 export const ICONS = {
   back: '<path d="M15 18l-6-6 6-6"/>',
+  download: '<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/>',
   play: '<path d="M7 5v14l12-7z" fill="currentColor" stroke="none"/>',
   pause: '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/>',
   next: '<path d="M5 5v14l10-7z" fill="currentColor" stroke="none"/><path d="M18 5v14"/>',

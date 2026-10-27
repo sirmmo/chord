@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, session, type Session, type WebContents } f
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
+import { serveInternalPages } from './internal.ts';
 
 export const PARTITION = 'persist:chord';
 
@@ -65,10 +66,7 @@ export function configureSession(): Session {
     callback(false);
   });
 
-  ses.on('will-download', (_event, item) => {
-    item.setSaveDialogOptions({ defaultPath: join(app.getPath('downloads'), item.getFilename()) });
-  });
-
+  serveInternalPages(ses);
   return ses;
 }
 

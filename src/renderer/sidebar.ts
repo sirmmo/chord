@@ -2,9 +2,9 @@
 // around the tab views (native children painted above it). Rendering is
 // keyed: existing elements are updated in place, never rebuilt.
 
-import type { ListName, MediaAction, MediaInfo, MediaStatus, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
+import type { DownloadsStatus, ListName, MediaAction, MediaInfo, MediaStatus, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace } from '../shared/model.ts';
-import { hostOf, isSecure, searchUrl, toUrl } from '../shared/url.ts';
+import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
 import { applyTheme } from './theme.ts';
 
@@ -142,6 +142,66 @@ api.onSidebar((m) => {
 
 let lastSpaceKey = '';
 let media: MediaStatus = {};
+let downloads: DownloadsStatus = { items: [], active: 0 };
+
+// ---- downloads: ring in the title bar, a row above the player while something is in flight ----
+
+const dlBtn = $<HTMLButtonElement>('#dl-btn');
+const dlRow = $<HTMLButtonElement>('#dl-row');
+const dlTitle = $('#dl-title');
+const dlSub = $('#dl-sub');
+const dlBar = $('#dl-bar');
+let dlHideTimer = 0;
+dlBtn.replaceChildren(svg(ICONS.download), dlBtn.querySelector('.ring')!, dlBtn.querySelector('.badge')!);
+dlBtn.onclick = () => dispatch({ type: 'downloads.open' });
+dlRow.onclick = () => dispatch({ type: 'downloads.open' });
+api.onDownloads((d) => {
+  downloads = d;
+  renderDownloads();
+});
+api.getDownloads().then((d) => {
+  if (d) {
+    downloads = d;
+    renderDownloads();
+  }
+});
+
+function formatBytesShort(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
+  return `${(n / 1024 ** 3).toFixed(2)} GB`;
+}
+
+function renderDownloads(): void {
+  const active = downloads.items.filter((e) => e.state === 'progressing');
+  const recent = downloads.items.find((e) => e.state === 'completed' && e.finishedAt && Date.now() - e.finishedAt < 8000);
+  dlBtn.classList.toggle('hidden', downloads.items.length === 0);
+  dlBtn.classList.toggle('active', active.length > 0);
+  if (active.length) {
+    const total = active.reduce((n, e) => n + e.total, 0);
+    const received = active.reduce((n, e) => n + e.received, 0);
+    const p = total > 0 ? received / total : 0;
+    dlBtn.style.setProperty('--p', String(p));
+    setText(dlBtn.querySelector('.badge') as HTMLElement, String(active.length));
+    const first = active[0];
+    setText(dlTitle, active.length === 1 ? first.filename : `${active.length} downloads`);
+    setText(dlSub, total > 0 ? `${Math.round(p * 100)}%` : formatBytesShort(received));
+    dlBar.style.width = `${Math.round(p * 100)}%`;
+    setClass(dlRow, 'done', false);
+    dlRow.classList.remove('hidden');
+    window.clearTimeout(dlHideTimer);
+  } else if (recent) {
+    setText(dlTitle, recent.filename);
+    setText(dlSub, 'Done');
+    setClass(dlRow, 'done', true);
+    dlRow.classList.remove('hidden');
+    window.clearTimeout(dlHideTimer);
+    dlHideTimer = window.setTimeout(renderDownloads, 8000 - (Date.now() - (recent.finishedAt ?? 0)) + 50);
+  } else {
+    dlRow.classList.add('hidden');
+  }
+}
 
 // ---- smart pages: the current player, across spaces ----
 
@@ -329,11 +389,13 @@ function setIconKey(slot: HTMLElement, key: string, make: () => Node): void {
 
 function iconKey(tab: Tab, spinner: boolean): string {
   if (spinner && tab.loading) return 'spinner';
+  if (isInternal(tab.url)) return `internal:${hostOf(tab.url)}`;
   return tab.favicon ? `img:${tab.favicon}` : `glyph:${initialOf(hostOf(tab.url) || tab.title)}`;
 }
 
 function makeIcon(tab: Tab, spinner: boolean): Node {
   if (spinner && tab.loading) return h('div', { class: 'spinner' });
+  if (isInternal(tab.url)) return h('div', { class: 'glyph internal' }, svg(hostOf(tab.url) === 'downloads' ? ICONS.download : ICONS.globe, 12));
   const glyph = h('div', { class: 'glyph' }, initialOf(hostOf(tab.url) || tab.title));
   if (!tab.favicon) return glyph;
   const img = h('img', { class: 'favicon', src: tab.favicon, alt: '', draggable: 'false' });

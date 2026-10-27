@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Downloads</title>
+  <link rel="stylesheet" href="internal.css">
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Downloads</h1>
+      <div class="actions">
+        <button class="btn" id="open-folder">Open Downloads Folder</button>
+        <button class="btn" id="clear">Clear Finished</button>
+      </div>
+    </header>
+    <p class="summary" id="summary"></p>
+    <div id="list"></div>
+    <p class="empty" id="empty">Nothing downloaded yet. Files you download show up here with their progress, and you can pause, resume, open or retry them.</p>
+  </main>
+  <script src="downloads.js"></script>
+</body>
+</html>

@@ -275,3 +275,22 @@ footer { flex: none; display: flex; align-items: center; gap: 4px; padding-top: 
 .now-mini-pp { margin-left: -2px; }
 .titlebar .now-mini { margin-left: 2px; }
 #addressbar .now-mini { margin-left: 6px; }
+
+/* downloads: a title-bar button with a progress ring, and a row above the player while active */
+.dl-btn { position: relative; }
+.dl-btn.hidden, .dl-row.hidden { display: none; }
+.dl-btn .ring { position: absolute; inset: 3px; border-radius: 50%; display: none; background: conic-gradient(var(--accent) calc(var(--p, 0) * 360deg), transparent 0); -webkit-mask: radial-gradient(circle, transparent 7px, #000 8px); mask: radial-gradient(circle, transparent 7px, #000 8px); }
+.dl-btn.active .ring { display: block; }
+.dl-btn.active svg { width: 12px; height: 12px; }
+.dl-btn .badge { position: absolute; top: -3px; right: -3px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center; display: none; box-sizing: border-box; }
+.dl-btn.active .badge { display: block; }
+.dl-row { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; padding: 7px 9px; border: 0; border-radius: 10px; background: var(--hover); color: var(--fg); font: inherit; text-align: left; cursor: default; }
+.dl-row:hover { background: var(--active); }
+.dl-row .dl-text { display: flex; justify-content: space-between; gap: 8px; min-width: 0; }
+.dl-row .title { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-row .sub { font-size: 11px; color: var(--muted); flex: none; }
+.dl-row .bar { display: block; height: 3px; border-radius: 2px; background: var(--active); overflow: hidden; }
+.dl-row .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+.dl-row.done .bar { display: none; }
+.glyph.internal { display: grid; place-items: center; color: var(--muted); }
+.glyph.internal svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
