@@ -137,6 +137,7 @@ function renderUpdates(): void {
     nsis: 'This Windows installer updates itself: the new version is installed when Chord restarts.',
     appimage: 'This AppImage updates itself: the new file replaces the current one when Chord restarts.',
     mac: 'The macOS build is not notarised, so it cannot replace itself: Chord offers the new dmg to download and you drag it over the old copy.',
+    'mac-legacy': 'This is the macOS 12 build (Electron 43). It cannot replace itself: Chord offers the new legacy dmg to download and you drag it over the old copy.',
     portable: 'The portable build never writes outside its folder: Chord offers the new zip to download.',
     deb: 'The .deb is managed by your package manager: Chord offers the new package to download.',
     dev: 'Update checks are off in development builds.',

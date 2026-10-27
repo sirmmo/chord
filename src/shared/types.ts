@@ -260,7 +260,7 @@ export interface UpdateSettings {
   auto: boolean;
 }
 
-export type UpdateChannel = 'mac' | 'nsis' | 'portable' | 'appimage' | 'deb' | 'dev';
+export type UpdateChannel = 'mac' | 'mac-legacy' | 'nsis' | 'portable' | 'appimage' | 'deb' | 'dev';
 
 export interface UpdateStatus {
   state: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'error';

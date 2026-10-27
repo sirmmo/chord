@@ -233,7 +233,8 @@
         <div>
           <h3>Downloads</h3>
           <ul>
-            <li><strong>macOS</strong>: one universal <code>.dmg</code> that runs natively on Apple Silicon and Intel. If an older per-architecture build warns about Rosetta, replace it with this one.</li>
+            <li><strong>macOS 13 or later</strong>: one universal <code>.dmg</code> that runs natively on Apple Silicon and Intel. If an older per-architecture build warns about Rosetta, replace it with this one.</li>
+            <li><strong>macOS 12 Monterey</strong>: <code>-mac-universal-legacy.dmg</code>, the same app on Electron 43, the last Electron that runs on Monterey. It gets every Chord release but fewer Chromium security updates, so move to the main build when you can.</li>
             <li><strong>Windows</strong>: <code>-setup.exe</code> installer, or <code>-portable.zip</code> to unpack anywhere; it keeps its data in <code>ChordData</code> next to <code>Chord.exe</code> (x64).</li>
             <li><strong>Linux</strong>: <code>.AppImage</code> and <code>.deb</code> (x64).</li>
           </ul>

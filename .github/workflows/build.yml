@@ -38,10 +38,18 @@ jobs:
       matrix:
         include:
           - name: macOS (universal)
+            artifact: mac
             os: macos-latest
             args: --mac --universal
             files: release/*.dmg
+          # Electron 44+ needs macOS 13: this second build on Electron 43 keeps Monterey (12) users going.
+          - name: macOS (legacy, Electron 43 for macOS 12)
+            artifact: mac-legacy
+            os: macos-latest
+            args: --mac --universal -c.electronVersion=43.8.4 '-c.artifactName=Chord-${version}-${os}-${arch}-legacy.${ext}'
+            files: release/*-legacy.dmg
           - name: Windows (x64)
+            artifact: windows
             os: windows-latest
             args: --win --x64
             files: |
@@ -49,6 +57,7 @@ jobs:
               release/*.zip
               release/latest*.yml
           - name: Linux (x64)
+            artifact: linux
             os: ubuntu-latest
             args: --linux --x64
             files: |
@@ -82,7 +91,7 @@ jobs:
           Compress-Archive -Path release/win-unpacked/* -DestinationPath "release/Chord-$version-win-x64-portable.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: chord-${{ runner.os }}
+          name: chord-${{ matrix.artifact }}
           path: ${{ matrix.files }}
           if-no-files-found: error
 

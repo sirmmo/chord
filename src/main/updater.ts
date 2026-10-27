@@ -139,7 +139,8 @@ export class UpdateManager {
 
 function detectChannel(): UpdateChannel {
   if (!app.isPackaged) return 'dev';
-  if (process.platform === 'darwin') return 'mac';
+  // Builds on Electron 43 exist for macOS 12, which Electron 44+ no longer runs on.
+  if (process.platform === 'darwin') return Number(process.versions.electron.split('.')[0]) < 44 ? 'mac-legacy' : 'mac';
   if (process.platform === 'win32') return app.getPath('userData').endsWith('ChordData') || process.env.PORTABLE_EXECUTABLE_DIR ? 'portable' : 'nsis';
   return process.env.APPIMAGE ? 'appimage' : 'deb';
 }

@@ -22,6 +22,7 @@ export function compareVersions(a: string, b: string): number {
 export function assetFor(names: string[], channel: string): string | undefined {
   const want: Record<string, RegExp> = {
     mac: /-mac-(universal|arm64)\.dmg$/,
+    'mac-legacy': /-mac-(universal|arm64)-legacy\.dmg$/,
     nsis: /-win-x64-setup\.exe$/,
     portable: /-win-x64-portable\.zip$/,
     appimage: /\.AppImage$/,

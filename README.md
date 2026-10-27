@@ -208,7 +208,8 @@ short guide (`chord://guide`), also at https://ingmmo.com/chord/guide.html.
 
 ## Install
 
-Installers for macOS (one universal `.dmg` for Apple Silicon and Intel), Windows and Linux are attached to each
+Installers for macOS (one universal `.dmg` for Apple Silicon and Intel, macOS 13 or later; a
+`-legacy.dmg` built on Electron 43 for macOS 12 Monterey), Windows and Linux are attached to each
 [release](https://github.com/sirmmo/chord/releases/latest). They are not signed or
 notarised yet: on macOS run `xattr -cr /Applications/Chord.app` once if the app refuses
 to open; on Windows choose "More info → Run anyway" in SmartScreen.
@@ -245,6 +246,7 @@ next depends on the build:
 | Windows `-setup.exe` | Downloaded in the background (or on request) and installed when Chord restarts. |
 | Linux AppImage | Same: the new file replaces the current one on restart. |
 | macOS dmg | Not notarised, so it cannot replace itself: a banner offers the new dmg; drag it over the old copy. |
+| macOS legacy dmg (macOS 12) | Same, with the `-legacy.dmg`. Electron 43 stops receiving Chromium updates sooner than the main build. |
 | Windows portable zip, Linux deb | A banner offers the matching download. |
 
 Both the check and the automatic install can be turned off. Self-updating builds read the
