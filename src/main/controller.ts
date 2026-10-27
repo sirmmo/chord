@@ -11,6 +11,7 @@ import { exportConfig, exportFileName, parseConfig } from '../shared/config.ts';
 import { Store } from './store.ts';
 import { TabManager } from './tabs.ts';
 import { Overlay } from './overlay.ts';
+import { CaptureManager } from './capture.ts';
 import { setShields } from './session.ts';
 import { buildAppMenu, spaceContextMenu, tabContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
@@ -44,6 +45,7 @@ export class Controller {
   readonly store: Store<State>;
   readonly tabs = new TabManager(this);
   readonly overlay = new Overlay(this);
+  readonly capture = new CaptureManager(this);
   readonly smart = new SmartManager(this);
   readonly tray = new TrayManager(this);
   /** set once the app is really quitting, so close-to-tray does not swallow the window close */
@@ -86,6 +88,7 @@ export class Controller {
     this.passwords.init();
     this.research.init();
     this.ai.init();
+    this.capture.init();
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -517,6 +520,12 @@ export class Controller {
         return;
       case 'space.forgetProfile':
         void this.forgetProfile(cmd.id);
+        return;
+      case 'capture.pick':
+        this.capture.pick(cmd.token, cmd.id);
+        return;
+      case 'capture.settings':
+        this.capture.openPermissionSettings();
         return;
       case 'prompt.answer': {
         const resolve = this.prompts.get(cmd.token);

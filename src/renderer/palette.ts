@@ -1,7 +1,7 @@
 // The overlay page: command bar (⌘T / ⌘L) and find bar (⌘F).
 
 import { presetsFor } from '../shared/tiling.ts';
-import type { DownloadsStatus, HistoryEntry, LockPurpose, Message, SmartStatus, SpaceId, State, Tab } from '../shared/types.ts';
+import type { CaptureSource, DownloadsStatus, HistoryEntry, LockPurpose, Message, SmartStatus, SpaceId, State, Tab } from '../shared/types.ts';
 import { downloadRow } from './downloads-view.ts';
 import { activeSpace, focusedTab, isLocked } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
@@ -28,7 +28,7 @@ const findInput = $<HTMLInputElement>('#find-input');
 const findCount = $('#find-count');
 
 let state: State | null = null;
-let mode: 'palette' | 'find' | 'password' | 'prompt' | 'downloads' | null = null;
+let mode: 'palette' | 'find' | 'password' | 'prompt' | 'downloads' | 'sources' | null = null;
 let promptToken = '';
 let downloads: DownloadsStatus = { items: [], active: 0 };
 let smart: SmartStatus = {};
@@ -67,6 +67,7 @@ api.onOverlay((m) => {
       else if (m.mode === 'password') showPassword(m.spaceId, m.purpose, m.name);
       else if (m.mode === 'prompt') showPrompt(m.token, m.title, m.placeholder, m.value);
       else if (m.mode === 'downloads') showDownloads();
+      else if (m.mode === 'sources') showSources(m.token, m.origin, m.audio, m.sources, m.needsPermission);
       else showFind();
       break;
     case 'password:error': {
@@ -149,6 +150,76 @@ $('#dl-all').onclick = () => {
 $('#dl-folder').onclick = () => dispatch({ type: 'downloads.openFolder' });
 window.addEventListener('keydown', (e) => {
   if (mode === 'downloads' && e.key === 'Escape') dispatch({ type: 'palette.close' });
+});
+
+// ---- screen-share source picker ----
+
+let captureToken = '';
+let captureSources: CaptureSource[] = [];
+let captureKind: CaptureSource['kind'] = 'screen';
+
+function showSources(token: string, origin: string, audio: boolean, sources: CaptureSource[], needsPermission: boolean): void {
+  mode = 'sources';
+  captureToken = token;
+  captureSources = sources;
+  captureKind = sources.some((x) => x.kind === 'screen') ? 'screen' : sources.some((x) => x.kind === 'window') ? 'window' : 'tab';
+  document.body.className = 'mode-sources' + (needsPermission ? ' needs-permission' : '');
+  $('#cap-title').textContent = `Share your screen with ${origin}`;
+  $('#cap-note').textContent = audio
+    ? api.platform === 'win32'
+      ? 'The site also asked for audio: system audio is included when sharing a screen or window.'
+      : 'The site also asked for audio: on this system only a Chord tab can be shared with its sound.'
+    : '';
+  renderSources();
+}
+
+function renderSources(): void {
+  const kinds: { kind: CaptureSource['kind']; label: string }[] = [
+    { kind: 'screen', label: 'Entire screen' },
+    { kind: 'window', label: 'Window' },
+    { kind: 'tab', label: 'Chord tab' },
+  ];
+  $('#cap-tabs').replaceChildren(
+    ...kinds
+      .filter((k) => captureSources.some((x) => x.kind === k.kind))
+      .map((k) =>
+        h(
+          'button',
+          {
+            class: k.kind === captureKind ? 'on' : '',
+            onclick: () => {
+              captureKind = k.kind;
+              renderSources();
+            },
+          },
+          k.label,
+        ),
+      ),
+  );
+  const list = captureSources.filter((x) => x.kind === captureKind);
+  const placeholder = captureKind === 'tab' ? ICONS.globe : ICONS.pip;
+  $('#cap-grid').replaceChildren(
+    ...(list.length
+      ? list.map((src) =>
+          h(
+            'button',
+            { class: 'cap-src', onclick: () => dispatch({ type: 'capture.pick', token: captureToken, id: src.id }) },
+            h('div', { class: 'thumb' }, src.thumbnail ? h('img', { src: src.thumbnail, alt: '' }) : svg(placeholder, 28)),
+            h('div', { class: 'label' }, src.icon ? h('img', { src: src.icon, alt: '' }) : null, h('span', { title: src.name }, src.name)),
+          ),
+        )
+      : [h('p', { class: 'cap-empty' }, 'Nothing to share here.')]),
+  );
+  ($('#cap-grid').querySelector('button') as HTMLElement | null)?.focus();
+}
+
+$('#cap-backdrop').addEventListener('mousedown', (e) => {
+  if (e.target === e.currentTarget) dispatch({ type: 'capture.pick', token: captureToken, id: null });
+});
+$('#cap-cancel').onclick = () => dispatch({ type: 'capture.pick', token: captureToken, id: null });
+$('#cap-settings').onclick = () => dispatch({ type: 'capture.settings' });
+window.addEventListener('keydown', (e) => {
+  if (mode === 'sources' && e.key === 'Escape') dispatch({ type: 'capture.pick', token: captureToken, id: null });
 });
 
 function showPalette(i: 'new' | 'current', query: string): void {

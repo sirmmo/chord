@@ -17,7 +17,7 @@ export class Overlay {
   private ready = false;
   private queue: OverlayMessage[] = [];
   private attached = false;
-  mode: 'palette' | 'find' | 'password' | 'prompt' | 'downloads' | null = null;
+  mode: 'palette' | 'find' | 'password' | 'prompt' | 'downloads' | 'sources' | null = null;
 
   private readonly c: Controller;
 
@@ -66,6 +66,7 @@ export class Overlay {
   hide(): void {
     if (!this.view || !this.mode) return;
     if (this.mode === 'prompt') this.c.cancelPrompts();
+    if (this.mode === 'sources') this.c.capture.cancel();
     this.mode = null;
     this.send({ kind: 'hide' });
     this.view.setVisible(false);
@@ -91,7 +92,7 @@ export class Overlay {
     const { width, height } = win.getContentBounds();
     const { settings } = this.c.state;
     const { content } = computeLayout({ width, height, sidebarOpen: this.c.sidebarVisible(), sidebarWidth: settings.sidebarWidth, panes: 1, topInset: this.c.topInset(), panelWidth: this.c.panel.width() });
-    if (this.mode === 'palette' || this.mode === 'password' || this.mode === 'prompt' || this.mode === 'downloads') {
+    if (this.mode !== 'find') {
       this.view.setBounds(content);
     } else {
       const w = Math.min(360, content.width);

@@ -82,6 +82,9 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
     previous and next.
   - Calls (Meet, Zoom, Jitsi, anything using the microphone or camera): a card with the
     call duration, mute, camera and leave, and a pulsing chip in the title bar.
+  - Screen sharing: when a page asks to share, macOS 15+ shows the system picker;
+    elsewhere Chord offers your screens, windows and other Chord tabs (tabs share
+    their sound too, Windows adds system audio).
   - Timers and progress read from the title (`24:59 - Pomofocus`, `Uploading 45%`): a
     chip in the title bar that jumps to the tab.
   - Unread counts from the title (`(3) Inbox`, `[2] Slack`) and notifications the page

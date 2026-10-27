@@ -198,3 +198,27 @@ body.mode-downloads #dl-backdrop { display: block; }
 .dl .bar.indeterminate i { width: 30%; animation: slide 1.2s infinite linear; }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
 .dl:not(.progressing) .bar { display: none; }
+
+/* screen-share source picker */
+#cap-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.22); align-items: flex-start; justify-content: center; padding-top: 8vh; box-sizing: border-box; }
+body.mode-sources #cap-backdrop { display: flex; }
+#cap-panel { width: min(760px, calc(100% - 48px)); max-height: 80vh; overflow-y: auto; background: var(--panel); backdrop-filter: blur(24px); border-radius: 14px; box-shadow: var(--shadow); padding: 14px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+.cap-head { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.cap-head .spacer { flex: 1; }
+.cap-tabs { display: flex; gap: 4px; }
+.cap-tabs button { font: inherit; font-size: 12.5px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+.cap-tabs button.on { background: var(--hover); color: var(--fg); border-color: transparent; }
+#cap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.cap-src { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 10px; border: 2px solid transparent; background: var(--hover); cursor: pointer; text-align: left; font: inherit; color: var(--fg); }
+.cap-src:hover, .cap-src:focus-visible { border-color: var(--accent); outline: none; }
+.cap-src .thumb { aspect-ratio: 16 / 10; width: 100%; border-radius: 6px; background: rgba(0, 0, 0, 0.3); object-fit: contain; display: grid; place-items: center; color: var(--muted); overflow: hidden; }
+.cap-src .thumb img { width: 100%; height: 100%; object-fit: contain; }
+.cap-src .thumb svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.cap-src .label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; min-width: 0; }
+.cap-src .label img { width: 16px; height: 16px; border-radius: 3px; flex: none; }
+.cap-src .label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cap-empty { color: var(--muted); font-size: 13px; grid-column: 1 / -1; padding: 20px; text-align: center; }
+.cap-note { color: var(--muted); font-size: 12px; margin: 0; }
+.cap-note:empty { display: none; }
+.cap-perm { display: none; font-size: 12.5px; margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(255, 180, 0, 0.12); }
+body.mode-sources.needs-permission .cap-perm { display: block; }

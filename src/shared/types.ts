@@ -349,7 +349,9 @@ export type Command =
   | { type: 'space.password'; id: SpaceId; purpose: LockPurpose; password: string }
   | { type: 'history.open' }
   | { type: 'history.remove'; id: string }
-  | { type: 'history.clear' };
+  | { type: 'history.clear' }
+  | { type: 'capture.pick'; token: string; id: string | null }
+  | { type: 'capture.settings' };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
@@ -358,13 +360,23 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings',
 ]);
 
 export type Message = Action | Command;
 
 export function isCommand(m: Message): m is Command {
   return COMMAND_TYPES.has(m.type);
+}
+
+/** A screen, window or Chord tab offered to a page that asked to share the screen */
+export interface CaptureSource {
+  id: string;
+  name: string;
+  kind: 'screen' | 'window' | 'tab';
+  /** data: URL preview, empty when unavailable (tabs, or no screen-recording permission) */
+  thumbnail: string;
+  icon?: string;
 }
 
 /** Messages from main to the overlay page */
@@ -376,6 +388,7 @@ export type OverlayMessage =
   | { kind: 'show'; mode: 'downloads' }
   | { kind: 'show'; mode: 'password'; spaceId: SpaceId; purpose: LockPurpose; name: string }
   | { kind: 'show'; mode: 'prompt'; token: string; title: string; placeholder: string; value: string }
+  | { kind: 'show'; mode: 'sources'; token: string; origin: string; audio: boolean; sources: CaptureSource[]; needsPermission: boolean }
   | { kind: 'password:error' }
   | { kind: 'hide' }
   | { kind: 'find:result'; active: number; matches: number };
