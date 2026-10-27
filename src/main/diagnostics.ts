@@ -58,6 +58,22 @@ export function startLagMonitor(): void {
   }, TICK_MS).unref();
 }
 
+// ---- main-process errors (last 20), shown in the report instead of a crash dialog ----
+
+const mainErrors: { at: number; text: string }[] = [];
+
+export function recordMainError(kind: string, err: unknown): void {
+  const text = err instanceof Error ? `${err.message}\n${(err.stack ?? '').split('\n').slice(1, 4).join('\n')}` : String(err);
+  mainErrors.push({ at: Date.now(), text: `${kind}: ${text}`.slice(0, 600) });
+  if (mainErrors.length > 20) mainErrors.shift();
+  console.error(kind, err);
+}
+
+export function installErrorHandlers(): void {
+  process.on('uncaughtException', (err) => recordMainError('uncaught exception', err));
+  process.on('unhandledRejection', (reason) => recordMainError('unhandled rejection', reason));
+}
+
 // ---- page console and failures (per tab, last 25 warnings/errors) ----
 
 interface PageLine {
@@ -220,6 +236,10 @@ export async function collectDiagnostics(c: Controller): Promise<string> {
   lines.push('');
   lines.push('## Focused page navigation timing');
   push('timing', pageTiming ?? 'no focused page');
+  lines.push('');
+  lines.push('## Main process errors');
+  for (const e of mainErrors) lines.push(`- ${new Date(e.at).toISOString().slice(11, 19)} ${e.text.replace(/\n/g, ' | ')}`);
+  if (!mainErrors.length) lines.push('- none');
   lines.push('');
   lines.push('## Focused page console (last warnings, errors and failures)');
   const log = focused ? pageLog.get(focused.id) ?? [] : [];

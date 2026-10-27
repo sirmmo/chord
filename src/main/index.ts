@@ -3,10 +3,11 @@ import { dirname, join } from 'node:path';
 import { existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { Controller } from './controller.ts';
 import { configureSession } from './session.ts';
-import { mark, warnIfTranslated } from './diagnostics.ts';
+import { installErrorHandlers, mark, warnIfTranslated } from './diagnostics.ts';
 import { registerInternalScheme } from './internal.ts';
 import { applyStartupFlags } from './flags.ts';
 
+installErrorHandlers();
 app.setName('Chord');
 app.setAboutPanelOptions({ applicationName: 'Chord', applicationVersion: app.getVersion(), website: 'https://ingmmo.com/chord/', copyright: 'MIT licensed · github.com/sirmmo/chord' });
 registerInternalScheme();

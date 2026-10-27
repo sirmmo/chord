@@ -288,7 +288,10 @@ export class TabManager {
         outlivesOpener: true,
         createWindow: (options) => {
           // Keep the opener relationship (needed by OAuth style popups) but show it as a tab.
-          const view = new WebContentsView({ webPreferences: options.webPreferences });
+          // When Electron has already created the popup's WebContents (window.open with an
+          // opener), the view must wrap that very object or the handler throws.
+          const guest = (options as { webContents?: WebContents }).webContents;
+          const view = guest ? new WebContentsView({ webContents: guest }) : new WebContentsView({ webPreferences: options.webPreferences });
           const newId = randomUUID();
           this.create(newId, view, '', this.partitions.get(id) ?? PARTITION);
           this.c.apply({
