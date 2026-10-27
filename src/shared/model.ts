@@ -25,7 +25,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo' };
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', flags: {}};
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -42,7 +42,10 @@ export function mergeSettings(raw: unknown): Settings {
   const boosts = Array.isArray(r.boosts) ? r.boosts.filter(isBoost) : [];
   const ai = { ...defaultSettings().ai, ...((r.ai ?? {}) as Partial<Settings['ai']>) };
   if (ai.provider !== 'anthropic' && ai.provider !== 'openai') ai.provider = 'openai';
-  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai };
+  const rawFlags = (typeof r.flags === 'object' && r.flags !== null ? r.flags : {}) as Record<string, unknown>;
+  const flags: Settings['flags'] = {};
+  for (const k of ['noHwVideoDecode', 'noMacOverlays', 'noGraphite', 'noGpuCompositing', 'noGpu'] as const) if (rawFlags[k] === true) flags[k] = true;
+  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags };
   merged.panelWidth = clampPanel(typeof merged.panelWidth === 'number' ? merged.panelWidth : 360);
   return merged;
 }

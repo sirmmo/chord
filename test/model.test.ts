@@ -318,3 +318,15 @@ test('tab volume is clamped and 100% means unset', () => {
   s = reduce(s, { type: 'tab.volume', id, volume: -1 }, ctx());
   assert.equal(s.tabs[id].volume, 0);
 });
+
+test('troubleshooting flags survive a reload and ignore junk', () => {
+  const ctx: Ctx = { now: 1, newId: () => 'x' };
+  const s = initialState(ctx);
+  const next = reduce(s, { type: 'settings.update', patch: { flags: { noHwVideoDecode: true } } }, ctx);
+  assert.equal(next.settings.flags.noHwVideoDecode, true);
+  const raw = JSON.parse(JSON.stringify(next)) as { settings: { flags: Record<string, unknown> } };
+  raw.settings.flags.noGpu = 'yes';
+  raw.settings.flags.bogus = true;
+  const back = hydrate(raw, ctx);
+  assert.deepEqual(back.settings.flags, { noHwVideoDecode: true });
+});

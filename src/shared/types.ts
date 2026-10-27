@@ -213,6 +213,16 @@ export interface Settings {
   /** ad and tracker blocking */
   shields: boolean;
   searchEngine: SearchEngine;
+  /** Chromium troubleshooting switches applied at the next launch */
+  flags: TroubleFlags;
+}
+
+export interface TroubleFlags {
+  noHwVideoDecode?: boolean;
+  noMacOverlays?: boolean;
+  noGraphite?: boolean;
+  noGpuCompositing?: boolean;
+  noGpu?: boolean;
 }
 
 export interface State {
@@ -351,7 +361,8 @@ export type Command =
   | { type: 'history.remove'; id: string }
   | { type: 'history.clear' }
   | { type: 'capture.pick'; token: string; id: string | null }
-  | { type: 'capture.settings' };
+  | { type: 'capture.settings' }
+  | { type: 'app.relaunch' };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
@@ -360,7 +371,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch',
 ]);
 
 export type Message = Action | Command;

@@ -1,7 +1,7 @@
 // chord://settings — the settings page.
 
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
-import type { AiStatus, Boost, ExtensionsStatus, Message, PasswordsStatus, State } from '../shared/types.ts';
+import type { AiStatus, Boost, ExtensionsStatus, Message, PasswordsStatus, State, TroubleFlags } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { SEARCH_ENGINES } from '../shared/url.ts';
@@ -70,6 +70,28 @@ sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages:
 sAskDl.onchange = () => dispatch({ type: 'settings.update', patch: { askDownloadPath: sAskDl.checked } });
 sTray.onchange = () => dispatch({ type: 'settings.update', patch: { closeToTray: sTray.checked } });
 sAutoPip.onchange = () => dispatch({ type: 'settings.update', patch: { autoPip: sAutoPip.checked } });
+const FLAGS: { key: keyof TroubleFlags; label: string; help: string }[] = [
+  { key: 'noHwVideoDecode', label: 'Disable hardware video decoding', help: 'Videos decode on the CPU. Try this first when a video stays black or never starts.' },
+  { key: 'noMacOverlays', label: 'Disable video overlays (macOS)', help: 'Draws video through the normal compositor instead of a native overlay layer.' },
+  { key: 'noGraphite', label: 'Disable Skia Graphite', help: 'Falls back to the older Ganesh renderer for all page drawing.' },
+  { key: 'noGpuCompositing', label: 'Disable GPU compositing', help: 'Composites pages on the CPU. Slower, but isolates driver problems.' },
+  { key: 'noGpu', label: 'Disable the GPU entirely', help: 'Last resort: software rendering for everything.' },
+];
+const flagInputs = new Map<keyof TroubleFlags, HTMLInputElement>();
+$('#s-flags').replaceChildren(
+  ...FLAGS.map((f) => {
+    const input = h('input', { type: 'checkbox' });
+    input.onchange = () => {
+      const flags: TroubleFlags = { ...(state?.settings.flags ?? {}) };
+      if (input.checked) flags[f.key] = true;
+      else delete flags[f.key];
+      dispatch({ type: 'settings.update', patch: { flags } });
+    };
+    flagInputs.set(f.key, input);
+    return h('label', { class: 'check', title: f.help }, input, ` ${f.label}`, h('span', { class: 'help' }, ` — ${f.help}`));
+  }),
+);
+$('#s-relaunch').onclick = () => dispatch({ type: 'app.relaunch' });
 $('#s-dldir-choose').onclick = () => dispatch({ type: 'downloads.chooseFolder' });
 sDlDirReset.onclick = () => dispatch({ type: 'settings.update', patch: { downloadDir: null } });
 $('#s-default').onclick = () => dispatch({ type: 'app.setDefaultBrowser' });
@@ -171,6 +193,7 @@ function fillSettings(): void {
   sAskDl.checked = s.settings.askDownloadPath;
   sTray.checked = s.settings.closeToTray;
   sAutoPip.checked = s.settings.autoPip;
+  for (const [k, input] of flagInputs) input.checked = s.settings.flags[k] === true;
   renderBoosts();
   renderAiSettings();
   sDlDir.textContent = s.settings.downloadDir ?? 'System Downloads folder';

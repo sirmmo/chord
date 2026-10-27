@@ -107,3 +107,7 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 
 .s-grid input.wide { font: inherit; font-size: 13px; color: var(--fg); background: var(--hover); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; min-width: 0; width: 100%; box-sizing: border-box; }
 .row input.wide { flex: 1; width: auto; }
+
+/* troubleshooting flags */
+#s-flags { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+#s-flags label.check .help { color: var(--muted); font-size: 12px; }

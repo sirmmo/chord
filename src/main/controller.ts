@@ -527,6 +527,12 @@ export class Controller {
       case 'capture.settings':
         this.capture.openPermissionSettings();
         return;
+      case 'app.relaunch':
+        this.store.flush();
+        this.quitting = true;
+        app.relaunch();
+        app.quit();
+        return;
       case 'prompt.answer': {
         const resolve = this.prompts.get(cmd.token);
         this.prompts.delete(cmd.token);

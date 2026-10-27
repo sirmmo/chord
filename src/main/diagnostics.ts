@@ -6,6 +6,7 @@ import { activeSpace, focusedTab } from '../shared/model.ts';
 import { hostOf } from '../shared/url.ts';
 import type { Controller } from './controller.ts';
 import { isMac } from './platform.ts';
+import { activeFlags } from './flags.ts';
 import { shieldsStatus } from './session.ts';
 
 /**
@@ -55,6 +56,25 @@ export function startLagMonitor(): void {
       if (stalls.length > 40) stalls.shift();
     }
   }, TICK_MS).unref();
+}
+
+// ---- page console and failures (per tab, last 25 warnings/errors) ----
+
+interface PageLine {
+  at: number;
+  text: string;
+}
+const pageLog = new Map<string, PageLine[]>();
+
+export function pageLine(tab: string, text: string): void {
+  let list = pageLog.get(tab);
+  if (!list) pageLog.set(tab, (list = []));
+  list.push({ at: Date.now(), text: text.slice(0, 300) });
+  if (list.length > 25) list.shift();
+}
+
+export function forgetPage(tab: string): void {
+  pageLog.delete(tab);
 }
 
 // ---- page-load timings ----
@@ -116,6 +136,20 @@ const PAGE_TIMING_JS = `(() => {
     load: Math.round(n.loadEventEnd),
     resources: performance.getEntriesByType('resource').length,
     paint,
+    media: Array.from(document.querySelectorAll('video, audio')).slice(0, 6).map((m) => ({
+      tag: m.tagName.toLowerCase(),
+      src: (m.currentSrc || m.src || '').slice(0, 60),
+      readyState: m.readyState,
+      networkState: m.networkState,
+      paused: m.paused,
+      ended: m.ended,
+      time: Math.round(m.currentTime * 10) / 10,
+      duration: Number.isFinite(m.duration) ? Math.round(m.duration) : m.duration,
+      size: m.videoWidth !== undefined ? m.videoWidth + 'x' + m.videoHeight : undefined,
+      error: m.error ? m.error.code + ' ' + m.error.message : null,
+      quality: typeof m.getVideoPlaybackQuality === 'function' ? (({ totalVideoFrames, droppedVideoFrames }) => ({ totalVideoFrames, droppedVideoFrames }))(m.getVideoPlaybackQuality()) : undefined,
+    })),
+    mse: typeof MediaSource !== 'undefined' ? ['video/webm; codecs="vp09.00.10.08"', 'video/mp4; codecs="avc1.42E01E"', 'video/mp4; codecs="av01.0.08M.08"', 'audio/webm; codecs="opus"'].map((t) => t + '=' + MediaSource.isTypeSupported(t)).join(' ') : 'none',
   };
 })()`;
 
@@ -154,6 +188,7 @@ export async function collectDiagnostics(c: Controller): Promise<string> {
   push('electron', `${process.versions.electron} (chrome ${process.versions.chrome}, node ${process.versions.node})`);
   push('platform', `${process.platform} ${process.getSystemVersion()} ${process.arch}${rosetta ? ' RUNNING UNDER ROSETTA/ARM64 TRANSLATION' : ''}`);
   push('packaged', app.isPackaged);
+  push('flags', activeFlags().length ? activeFlags().join(' ') : 'none');
   push('signing', await signingInfo());
   push('memory', `${Math.round(mem.total / 1024)} MB total, ${Math.round(mem.free / 1024)} MB free`);
   push('gpu', Object.entries(gpu).map(([k, v]) => `${k}=${v}`).join(' '));
@@ -185,6 +220,11 @@ export async function collectDiagnostics(c: Controller): Promise<string> {
   lines.push('');
   lines.push('## Focused page navigation timing');
   push('timing', pageTiming ?? 'no focused page');
+  lines.push('');
+  lines.push('## Focused page console (last warnings, errors and failures)');
+  const log = focused ? pageLog.get(focused.id) ?? [] : [];
+  for (const l of log) lines.push(`- ${new Date(l.at).toISOString().slice(11, 19)} ${l.text}`);
+  if (!log.length) lines.push('- nothing recorded');
   return lines.join('\n');
 }
 

@@ -247,8 +247,11 @@ the prompt, with an "Install without Boosts" choice.
 
 Help → Copy Diagnostics puts a text report on the clipboard (and in `diagnostics.txt` in
 the profile folder): versions, whether the build is signed or translated by Rosetta, GPU
-status, main-process event-loop stalls, recent page-load timings and the focused page's
-navigation timing. Paste it into a GitHub issue.
+status, main-process event-loop stalls, recent page-load timings, the focused page's
+navigation timing, its media elements and codec support, and its last console errors.
+Paste it into a GitHub issue. Settings → General → Troubleshooting has Chromium switches
+(hardware video decoding, macOS video overlays, Skia Graphite, GPU compositing, GPU) to
+turn off one at a time with a relaunch when a video stays black or pages draw wrong.
 
 ## Run it from source
 

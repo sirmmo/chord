@@ -5,6 +5,7 @@ import { Controller } from './controller.ts';
 import { configureSession } from './session.ts';
 import { mark, warnIfTranslated } from './diagnostics.ts';
 import { registerInternalScheme } from './internal.ts';
+import { applyStartupFlags } from './flags.ts';
 
 app.setName('Chord');
 app.setAboutPanelOptions({ applicationName: 'Chord', applicationVersion: app.getVersion(), website: 'https://ingmmo.com/chord/', copyright: 'MIT licensed · github.com/sirmmo/chord' });
@@ -19,6 +20,7 @@ const portableDir = process.env.PORTABLE_EXECUTABLE_DIR ?? (existsSync(join(exeD
 if (portableDir) {
   app.setPath('userData', join(portableDir, 'ChordData'));
 }
+applyStartupFlags();
 
 /**
  * Make sure the process really ends once quitting starts. A page that stalls in

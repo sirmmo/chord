@@ -11,7 +11,7 @@ import { installUrlFrom } from '../shared/installer.ts';
 import { openExternalLink } from './external.ts';
 import { pageContextMenu } from './menu.ts';
 import type { Controller } from './controller.ts';
-import { navDomReady, navFinished, navStarted } from './diagnostics.ts';
+import { navDomReady, navFinished, navStarted, pageLine } from './diagnostics.ts';
 
 const CONTENT_RADIUS = 10;
 
@@ -234,7 +234,11 @@ export class TabManager {
     wc.on('found-in-page', (_e, result) => {
       this.c.overlay.send({ kind: 'find:result', active: result.activeMatchOrdinal, matches: result.matches });
     });
+    wc.on('console-message', (event) => {
+      if (event.level === 'error' || event.level === 'warning') pageLine(id, `${event.level}: ${event.message} (${event.sourceId.split('/').pop() ?? ''}:${event.lineNumber})`);
+    });
     wc.on('render-process-gone', (_e, details) => {
+      pageLine(id, `renderer gone: ${details.reason} exit=${details.exitCode}`);
       if (details.reason === 'clean-exit') return;
       patch({ crashed: true });
       this.c.apply({ type: 'tab.sleep', id });
@@ -246,6 +250,7 @@ export class TabManager {
       if (this.c.state.tabs[id]?.awake) this.c.apply({ type: 'tab.sleep', id });
     });
     wc.on('did-fail-load', (_e, code, description, url, isMainFrame) => {
+      if (code !== -3) pageLine(id, `load failed ${code} ${description} ${isMainFrame ? '' : '(subframe) '}${url.slice(0, 120)}`);
       if (isMainFrame && code !== -3) this.showError(wc, code, description, url);
     });
     wc.on('will-navigate', (e, url) => {
