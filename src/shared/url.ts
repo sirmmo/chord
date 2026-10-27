@@ -8,6 +8,17 @@ export const SEARCH_ENGINES: Record<SearchEngine, { name: string; url: string }>
   startpage: { name: 'Startpage', url: 'https://www.startpage.com/do/search?q=' },
 };
 
+/** Schemes the browser itself renders; anything else with a scheme belongs to another app. */
+const WEB_SCHEMES = new Set(['http:', 'https:', 'file:', 'ftp:', 'chord:', 'about:', 'data:', 'blob:', 'javascript:', 'chrome:', 'devtools:', 'chrome-extension:']);
+
+/** magnet:, mailto:, zoommtg: … — links another application should open. */
+export function externalScheme(url: string): string | null {
+  const m = /^([a-z][a-z0-9+.-]*):/i.exec(url);
+  if (!m) return null;
+  const scheme = `${m[1].toLowerCase()}:`;
+  return WEB_SCHEMES.has(scheme) ? null : scheme;
+}
+
 /** Chord's own pages: chord://downloads and friends. */
 export function isInternal(url: string): boolean {
   return /^chord:\/\//i.test(url);

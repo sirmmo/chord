@@ -57,7 +57,9 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
 - **Find in page** `⌘F`, tab sleep, mute, reopen closed tab `⌘⇧T`, per-site
-  permission prompts, OAuth-style popups opened as tabs.
+  permission prompts, OAuth-style popups opened as tabs. Middle-click and ⌘-click open
+  links in a new tab regardless of what the page's scripts do; `magnet:`, `zoommtg:` and
+  other non-web links go to the matching app after a confirmation (once per scheme).
 - **Settings page** at `chord://settings` (`⌘,`), a tab like any other: General
   (smart pages, tray, downloads, address bar, archiving, search engine, default browser,
   import and export), Appearance, Layouts, Add-ins, and About (version, runtime and the

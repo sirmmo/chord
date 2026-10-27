@@ -24,10 +24,18 @@ export class SmartManager {
   init(): void {
     ipcMain.on('smart', (event: IpcMainEvent, raw: unknown) => {
       const id = this.c.tabs.tabIdOf(event.sender);
-      if (!id || !this.c.state.settings.smartPages) return;
+      if (!id) return;
       if (typeof raw !== 'object' || raw === null) return;
       const r = raw as Record<string, unknown>;
       const url = this.c.state.tabs[id]?.url ?? '';
+      if (r.kind === 'open') {
+        const target = str(r.url, 4000);
+        if (!/^(https?|ftp):\/\//i.test(target)) return;
+        const opener = this.c.state.tabs[id];
+        this.c.apply({ type: 'tab.new', url: target, spaceId: opener?.spaceId ?? this.c.state.activeSpaceId, activate: r.background !== true });
+        return;
+      }
+      if (!this.c.state.settings.smartPages) return;
       if (r.kind === 'notification') {
         const prev = this.status[id] ?? empty();
         this.set(id, {

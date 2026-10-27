@@ -1,4 +1,4 @@
-import { WebContentsView, shell, type WebContents } from 'electron';
+import { WebContentsView, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace } from '../shared/model.ts';
@@ -6,7 +6,8 @@ import { computeLayout } from '../shared/layout.ts';
 import { parseTiling } from '../shared/tiling.ts';
 import { PARTITION } from './session.ts';
 import { PAGE_PRELOAD, PRELOAD } from './paths.ts';
-import { isInternal } from '../shared/url.ts';
+import { externalScheme, isInternal } from '../shared/url.ts';
+import { openExternalLink } from './external.ts';
 import { pageContextMenu } from './menu.ts';
 import type { Controller } from './controller.ts';
 import { navDomReady, navFinished, navStarted } from './diagnostics.ts';
@@ -227,17 +228,17 @@ export class TabManager {
         e.preventDefault();
         return;
       }
-      if (/^(mailto|tel|sms|facetime):/i.test(url)) {
+      if (externalScheme(url)) {
         e.preventDefault();
-        shell.openExternal(url).catch(() => {});
+        void openExternalLink(wc, url);
       }
     });
     wc.on('context-menu', (_e, params) => pageContextMenu(this.c, id, wc, params));
 
     wc.setWindowOpenHandler((details) => {
       const url = details.url;
-      if (/^(mailto|tel|sms|facetime):/i.test(url)) {
-        shell.openExternal(url).catch(() => {});
+      if (externalScheme(url)) {
+        void openExternalLink(wc, url);
         return { action: 'deny' };
       }
       const background = details.disposition === 'background-tab';

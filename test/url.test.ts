@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isInternal, titleFor, toUrl } from '../src/shared/url.ts';
+import { externalScheme, isInternal, titleFor, toUrl } from '../src/shared/url.ts';
 
 test("Chord's own pages are URLs, not searches", () => {
   assert.equal(toUrl('chord://downloads'), 'chord://downloads');
@@ -9,4 +9,14 @@ test("Chord's own pages are URLs, not searches", () => {
   assert.equal(isInternal('https://chord.test/'), false);
   assert.equal(titleFor('chord://downloads/'), 'Downloads');
   assert.equal(toUrl('weird://thing'), null, 'unknown schemes still search');
+});
+
+test('external schemes are recognised, web schemes are not', () => {
+  assert.equal(externalScheme('magnet:?xt=urn:btih:abc'), 'magnet:');
+  assert.equal(externalScheme('mailto:a@b.c'), 'mailto:');
+  assert.equal(externalScheme('ZoomMtg://join'), 'zoommtg:');
+  assert.equal(externalScheme('https://example.com/'), null);
+  assert.equal(externalScheme('chord://settings/'), null);
+  assert.equal(externalScheme('javascript:void(0)'), null);
+  assert.equal(externalScheme('no scheme here'), null);
 });

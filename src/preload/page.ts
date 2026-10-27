@@ -157,6 +157,28 @@ function smartHook(reportKey: string, actionKey: string): void {
     schedule();
   }
 
+  // ---- middle click and modifier click on links: the browser opens the tab, not the page's scripts ----
+  const linkOf = (target: EventTarget | null): string | null => {
+    const a = target instanceof Element ? target.closest('a[href]') : null;
+    if (!a) return null;
+    const href = (a as HTMLAnchorElement).href;
+    return /^(https?|ftp):\/\//i.test(href) ? href : null;
+  };
+  const openLink = (e: MouseEvent, background: boolean) => {
+    const href = linkOf(e.target);
+    if (!href) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    post({ kind: 'open', url: href, background });
+  };
+  window.addEventListener('auxclick', (e) => { if (e.button === 1) openLink(e, true); }, true);
+  window.addEventListener('mousedown', (e) => { if (e.button === 1 && linkOf(e.target)) e.stopImmediatePropagation(); }, true);
+  window.addEventListener('mouseup', (e) => { if (e.button === 1 && linkOf(e.target)) e.stopImmediatePropagation(); }, true);
+  window.addEventListener('click', (e) => {
+    const mod = navigator.platform.startsWith('Mac') ? e.metaKey : e.ctrlKey;
+    if (e.button === 0 && mod && !e.altKey) openLink(e, !e.shiftKey);
+  }, true);
+
   // ---- notifications ----
   const g = w as unknown as { Notification?: typeof Notification };
   const OrigNotification = g.Notification;
