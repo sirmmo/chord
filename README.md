@@ -176,7 +176,9 @@ URL strings or objects with `url`, `title` and `favicon`:
 | `⌘[` · `⌘]` · `⌘R` | Back · forward · reload |
 | `⌘F` · `⌘⇧C` | Find in page · copy URL |
 
-On Windows and Linux use `Ctrl` for `⌘` and `Alt` for `⌥`.
+On Windows and Linux use `Ctrl` for `⌘` and `Alt` for `⌥`; there `Alt+1…9` jumps to a space
+(`Ctrl+1…9` is taken by tabs). New to this kind of browser? Help → Getting Started opens a
+short guide (`chord://guide`), also at https://ingmmo.com/chord/guide.html.
 
 ## Install
 

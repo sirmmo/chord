@@ -303,6 +303,7 @@ const RUNTIME_NAMES: Record<string, string> = {
 };
 const openExternal = (url: string) => dispatch({ type: 'open.external', url });
 $('#a-site').onclick = () => openExternal('https://ingmmo.com/chord/');
+$('#a-guide').onclick = () => dispatch({ type: 'guide.open' });
 $('#a-github').onclick = () => openExternal('https://github.com/sirmmo/chord');
 $('#a-releases').onclick = () => openExternal('https://github.com/sirmmo/chord/releases');
 $('#a-diag').onclick = () => dispatch({ type: 'diagnostics.copy' });

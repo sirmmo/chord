@@ -117,9 +117,10 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Next Space', accelerator: 'CmdOrCtrl+Alt+Right', click: d({ type: 'space.next' }) },
         { label: 'Previous Space', accelerator: 'CmdOrCtrl+Alt+Left', click: d({ type: 'space.prev' }) },
         sep,
+        // Ctrl+1…9 jumps to tabs on Windows and Linux (CmdOrCtrl), so spaces take Alt there.
         ...spaces.slice(0, 9).map((sp, i) => ({
           label: `${sp.icon ? sp.icon + ' ' : ''}${sp.name}`,
-          accelerator: `Control+${i + 1}`,
+          accelerator: isMac ? `Control+${i + 1}` : `Alt+${i + 1}`,
           click: d({ type: 'space.activate', id: sp.id }),
         })),
       ],
@@ -128,6 +129,7 @@ export function buildAppMenu(c: Controller): void {
     {
       role: 'help',
       submenu: [
+        { label: 'Getting Started', click: d({ type: 'guide.open' }) },
         { label: 'Chord on GitHub', click: () => shell.openExternal('https://github.com/sirmmo/chord') },
         { label: 'Set Chord as Default Browser', click: d({ type: 'app.setDefaultBrowser' }) },
         sep,

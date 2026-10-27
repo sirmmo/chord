@@ -430,6 +430,7 @@ function compute(raw: string): Item[] {
     { title: 'Picture in Picture', keywords: 'pip video popout', subtitle: '⌘⌥P', when: !!current, run: () => dispatch({ type: 'media.pip' }) },
     { title: `Boost ${current ? hostOf(current.url) : 'this site'}…`, keywords: 'boost css javascript userstyle userscript', subtitle: 'Per-site CSS and JavaScript', when: !!current, run: () => dispatch({ type: 'settings.open', page: `boosts:${current ? hostOf(current.url) : ''}` }) },
     { title: 'Install Space from This Site', keywords: 'install space manifest', when: !!(current && smart[current.id]?.manifest), run: () => { const m = current && smart[current.id]?.manifest; if (m) dispatch({ type: 'space.install', url: m }); } },
+    { title: 'Getting Started Guide', keywords: 'guide help how to tutorial getting started shortcuts new user', subtitle: 'Sidebar, spaces, command bar, shortcuts', run: () => dispatch({ type: 'guide.open' }) },
     { title: 'About Chord', keywords: 'about version credits licenses open source', subtitle: 'Version and open-source credits', run: () => dispatch({ type: 'settings.open', page: 'about' }) },
     { title: 'History', keywords: 'history visited pages', subtitle: '⌘Y', run: () => dispatch({ type: 'history.open' }) },
     { title: 'Downloads', keywords: 'downloads files progress', subtitle: '⌘⇧J', run: () => dispatch({ type: 'downloads.open' }) },

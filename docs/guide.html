@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Getting started with Chord</title>
+  <meta name="description" content="A short guide to Chord for people coming from Chrome, Edge, Firefox or Safari on macOS, Windows or Linux: the sidebar, Spaces, the command bar, split view, import and shortcuts.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%235b6cff'/%3E%3C/svg%3E">
+  <style>
+    :root { --space: #5b6cff; --chrome: #15151b; --bg: color-mix(in srgb, var(--space) 22%, var(--chrome)); --bg2: color-mix(in srgb, var(--space) 6%, var(--chrome)); --panel: rgba(255,255,255,.06); --panel-2: rgba(255,255,255,.1); --line: rgba(255,255,255,.12); --fg: #eeeef3; --muted: rgba(255,255,255,.62); --accent: #9aa6ff; --max: 820px; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--fg); background: linear-gradient(170deg, var(--bg) 0%, var(--bg2) 60%, var(--chrome) 100%) fixed; font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; }
+    kbd { background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 20px; }
+    nav { position: sticky; top: 0; backdrop-filter: blur(18px); background: color-mix(in srgb, var(--chrome) 65%, transparent); border-bottom: 1px solid var(--line); z-index: 2; }
+    nav .wrap { display: flex; align-items: center; gap: 22px; height: 56px; max-width: 1040px; }
+    nav .brand { font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--fg); }
+    nav .brand svg { width: 22px; height: 22px; }
+    nav .links { display: flex; gap: 18px; margin-left: auto; font-size: 14px; }
+    nav .links a { color: var(--muted); }
+    nav .links a:hover { color: var(--fg); text-decoration: none; }
+    header { padding: 56px 0 8px; }
+    h1 { font-size: clamp(32px, 5vw, 44px); line-height: 1.1; margin: 0 0 12px; letter-spacing: -.02em; }
+    .lead { font-size: 18px; color: var(--muted); margin: 0 0 20px; }
+    section { padding: 28px 0; border-top: 1px solid var(--line); }
+    h2 { font-size: 24px; margin: 0 0 10px; letter-spacing: -.01em; }
+    h3 { font-size: 17px; margin: 16px 0 6px; }
+    ol, ul { padding-left: 22px; } li { margin: 5px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+    .toc { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 8px; font-size: 14px; }
+    .os { display: none; }
+    body.mac .os-mac, body.win .os-win, body.linux .os-linux { display: block; }
+    span.os-mac, span.os-win, span.os-linux { display: none; }
+    body.mac span.os-mac, body.win span.os-win, body.linux span.os-linux { display: inline; }
+    .other-os { color: var(--muted); font-size: 14px; }
+    .other-os button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+    footer { padding: 36px 0 60px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
+    @media (max-width: 820px) { nav .links a:not(:last-child) { display: none; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="wrap">
+      <a class="brand" href="./">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#5b6cff"/><path d="M16 42 L48 22" stroke="#fff" stroke-width="6" stroke-linecap="round"/><circle cx="16" cy="42" r="6" fill="#fff"/><circle cx="48" cy="22" r="6" fill="#fff"/></svg>
+        Chord
+      </a>
+      <div class="links">
+        <a href="./#features">Features</a>
+        <a href="./#install">Install</a>
+        <a href="./guide.html">Guide</a>
+        <a href="https://github.com/sirmmo/chord">GitHub</a>
+      </div>
+    </div>
+  </nav>
+  <header>
+    <div class="wrap">
+      <h1>Getting started with Chord</h1>
+      <p class="lead">A short guide for people arriving from another browser on macOS, Windows or Linux. Inside Chord it is one click away: Help → Getting Started.</p>
+      <p class="toc"><a href="#install">Install</a> <a href="#sidebar">Sidebar</a> <a href="#commandbar">Command bar</a> <a href="#spaces">Spaces</a> <a href="#split">Split view</a> <a href="#import">Import</a> <a href="#smart">Smart pages</a> <a href="#pages">Pages</a> <a href="#shortcuts">Shortcuts</a> <a href="#help">Help</a></p>
+      <p class="other-os">Showing instructions for <span class="os-name">this system</span>. Show for: <button data-os="mac">macOS</button> · <button data-os="win">Windows</button> · <button data-os="linux">Linux</button></p>
+    </div>
+  </header>
+  <div class="wrap">
+
+<section id="welcome">
+  <h2>Welcome to Chord</h2>
+  <p>Chord is a browser in the style of Arc, which only ever existed on the Mac. If you are coming from Chrome, Edge, Firefox or Safari on <span class="os-name">your system</span>, four things are different, and the rest is the browser you know:</p>
+  <ul>
+    <li><strong>Tabs live in a sidebar</strong> on the left, not in a strip on top.</li>
+    <li><strong>Spaces</strong> keep separate sets of tabs (work, home, a project) one keystroke apart.</li>
+    <li><strong>A command bar</strong> replaces the address bar: one box for URLs, searches and commands.</li>
+    <li><strong>Tabs tidy themselves</strong>: today's tabs are archived after a while unless you pin them.</li>
+  </ul>
+</section>
+
+<section id="install">
+  <h2>Install and first launch</h2>
+  <div class="os os-mac">
+    <h3>macOS</h3>
+    <ol>
+      <li>Download <code>Chord-&lt;version&gt;-mac-universal.dmg</code>. One file runs natively on Apple Silicon and Intel.</li>
+      <li>Open it and drag Chord to Applications.</li>
+      <li>Chord is not notarised yet, so the first launch may be refused. Right-click the app and choose Open, or run <code>xattr -cr /Applications/Chord.app</code> once in Terminal.</li>
+      <li>Updating: drag the new version over the old one. Your spaces and settings stay.</li>
+    </ol>
+  </div>
+  <div class="os os-win">
+    <h3>Windows</h3>
+    <ol>
+      <li><code>Chord-&lt;version&gt;-win-x64-setup.exe</code> installs for your user, no admin rights needed. SmartScreen will warn about an unknown publisher: choose More info, then Run anyway.</li>
+      <li>Prefer no installer? <code>Chord-&lt;version&gt;-win-x64-portable.zip</code> unpacks anywhere, a USB stick included. While <code>portable.txt</code> sits next to <code>Chord.exe</code>, everything Chord saves goes to a <code>ChordData</code> folder beside it.</li>
+      <li>Close with the window button or <kbd>Ctrl+Q</kbd>; the window's close button can also keep Chord running in the tray (Settings → General).</li>
+    </ol>
+  </div>
+  <div class="os os-linux">
+    <h3>Linux</h3>
+    <ol>
+      <li>Debian and Ubuntu: <code>sudo apt install ./Chord-&lt;version&gt;-linux-amd64.deb</code>, then Chord is in your app menu.</li>
+      <li>Anything else: make the AppImage executable (<code>chmod +x Chord-*.AppImage</code>) and run it.</li>
+      <li>Chord registers itself for <code>chord://</code> links. Set it as the default browser from Help → Set Chord as Default Browser.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="sidebar">
+  <h2>The sidebar</h2>
+  <p>Top to bottom, the sidebar of a space holds:</p>
+  <ul>
+    <li><strong>Favorites</strong>: a grid of icons for the sites you open all day. They are shared by every space. Drag a tab onto the grid, or right-click it and choose Add to Favorites.</li>
+    <li><strong>Pinned</strong>: tabs that stay until you close them. <kbd>Cmd+D</kbd> pins and unpins the current one. A pinned tab remembers its home page: right-click it and choose Go Home when you have wandered off.</li>
+    <li><strong>Today</strong>: everything else. Tabs you have not touched for a while move to the archive, where History and the command bar can still find them. The delay is in Settings → General.</li>
+    <li><strong>Spaces</strong> along the bottom edge, as coloured dots.</li>
+  </ul>
+  <p><kbd>Cmd+S</kbd> collapses the sidebar; hover the left edge of the window to peek at it. Drag its right edge to resize it. Tabs that have not been used for a while go to sleep (greyed out) and wake on click.</p>
+</section>
+
+<section id="commandbar">
+  <h2>The command bar</h2>
+  <p>There is no address bar by default. <kbd>Cmd+T</kbd> opens the command bar for a new tab, <kbd>Cmd+L</kbd> opens it on the current tab's URL. Type any of:</p>
+  <ul>
+    <li>a URL or a domain (<code>bbc.co.uk</code>),</li>
+    <li>words to search (the engine is in Settings → General),</li>
+    <li>the name of an open tab or a page from history to jump to it,</li>
+    <li>a command: Settings, Downloads, History, Import from another browser, Picture in Picture, Research or AI mode, and so on.</li>
+  </ul>
+  <p>Press <kbd>Enter</kbd> to open in the current tab and <kbd>Cmd+Enter</kbd> for a new one. If you would rather see the URL all the time, <kbd>Cmd+Shift+L</kbd> shows a classic address bar above the page.</p>
+</section>
+
+<section id="spaces">
+  <h2>Spaces</h2>
+  <p>A space is a sidebar of its own, with its own colour and icon. <kbd>Cmd+Shift+N</kbd> creates one. Switch with <kbd class="space-jump">Ctrl+1</kbd>…<kbd class="space-jump">Ctrl+9</kbd> or <kbd>Cmd+Alt+Left</kbd> / <kbd>Cmd+Alt+Right</kbd>, or click the dots. Right-click a dot for everything else:</p>
+  <ul>
+    <li><strong>Rename, colour, icon</strong>: the colour tints the whole window, so you always know where you are.</li>
+    <li><strong>Profile</strong>: give a space its own cookies and logins, for a second account or a client's systems. Spaces with the same profile name share them.</li>
+    <li><strong>Private</strong>: lock the space with a password. It locks on launch, when the window is hidden and after fifteen minutes away. Its tabs never appear in history or exports.</li>
+    <li><strong>Modes</strong>: Research mode adds a side panel for notes, clips and Zotero; AI mode adds a model that can read and act on the space's tabs.</li>
+    <li><strong>Export</strong> the space as JSON to share it or move it to another machine.</li>
+  </ul>
+</section>
+
+<section id="split">
+  <h2>Split view</h2>
+  <p><kbd>Cmd+Shift+D</kbd> adds the current tab to a split beside the one you are looking at; <kbd>Cmd+Alt+W</kbd> takes it out again. Drag the divider to resize. With three or more panes, Tabs → Split Layout offers grids such as two on top and one below, and Settings → Layouts lets you define your own with a short spec: <code>50/50 | 100</code> means a row of two equal panes above a full-width one.</p>
+</section>
+
+<section id="import">
+  <h2>Bring your tabs and bookmarks</h2>
+  <p>File → Import from Another Browser… finds Arc, Chrome, Brave, Edge and Chromium on this machine and turns their bookmarks (and Arc's spaces, favorites and pinned tabs) into Chord spaces. Nothing is deleted from the other browser. Passwords are not imported: Chord offers to save them again as you sign in.</p>
+  <p>Settings → General can also export the whole configuration as one JSON file and import it on another computer.</p>
+</section>
+
+<section id="smart">
+  <h2>Pages that talk back</h2>
+  <p>Some pages get controls in the sidebar, visible from every space: a card with play, pause, next and volume for YouTube Music, Spotify and other players; a card with mute, camera and leave for Meet, Zoom and Jitsi calls; unread counts and timers read from page titles. With Settings → General → Keep running when the window is closed, those controls also live in the <span class="os-mac">menu bar</span><span class="os-win os-linux">tray</span>.</p>
+</section>
+
+<section id="pages">
+  <h2>Everyday pages</h2>
+  <table>
+    <tr><th>Page</th><th>Address</th><th>Shortcut</th></tr>
+    <tr><td>Downloads</td><td><code>chord://downloads</code></td><td><kbd>Cmd+Shift+J</kbd></td></tr>
+    <tr><td>History</td><td><code>chord://history</code></td><td><kbd>Cmd+Y</kbd></td></tr>
+    <tr><td>Settings</td><td><code>chord://settings</code></td><td><kbd>Cmd+,</kbd></td></tr>
+    <tr><td>This guide</td><td><code>chord://guide</code></td><td>Help menu</td></tr>
+  </table>
+  <p>Shields, the built-in ad and tracker blocker, is on by default; the toggle is in Settings → General. Chrome extensions can be added unpacked from Settings → Add-ins.</p>
+</section>
+
+<section id="shortcuts">
+  <h2>Shortcuts</h2>
+  <table>
+    <tr><th>Keys</th><th>Action</th></tr>
+    <tr><td><kbd>Cmd+T</kbd> / <kbd>Cmd+L</kbd></td><td>Command bar: new tab / edit current URL</td></tr>
+    <tr><td><kbd>Cmd+W</kbd> · <kbd>Cmd+Shift+T</kbd></td><td>Close tab · reopen closed tab</td></tr>
+    <tr><td><kbd>Cmd+S</kbd> · <kbd>Cmd+,</kbd> · <kbd>Cmd+Shift+L</kbd></td><td>Collapse sidebar · settings · address bar</td></tr>
+    <tr><td><kbd>Cmd+D</kbd></td><td>Pin / unpin tab</td></tr>
+    <tr><td><kbd>Cmd+Shift+D</kbd> · <kbd>Cmd+Alt+W</kbd></td><td>Add to split view · remove from split view</td></tr>
+    <tr><td><kbd>Ctrl+Tab</kbd> · <kbd>Ctrl+Shift+Tab</kbd></td><td>Next / previous tab</td></tr>
+    <tr><td><kbd>Cmd+1</kbd>…<kbd>Cmd+8</kbd> · <kbd>Cmd+9</kbd></td><td>Jump to tab · last tab</td></tr>
+    <tr><td><kbd>Cmd+Alt+Left</kbd> / <kbd>Cmd+Alt+Right</kbd></td><td>Previous / next space</td></tr>
+    <tr><td><kbd class="space-jump">Ctrl+1</kbd>…<kbd class="space-jump">Ctrl+9</kbd> · <kbd>Cmd+Shift+N</kbd></td><td>Jump to space · new space</td></tr>
+    <tr><td><kbd>Cmd+[</kbd> · <kbd>Cmd+]</kbd> · <kbd>Cmd+R</kbd></td><td>Back · forward · reload</td></tr>
+    <tr><td><kbd>Cmd+F</kbd> · <kbd>Cmd+Shift+C</kbd></td><td>Find in page · copy URL</td></tr>
+    <tr><td><kbd>Cmd+Shift+J</kbd> · <kbd>Cmd+Y</kbd> · <kbd>Cmd+Alt+P</kbd></td><td>Downloads · history · picture in picture</td></tr>
+    <tr><td><kbd>Cmd+=</kbd> · <kbd>Cmd+-</kbd> · <kbd>Cmd+0</kbd></td><td>Zoom in · out · reset</td></tr>
+  </table>
+</section>
+
+<section id="help">
+  <h2>When something is off</h2>
+  <p>Help → Copy Diagnostics puts a report on the clipboard: versions, GPU state, page timings and the focused page's console errors. Paste it into an issue at <a href="https://github.com/sirmmo/chord/issues">github.com/sirmmo/chord/issues</a>. Settings → General → Troubleshooting has switches for black videos and drawing glitches. Your profile folder is shown at the bottom of Settings → About.</p>
+</section>
+
+  </div>
+  <footer>
+    <div class="wrap">Chord is MIT licensed. Not affiliated with The Browser Company or Arc. <a href="https://github.com/sirmmo/chord">github.com/sirmmo/chord</a></div>
+  </footer>
+  <script>
+(function () {
+  function render(isMac) {
+    var map = isMac
+      ? { Cmd: '⌘', Alt: '⌥', Shift: '⇧', Ctrl: '⌃', Left: '←', Right: '→', Enter: '↩' }
+      : { Cmd: 'Ctrl', Alt: 'Alt', Shift: 'Shift', Ctrl: 'Ctrl', Left: '←', Right: '→', Enter: 'Enter' };
+    document.querySelectorAll('kbd').forEach(function (k) {
+      var parts = k.textContent.split('+');
+      if (parts.length === 1 && parts[0] !== 'Enter') return;
+      if (!isMac && k.classList.contains('space-jump')) parts[0] = 'Alt';
+      var out = parts.map(function (p) { return map[p] || p; });
+      k.textContent = isMac ? out.join('') : out.join('+');
+    });
+  }
+  window.renderKeys = render;
+})();
+
+    (function () {
+      var names = { mac: 'macOS', win: 'Windows', linux: 'Linux' };
+      function show(os) {
+        document.body.className = os;
+        document.querySelectorAll('.os-name').forEach(function (e) { e.textContent = names[os]; });
+        window.renderKeys(os === 'mac');
+      }
+      document.querySelectorAll('.other-os button').forEach(function (b) { b.onclick = function () { show(b.dataset.os); }; });
+      var p = navigator.platform || '';
+      show(/Mac/i.test(p) ? 'mac' : /Win/i.test(p) ? 'win' : 'linux');
+    })();
+  </script>
+</body>
+</html>

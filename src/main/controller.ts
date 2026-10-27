@@ -41,6 +41,8 @@ const BROADCAST_INTERVAL_MS = 16;
 
 export class Controller {
   state!: State;
+  /** true when no state.json existed at launch: the guide opens as the first tab */
+  firstRun = false;
   win: BrowserWindow | null = null;
   readonly store: Store<State>;
   readonly tabs = new TabManager(this);
@@ -78,7 +80,9 @@ export class Controller {
   }
 
   init(): void {
-    this.state = hydrate(this.store.load(), this.ctx());
+    const stored = this.store.load();
+    this.firstRun = stored === null;
+    this.state = hydrate(stored, this.ctx());
     setInterval(() => this.apply({ type: 'tick' }), 60_000).unref();
     startLagMonitor();
     this.smart.init();
@@ -138,6 +142,10 @@ export class Controller {
       this.tabs.reconcile(this.state);
       this.panel.sync();
       this.broadcast();
+      if (this.firstRun) {
+        this.firstRun = false;
+        this.openInternal('chord://guide/');
+      }
       // Filter lists and extensions are heavy to load: let the first page start first.
       setTimeout(() => {
         void setShields(this.state.settings.shields).then(() => mark('shields-ready'));
@@ -508,6 +516,9 @@ export class Controller {
         return;
       case 'history.open':
         this.openInternal('chord://history/');
+        return;
+      case 'guide.open':
+        this.openInternal('chord://guide/');
         return;
       case 'space.install':
         void installSpace(this, cmd.url);
