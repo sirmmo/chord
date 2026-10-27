@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { Action, AppInfo, Command, Message, SidebarMessage, State, TabId } from '../shared/types.ts';
 import { isCommand } from '../shared/types.ts';
-import { activeSpace, focusedTab, hydrate, isLocked, panelVisible, reduce, visiblePanes, type Ctx } from '../shared/model.ts';
+import { activeSpace, focusedTab, hydrate, isLocked, panelVisible, reduce, spaceOfTab, visiblePanes, type Ctx } from '../shared/model.ts';
 import { makeLock, verifyLock } from './locks.ts';
 import { titleFor } from '../shared/url.ts';
 import { exportConfig, exportFileName, parseConfig } from '../shared/config.ts';
@@ -16,7 +16,7 @@ import { buildAppMenu, spaceContextMenu, tabContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
 import { isMac, TITLEBAR_HEIGHT, TOP_INSET, ADDRESS_BAR_HEIGHT } from './platform.ts';
 import { ExtensionManager } from './extensions.ts';
-import { copyDiagnostics, startLagMonitor } from './diagnostics.ts';
+import { copyDiagnostics, mark, startLagMonitor } from './diagnostics.ts';
 import { SmartManager } from './smart.ts';
 import { TrayManager } from './tray.ts';
 import { confirmImport, importFromBrowser } from './importers.ts';
@@ -31,7 +31,7 @@ import { ResearchManager } from './research.ts';
 import { AiManager } from './ai.ts';
 import { modesMenu } from './menu.ts';
 import { installUrlFrom } from '../shared/installer.ts';
-import { browsingSession } from './session.ts';
+import { browsingSession, configureSession, partitionFor } from './session.ts';
 import { isInternal } from '../shared/url.ts';
 
 const CHROME_DARK = '#1b1b22';
@@ -97,8 +97,6 @@ export class Controller {
     ipcMain.handle('smart', (event) => (this.trusted(event) ? this.smart.getStatus() : {}));
     ipcMain.handle('downloads', (event) => (this.trusted(event) ? this.downloads.status() : { items: [], active: 0 }));
 
-    void setShields(this.state.settings.shields);
-    void this.extensions.sync(this.state);
     this.refreshMenu();
   }
 
@@ -114,6 +112,7 @@ export class Controller {
 
   createWindow(): void {
     if (this.win) return;
+    mark('window-created');
     const win = new BrowserWindow({
       width: 1280,
       height: 820,
@@ -132,9 +131,15 @@ export class Controller {
     win.loadFile(join(RENDERER_DIR, 'index.html'));
     win.once('ready-to-show', () => {
       win.show();
+      mark('window-shown');
       this.tabs.reconcile(this.state);
       this.panel.sync();
       this.broadcast();
+      // Filter lists and extensions are heavy to load: let the first page start first.
+      setTimeout(() => {
+        void setShields(this.state.settings.shields).then(() => mark('shields-ready'));
+        void this.extensions.sync(this.state);
+      }, 400);
     });
     win.webContents.on('did-finish-load', () => this.broadcast());
     const relayout = () => this.relayout();
@@ -498,6 +503,18 @@ export class Controller {
       case 'space.modesMenu':
         modesMenu(this, cmd.id);
         return;
+      case 'space.newProfile':
+        void this.newProfile(cmd.id);
+        return;
+      case 'space.forgetProfile':
+        void this.forgetProfile(cmd.id);
+        return;
+      case 'prompt.answer': {
+        const resolve = this.prompts.get(cmd.token);
+        this.prompts.delete(cmd.token);
+        resolve?.(cmd.text);
+        return;
+      }
       case 'research.note':
         this.research.note(cmd.spaceId, cmd.text);
         return;
@@ -650,6 +667,53 @@ export class Controller {
     run(after, 'exit');
   }
 
+  private readonly prompts = new Map<string, (text: string | null) => void>();
+
+  /** Ask the user for a line of text through the overlay; null when dismissed. */
+  prompt(title: string, placeholder = '', value = ''): Promise<string | null> {
+    const token = randomUUID();
+    return new Promise((resolve) => {
+      this.prompts.set(token, resolve);
+      this.overlay.show({ kind: 'show', mode: 'prompt', token, title, placeholder, value });
+    });
+  }
+
+  cancelPrompts(): void {
+    for (const resolve of this.prompts.values()) resolve(null);
+    this.prompts.clear();
+  }
+
+  private async newProfile(spaceId: string): Promise<void> {
+    const sp = this.state.spaces.find((x) => x.id === spaceId);
+    if (!sp) return;
+    const name = await this.prompt(`Profile for “${sp.name}”`, 'Profile name, e.g. Work');
+    this.overlay.hide();
+    if (name && name.trim()) this.apply({ type: 'space.profile', id: spaceId, profile: name.trim() });
+  }
+
+  private async forgetProfile(spaceId: string): Promise<void> {
+    const sp = this.state.spaces.find((x) => x.id === spaceId);
+    if (!sp || !this.win) return;
+    const partition = partitionFor(sp.profile);
+    const others = this.state.spaces.filter((x) => x.id !== sp.id && partitionFor(x.profile) === partition).map((x) => x.name);
+    const { response } = await dialog.showMessageBox(this.win, {
+      type: 'warning',
+      buttons: ['Forget', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      message: `Forget all data of the ${sp.profile ? `profile “${sp.profile}”` : 'shared session'}?`,
+      detail: `Cookies, logins, storage and cache go away${others.length ? `, also for ${others.join(', ')}` : ''}. Open pages reload.`,
+    });
+    if (response !== 0) return;
+    const ses = configureSession(partition);
+    await ses.clearStorageData().catch(() => {});
+    await ses.clearCache().catch(() => {});
+    for (const [id, tab] of Object.entries(this.state.tabs)) {
+      if (!tab.awake || partitionFor(spaceOfTab(this.state, tab).profile) !== partition) continue;
+      this.tabs.get(id)?.webContents.reload();
+    }
+  }
+
   /** Show one of Chord's own pages: reuse it if the active space already has it open. */
   openInternal(url: string, hash?: string): void {
     const space = activeSpace(this.state);
@@ -696,7 +760,7 @@ function viewSignature(s: State): string {
   const space = activeSpace(s);
   const awake: string[] = [];
   for (const t of Object.values(s.tabs)) if (t.awake) awake.push(t.id + (t.muted ? '!' : ''));
-  return [s.activeSpaceId, visiblePanes(space).join(','), isLocked(space), panelVisible(s) ? s.settings.panelWidth : 0, space.tiling ?? '', space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
+  return [s.activeSpaceId, s.spaces.map((sp) => sp.profile ?? '').join(','), visiblePanes(space).join(','), isLocked(space), panelVisible(s) ? s.settings.panelWidth : 0, space.tiling ?? '', space.focused ?? '', s.settings.sidebarOpen, s.settings.sidebarWidth, awake.sort().join(',')].join('|');
 }
 
 function isMessage(m: unknown): m is Message {

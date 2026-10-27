@@ -33,6 +33,11 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   across the bottom; `2:50/50 | 1:100` makes the top row twice as tall). Drag the gap
   between two panes to adjust the layout live. Each space remembers its layout.
   or use "Open in Split View" from a tab's or a link's context menu.
+- **Profiles**: by default every tab shares one session (cookies, logins, storage). Give a
+  space a profile from its menu (Profile → New Profile…) to isolate it, and pick the same
+  profile for other spaces to share it with them: two Google accounts in two spaces, a
+  client's logins kept apart from yours. "Forget … Data" wipes a profile. Profiles travel
+  with exported spaces. Chrome extensions load into the shared session only.
 - **Modes**: composable capabilities per space, each with a view in a side panel on the
   right (⌘⇧U, resizable by dragging its edge). Switch them on from the ✦ button in the
   space header or the space's menu.
@@ -175,10 +180,11 @@ notarised yet: on macOS run `xattr -cr /Applications/Chord.app` once if the app 
 to open; on Windows choose "More info → Run anyway" in SmartScreen.
 
 Windows comes in two flavours: `Chord-<version>-win-x64-setup.exe` installs per user, and
-`Chord-<version>-win-x64-portable.exe` runs from wherever you put it and keeps profile,
-cookies and settings in a `ChordData` folder next to the executable, so it can live on a
-USB stick. Quit with `Ctrl+Q` or the window's close button; Chord never stays running in
-the background.
+`Chord-<version>-win-x64-portable.zip` unpacks to a folder you can put anywhere (a USB
+stick included); while the `portable.txt` file sits next to `Chord.exe`, the profile,
+cookies and settings live in a `ChordData` folder beside it. The earlier single-file
+portable `.exe` is gone: it re-extracted the whole application on every launch, which
+made starting it take ages. Quit with `Ctrl+Q` or the window's close button.
 
 ## Coming from Arc, Chrome or Brave
 

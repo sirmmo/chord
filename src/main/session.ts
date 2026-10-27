@@ -10,6 +10,25 @@ export function browsingSession(): Session {
   return session.fromPartition(PARTITION);
 }
 
+/** A space with a profile gets its own cookies, logins and storage; spaces sharing a profile share them. */
+export function partitionFor(profile: string | undefined | null): string {
+  const slug = (profile ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return slug ? `persist:chord-p-${slug}` : PARTITION;
+}
+
+const configured = new Map<string, Session>();
+const sessionListeners: ((ses: Session) => void)[] = [];
+
+/** Run for every browsing session, existing and future (downloads, shields…). */
+export function onSession(cb: (ses: Session) => void): void {
+  sessionListeners.push(cb);
+  for (const ses of configured.values()) cb(ses);
+}
+
+export function allSessions(): Session[] {
+  return [...configured.values()];
+}
+
 const ASK: Record<string, string> = {
   media: 'use your camera or microphone',
   geolocation: 'know your location',
@@ -40,8 +59,11 @@ async function askPermission(wc: WebContents, permission: string, origin: string
   return allowed;
 }
 
-export function configureSession(): Session {
-  const ses = browsingSession();
+export function configureSession(partition = PARTITION): Session {
+  const existing = configured.get(partition);
+  if (existing) return existing;
+  const ses = session.fromPartition(partition);
+  configured.set(partition, ses);
 
   // Present as a plain Chromium build: some sites serve degraded pages to unknown UA tokens.
   const ua = ses
@@ -67,6 +89,8 @@ export function configureSession(): Session {
   });
 
   serveInternalPages(ses);
+  for (const cb of sessionListeners) cb(ses);
+  if (shieldsOn && blocker) blocker.enableBlockingInSession(ses);
   return ses;
 }
 
@@ -97,15 +121,14 @@ export function shieldsStatus(): { enabled: boolean; loaded: boolean } {
 }
 
 export async function setShields(enabled: boolean): Promise<void> {
-  const ses = browsingSession();
   if (enabled) {
     const b = await loadBlocker();
     if (b && !shieldsOn) {
-      b.enableBlockingInSession(ses);
+      for (const ses of allSessions()) b.enableBlockingInSession(ses);
       shieldsOn = true;
     }
   } else if (blocker && shieldsOn) {
-    blocker.disableBlockingInSession(ses);
+    for (const ses of allSessions()) blocker.disableBlockingInSession(ses);
     shieldsOn = false;
   }
 }

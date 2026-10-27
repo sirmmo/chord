@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { basename, extname, join } from 'node:path';
 import type { DownloadEntry, DownloadsStatus } from '../shared/types.ts';
 import { Store } from './store.ts';
+import { onSession } from './session.ts';
 import { isMac } from './platform.ts';
 import type { Controller } from './controller.ts';
 
@@ -27,6 +28,7 @@ export class DownloadManager {
 
   init(ses: Session): void {
     this.ses = ses;
+    onSession((s) => s.on('will-download', (_event, item) => this.track(item)));
     const raw = this.store.load();
     if (Array.isArray(raw)) {
       this.items = raw
@@ -34,7 +36,6 @@ export class DownloadManager {
         .map((e) => (e.state === 'progressing' ? { ...e, state: 'interrupted' as const, paused: false, canResume: false, bytesPerSecond: 0 } : e))
         .slice(0, MAX_HISTORY);
     }
-    ses.on('will-download', (_event, item) => this.track(item));
     ipcMain.handle('downloads', () => this.status());
   }
 

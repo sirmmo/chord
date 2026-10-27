@@ -365,3 +365,6 @@ body.space-locked .lists { display: none; }
 /* modes */
 .space-header .modes-btn { opacity: 1; }
 .space-header .modes-btn.on { color: var(--accent); }
+
+.profile-pill { flex: none; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 5px; padding: 1px 5px; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-pill.hidden { display: none; }

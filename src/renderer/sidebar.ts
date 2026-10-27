@@ -528,6 +528,9 @@ function render(): void {
 
   document.body.classList.toggle('space-locked', isLocked(space));
   setClass(modesBtn, 'on', (space.modes?.length ?? 0) > 0);
+  const pill = $('#space-profile');
+  pill.classList.toggle('hidden', !space.profile);
+  if (space.profile) setText(pill, space.profile);
   const tab = focused();
   back.disabled = !tab?.canGoBack;
   forward.disabled = !tab?.canGoForward;

@@ -438,6 +438,14 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       }
       return s;
     }
+    case 'space.profile': {
+      const sp = spaceById(s, a.id);
+      if (!sp) return prev;
+      const name = (a.profile ?? '').trim().slice(0, 40);
+      if (name) sp.profile = name;
+      else delete sp.profile;
+      return s;
+    }
     case 'space.modes': {
       const sp = spaceById(s, a.id);
       if (!sp) return prev;

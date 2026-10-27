@@ -44,7 +44,9 @@ jobs:
           - name: Windows (x64)
             os: windows-latest
             args: --win --x64
-            files: release/*.exe
+            files: |
+              release/*.exe
+              release/*.zip
           - name: Linux (x64)
             os: ubuntu-latest
             args: --linux --x64
@@ -69,6 +71,13 @@ jobs:
         env:
           # Builds are unsigned until signing certificates are configured as secrets.
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Portable zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          Set-Content -Path release/win-unpacked/portable.txt -Value "Chord keeps its profile in the ChordData folder next to Chord.exe while this file exists."
+          Compress-Archive -Path release/win-unpacked/* -DestinationPath "release/Chord-$version-win-x64-portable.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: chord-${{ runner.os }}

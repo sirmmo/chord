@@ -17,6 +17,21 @@ import { shieldsStatus } from './session.ts';
  * page's own navigation timing.
  */
 
+// ---- startup marks: milliseconds since the process was created ----
+
+const marks: { name: string; ms: number }[] = [];
+let firstPage = false;
+
+export function mark(name: string): void {
+  marks.push({ name, ms: Math.round(Date.now() - process.getCreationTime()!) });
+}
+
+export function markFirstPage(): void {
+  if (firstPage) return;
+  firstPage = true;
+  mark('first-page-dom-ready');
+}
+
 // ---- main-process event-loop lag ----
 
 const TICK_MS = 100;
@@ -64,6 +79,7 @@ export function navStarted(tab: string, url: string): void {
 }
 
 export function navDomReady(tab: string): void {
+  markFirstPage();
   const nav = inFlight.get(tab);
   if (nav && nav.domReady === undefined) nav.domReady = Date.now() - nav.startedAt;
 }
@@ -150,6 +166,10 @@ export async function collectDiagnostics(c: Controller): Promise<string> {
   push('shields', `setting=${s.settings.shields} active=${shields.enabled} engineLoaded=${shields.loaded}`);
   push('extensions', `${s.settings.extensions.filter((e) => e.enabled).length} enabled of ${s.settings.extensions.length}`);
   push('ui', `sidebar=${s.settings.sidebarOpen} width=${s.settings.sidebarWidth} addressBar=${s.settings.addressBar} theme=${s.settings.theme.mode}`);
+  lines.push('');
+  lines.push('## Startup (ms after process start)');
+  push('marks', marks.map((m) => `${m.name}=${m.ms}`).join(' '));
+  push('portable', Boolean(process.env.PORTABLE_EXECUTABLE_DIR) || app.getPath('userData').endsWith('ChordData'));
   lines.push('');
   lines.push('## Main process event loop (100 ms ticks)');
   push('samples', samples);

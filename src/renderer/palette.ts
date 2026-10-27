@@ -28,7 +28,8 @@ const findInput = $<HTMLInputElement>('#find-input');
 const findCount = $('#find-count');
 
 let state: State | null = null;
-let mode: 'palette' | 'find' | 'password' | 'downloads' | null = null;
+let mode: 'palette' | 'find' | 'password' | 'prompt' | 'downloads' | null = null;
+let promptToken = '';
 let downloads: DownloadsStatus = { items: [], active: 0 };
 let smart: SmartStatus = {};
 api.onSmart((m) => {
@@ -64,6 +65,7 @@ api.onOverlay((m) => {
     case 'show':
       if (m.mode === 'palette') showPalette(m.intent, m.query);
       else if (m.mode === 'password') showPassword(m.spaceId, m.purpose, m.name);
+      else if (m.mode === 'prompt') showPrompt(m.token, m.title, m.placeholder, m.value);
       else if (m.mode === 'downloads') showDownloads();
       else showFind();
       break;
@@ -90,6 +92,19 @@ api.onOverlay((m) => {
 });
 
 // ---- command bar ----
+
+function showPrompt(token: string, title: string, placeholder: string, value: string): void {
+  mode = 'prompt';
+  promptToken = token;
+  document.body.className = 'mode-password';
+  input.type = 'text';
+  input.value = value;
+  input.placeholder = placeholder;
+  intentHint.textContent = '';
+  $('#pw-help').textContent = title;
+  input.focus();
+  input.select();
+}
 
 function showPassword(spaceId: SpaceId, purpose: LockPurpose, name: string): void {
   mode = 'password';
@@ -155,6 +170,16 @@ input.addEventListener('input', () => {
   if (mode === 'palette') update();
 });
 input.addEventListener('keydown', (e) => {
+  if (mode === 'prompt') {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      dispatch({ type: 'prompt.answer', token: promptToken, text: input.value });
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      dispatch({ type: 'palette.close' });
+    }
+    return;
+  }
   if (mode === 'password') {
     if (e.key === 'Enter') {
       e.preventDefault();

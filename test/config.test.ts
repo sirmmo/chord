@@ -165,3 +165,11 @@ test('smart pages setting travels with the configuration', () => {
   assert.ok(parsed.ok);
   if (parsed.ok) assert.deepEqual(parsed.config.settings, { smartPages: false });
 });
+
+test('profiles and modes travel with exported spaces', () => {
+  const parsed = parseConfig('{"format":"chord-config","version":1,"spaces":[{"name":"Work","profile":"work","modes":["research","bogus"],"today":["https://a.test"]}]}');
+  assert.ok(parsed.ok);
+  if (!parsed.ok) return;
+  assert.equal(parsed.config.spaces[0].profile, 'work');
+  assert.deepEqual(parsed.config.spaces[0].modes, ['research']);
+});

@@ -220,6 +220,7 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
     },
     sep,
     { label: 'Modes', submenu: modeItems(c, id) },
+    { label: 'Profile', submenu: profileItems(c, id) },
     {
       label: 'Private',
       submenu: space.lock
@@ -356,4 +357,19 @@ function modeItems(c: Controller, id: SpaceId): MenuItemConstructorOptions[] {
 export function modesMenu(c: Controller, id: SpaceId): void {
   if (!c.win) return;
   Menu.buildFromTemplate(modeItems(c, id)).popup({ window: c.win });
+}
+
+/** Which browsing session a space uses: the shared one, or a named profile other spaces may share. */
+function profileItems(c: Controller, id: SpaceId): MenuItemConstructorOptions[] {
+  const space = c.state.spaces.find((sp) => sp.id === id);
+  const names = [...new Set(c.state.spaces.map((sp) => sp.profile).filter((p): p is string => Boolean(p)))].sort();
+  return [
+    { label: 'Shared session', type: 'radio', checked: !space?.profile, click: () => c.dispatch({ type: 'space.profile', id, profile: null }) },
+    ...names.map((name) => ({ label: name, type: 'radio' as const, checked: space?.profile === name, click: () => c.dispatch({ type: 'space.profile', id, profile: name }) })),
+    { type: 'separator' },
+    { label: 'New Profile…', click: () => c.dispatch({ type: 'space.newProfile', id }) },
+    { label: space?.profile ? `Forget “${space.profile}” Data…` : 'Forget Shared Session Data…', click: () => c.dispatch({ type: 'space.forgetProfile', id }) },
+    { type: 'separator' },
+    { label: 'A profile has its own cookies, logins and storage. Spaces with the same profile share them.', enabled: false },
+  ];
 }

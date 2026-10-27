@@ -4,7 +4,7 @@ import type { State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace, isLocked, spaceOfTab, visiblePanes } from '../shared/model.ts';
 import { computeLayout } from '../shared/layout.ts';
 import { parseTiling } from '../shared/tiling.ts';
-import { PARTITION } from './session.ts';
+import { PARTITION, configureSession, partitionFor } from './session.ts';
 import { PAGE_PRELOAD, PRELOAD } from './paths.ts';
 import { externalScheme, isInternal } from '../shared/url.ts';
 import { installUrlFrom } from '../shared/installer.ts';
@@ -69,11 +69,12 @@ export class TabManager {
 
     for (const [id] of [...this.views]) {
       const tab = state.tabs[id];
-      if (!tab || !tab.awake) this.destroy(id);
+      // Gone, asleep, or moved to a space with another profile: the view cannot be kept.
+      if (!tab || !tab.awake || this.partitions.get(id) !== partitionFor(spaceOfTab(state, tab).profile)) this.destroy(id);
     }
     for (const tab of Object.values(state.tabs)) {
       if (tab.awake && !this.views.has(tab.id)) {
-        const view = this.create(tab.id, undefined, tab.url);
+        const view = this.create(tab.id, undefined, tab.url, partitionFor(spaceOfTab(state, tab).profile));
         view.webContents.loadURL(tab.url).catch(() => {});
       }
     }
@@ -122,13 +123,23 @@ export class TabManager {
     visible.forEach((id, k) => this.views.get(id)!.setBounds(panes[k]));
   }
 
-  create(id: TabId, existing?: WebContentsView, url = ''): WebContentsView {
+  private readonly partitions = new Map<TabId, string>();
+
+  /** The session a tab's page belongs to: its space's profile, or the shared one. */
+  partitionOf(id: TabId): string {
+    const tab = this.c.state.tabs[id];
+    return tab ? partitionFor(spaceOfTab(this.c.state, tab).profile) : PARTITION;
+  }
+
+  create(id: TabId, existing?: WebContentsView, url = '', partition = PARTITION): WebContentsView {
     const win = this.c.win!;
+    configureSession(partition);
+    this.partitions.set(id, partition);
     const view =
       existing ??
       new WebContentsView({
         webPreferences: {
-          partition: PARTITION,
+          partition,
           // Chord's own pages get the chrome API; web pages only the media bridge.
           preload: isInternal(url) ? PRELOAD : PAGE_PRELOAD,
           sandbox: true,
@@ -153,6 +164,7 @@ export class TabManager {
     const view = this.views.get(id);
     if (!view) return;
     this.views.delete(id);
+    this.partitions.delete(id);
     this.c.smart.clear(id);
     if (this.fullscreenTab === id) this.fullscreenTab = null;
     if (this.lastFocused === id) this.lastFocused = null;
@@ -271,7 +283,7 @@ export class TabManager {
           // Keep the opener relationship (needed by OAuth style popups) but show it as a tab.
           const view = new WebContentsView({ webPreferences: options.webPreferences });
           const newId = randomUUID();
-          this.create(newId, view);
+          this.create(newId, view, '', this.partitions.get(id) ?? PARTITION);
           this.c.apply({
             type: 'tab.new',
             id: newId,

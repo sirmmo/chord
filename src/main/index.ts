@@ -1,8 +1,9 @@
 import { app } from 'electron';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { Controller } from './controller.ts';
 import { configureSession } from './session.ts';
-import { warnIfTranslated } from './diagnostics.ts';
+import { mark, warnIfTranslated } from './diagnostics.ts';
 import { registerInternalScheme } from './internal.ts';
 
 app.setName('Chord');
@@ -12,7 +13,9 @@ registerInternalScheme();
 // The Windows portable build (electron-builder "portable" target) sets this to the
 // folder holding the .exe. Keep profile, cookies and settings next to it so the
 // whole browser can live on a USB stick and leaves nothing behind in %APPDATA%.
-const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+// The zip build is portable when a portable.txt sits next to Chord.exe.
+const exeDir = dirname(app.getPath('exe'));
+const portableDir = process.env.PORTABLE_EXECUTABLE_DIR ?? (existsSync(join(exeDir, 'portable.txt')) ? exeDir : null);
 if (portableDir) {
   app.setPath('userData', join(portableDir, 'ChordData'));
 }
@@ -46,6 +49,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
+    mark('app-ready');
     configureSession();
     controller = new Controller();
     controller.init();
@@ -53,7 +57,24 @@ if (!app.requestSingleInstanceLock()) {
     warnIfTranslated(controller);
     const url = pendingUrl ?? urlFromArgv(process.argv.slice(1));
     if (url) controller.openUrl(url);
-    if (!process.defaultApp) app.setAsDefaultProtocolClient('chord');
+    // Registering the chord: protocol touches the registry on Windows: do it once per version.
+    if (!process.defaultApp) {
+      const stamp = join(app.getPath('userData'), 'protocol-registered');
+      let done = '';
+      try {
+        done = readFileSync(stamp, 'utf8');
+      } catch {
+        /* first run */
+      }
+      if (done !== app.getVersion()) {
+        app.setAsDefaultProtocolClient('chord');
+        try {
+          writeFileSync(stamp, app.getVersion());
+        } catch {
+          /* read-only profile */
+        }
+      }
+    }
   });
 
   app.on('activate', () => controller?.focusWindow());

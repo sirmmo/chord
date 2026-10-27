@@ -22,6 +22,7 @@ export interface ConfigSpace {
   color?: string;
   icon?: string;
   modes?: ModeId[];
+  profile?: string;
   pinned: ConfigTab[];
   today: ConfigTab[];
 }
@@ -63,6 +64,7 @@ export function exportConfig(s: State, now: number, spaceId?: SpaceId): ChordCon
       color: sp.color,
       icon: sp.icon,
       modes: sp.modes && sp.modes.length ? sp.modes : undefined,
+      profile: sp.profile,
       pinned: tabsToConfig(s, sp.pinned),
       today: tabsToConfig(s, sp.today),
     })),
@@ -111,6 +113,7 @@ export function parseConfig(text: string): ParseResult {
         color: isHex(sp.color) ? sp.color : undefined,
         icon: typeof sp.icon === 'string' && sp.icon ? sp.icon.slice(0, 4) : undefined,
         modes: Array.isArray(sp.modes) ? sp.modes.filter(isModeId) : undefined,
+        profile: typeof sp.profile === 'string' && sp.profile.trim() ? sp.profile.trim().slice(0, 40) : undefined,
         pinned: parseTabs(sp.pinned, `spaces[${i}].pinned`),
         today: parseTabs(sp.today, `spaces[${i}].today`),
       };
@@ -227,6 +230,7 @@ export function importConfig(s: State, config: ChordConfig, mode: ImportMode, ct
       if (cs.color) space.color = cs.color;
       if (cs.icon) space.icon = cs.icon;
     }
+    if (cs.profile && !space.profile) space.profile = cs.profile;
     if (cs.modes && cs.modes.length) {
       space.modes = [...new Set([...(space.modes ?? []), ...cs.modes])];
       if (!space.panelMode) space.panelMode = space.modes[0];

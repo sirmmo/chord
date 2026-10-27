@@ -128,6 +128,8 @@ export interface Space {
   panes: TabId[];
   /** split-view tiling spec (see shared/tiling.ts); equal columns when unset */
   tiling?: string;
+  /** named browsing profile (cookies, logins, storage); unset means the shared session */
+  profile?: string;
   /** composable modes; each has a view in the side panel */
   modes?: ModeId[];
   /** which mode's view the side panel shows */
@@ -241,6 +243,7 @@ export type Action =
   | { type: 'tab.split'; id: TabId }
   | { type: 'space.tiling'; spec: string | null; spaceId?: SpaceId }
   | { type: 'space.modes'; id: SpaceId; modes: ModeId[] }
+  | { type: 'space.profile'; id: SpaceId; profile: string | null }
   | { type: 'panel.toggle'; open?: boolean }
   | { type: 'panel.mode'; mode: ModeId }
   | { type: 'panel.resize'; width: number }
@@ -311,6 +314,9 @@ export type Command =
   | { type: 'media.pip'; id?: TabId }
   | { type: 'space.install'; url: string }
   | { type: 'space.modesMenu'; id: SpaceId }
+  | { type: 'space.newProfile'; id: SpaceId }
+  | { type: 'space.forgetProfile'; id: SpaceId }
+  | { type: 'prompt.answer'; token: string; text: string }
   | { type: 'research.note'; spaceId: SpaceId; text: string }
   | { type: 'research.clip'; spaceId?: SpaceId; text?: string; url?: string; title?: string }
   | { type: 'research.remove'; spaceId: SpaceId; kind: 'clip' | 'source'; id: string }
@@ -347,7 +353,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear',
 ]);
@@ -366,6 +372,7 @@ export type OverlayMessage =
   | { kind: 'show'; mode: 'find' }
   | { kind: 'show'; mode: 'downloads' }
   | { kind: 'show'; mode: 'password'; spaceId: SpaceId; purpose: LockPurpose; name: string }
+  | { kind: 'show'; mode: 'prompt'; token: string; title: string; placeholder: string; value: string }
   | { kind: 'password:error' }
   | { kind: 'hide' }
   | { kind: 'find:result'; active: number; matches: number };
