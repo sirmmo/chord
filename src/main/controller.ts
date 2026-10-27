@@ -272,9 +272,15 @@ export class Controller {
     if (prev.settings.closeToTray !== next.settings.closeToTray) this.tray.sync(next.settings.closeToTray);
     if (prev.settings.boosts !== next.settings.boosts && JSON.stringify(prev.settings.boosts) !== JSON.stringify(next.settings.boosts)) void this.boosts.refresh();
     this.autoPip(prev, next);
+    let soundChanged = false;
     for (const [id, tab] of Object.entries(next.tabs)) {
-      if ((prev.tabs[id]?.volume ?? 1) !== (tab.volume ?? 1)) this.tabs.get(id)?.webContents.send('smart:action', `volume:${tab.volume ?? 1}`);
+      if ((prev.tabs[id]?.volume ?? 1) !== (tab.volume ?? 1)) {
+        this.tabs.get(id)?.webContents.send('smart:action', `volume:${tab.volume ?? 1}`);
+        soundChanged = true;
+      }
+      if (!!prev.tabs[id]?.muted !== !!tab.muted) soundChanged = true;
     }
+    if (soundChanged) this.tray.refresh();
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.settings.theme.mode !== next.settings.theme.mode) this.applyChromeColors();

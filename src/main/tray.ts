@@ -2,10 +2,11 @@ import { app, Menu, Tray, type MenuItemConstructorOptions } from 'electron';
 import type { Controller } from './controller.ts';
 import { isMac } from './platform.ts';
 import { trayIcon } from './trayicon.ts';
+import { volumeMenu } from './menu.ts';
 
 /**
  * Menu bar / tray presence while "keep running when the window is closed" is on:
- * reopen the window, control the current player or call, see downloads, quit.
+ * reopen the window, control the current player (play, mute, volume) or call, see downloads, quit.
  */
 export class TrayManager {
   private readonly c: Controller;
@@ -45,8 +46,26 @@ export class TrayManager {
         { label: m.playing ? 'Pause' : 'Play', click: () => this.c.smart.mediaAction(id, m.playing ? 'pause' : 'play') },
         { label: 'Next Track', enabled: m.actions.includes('nexttrack'), click: () => this.c.smart.mediaAction(id, 'nexttrack') },
         { label: 'Previous Track', enabled: m.actions.includes('previoustrack'), click: () => this.c.smart.mediaAction(id, 'previoustrack') },
+        { label: tabs[id].muted ? 'Unmute' : 'Mute', click: () => this.c.dispatch({ type: 'tab.mute', id }) },
+        volumeMenu(this.c, tabs[id]),
         { type: 'separator' },
       );
+    }
+
+    const others = Object.entries(smart).filter(([id, s]) => s.media && tabs[id] && id !== player?.[0]);
+    if (others.length) {
+      items.push({
+        label: 'Other Players',
+        submenu: others.map(([id, s]) => ({
+          label: (s.media!.title || tabs[id].title).slice(0, 50),
+          submenu: [
+            { label: s.media!.playing ? 'Pause' : 'Play', click: () => this.c.smart.mediaAction(id, s.media!.playing ? 'pause' : 'play') },
+            { label: tabs[id].muted ? 'Unmute' : 'Mute', click: () => this.c.dispatch({ type: 'tab.mute', id }) },
+            volumeMenu(this.c, tabs[id]),
+          ],
+        })),
+      });
+      items.push({ type: 'separator' });
     }
 
     const call = Object.entries(smart).find(([id, s]) => s.call && tabs[id]);

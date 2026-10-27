@@ -2,7 +2,7 @@ import { presetsFor } from '../shared/tiling.ts';
 import { MODES } from '../shared/modes.ts';
 import { app, clipboard, dialog, Menu, shell, type ContextMenuParams, type MenuItemConstructorOptions, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
-import type { Message, SpaceId, TabId } from '../shared/types.ts';
+import type { Message, SpaceId, Tab, TabId } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS, spaceOfTab } from '../shared/model.ts';
 import { hostOf, searchUrl } from '../shared/url.ts';
 import type { Controller } from './controller.ts';
@@ -185,15 +185,25 @@ export function tabContextMenu(c: Controller, id: TabId): void {
   items.push(sep);
   if (tab.awake) {
     items.push({ label: tab.muted ? 'Unmute' : 'Mute', click: d({ type: 'tab.mute', id }) });
-  items.push({
-    label: `Volume${tab.volume !== undefined ? ` (${Math.round(tab.volume * 100)}%)` : ''}`,
-    submenu: [100, 75, 50, 25, 10].map((pct) => ({ label: `${pct}%`, type: 'radio' as const, checked: Math.round((tab.volume ?? 1) * 100) === pct, click: d({ type: 'tab.volume', id, volume: pct / 100 }) })),
-  });
+  items.push(volumeMenu(c, tab));
     items.push({ label: 'Put to Sleep', click: d({ type: 'tab.sleep', id }) });
   }
   items.push({ label: tab.kind === 'today' ? 'Close Tab' : 'Close', click: d({ type: 'tab.close', id }) });
 
   Menu.buildFromTemplate(items).popup({ window: c.win });
+}
+
+/** "Volume (50%)" submenu with radio levels; shared by the tab context menu and the tray. */
+export function volumeMenu(c: Controller, tab: Tab): MenuItemConstructorOptions {
+  const cur = Math.round((tab.volume ?? 1) * 100);
+  const levels = [100, 75, 50, 25, 10];
+  if (!levels.includes(cur)) levels.push(cur);
+  return {
+    label: `Volume${tab.volume !== undefined ? ` (${cur}%)` : ''}`,
+    submenu: levels
+      .sort((a, b) => b - a)
+      .map((pct) => ({ label: `${pct}%`, type: 'radio' as const, checked: cur === pct, click: () => c.dispatch({ type: 'tab.volume', id: tab.id, volume: pct / 100 }) })),
+  };
 }
 
 export function spaceContextMenu(c: Controller, id: SpaceId): void {
