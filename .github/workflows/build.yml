@@ -37,9 +37,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: macOS (arm64 + x64)
+          - name: macOS (universal)
             os: macos-latest
-            args: --mac --arm64 --x64
+            args: --mac --universal
             files: release/*.dmg
           - name: Windows (x64)
             os: windows-latest

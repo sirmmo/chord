@@ -204,17 +204,20 @@ export async function copyDiagnostics(c: Controller): Promise<void> {
   if (response === 1) shell.showItemInFolder(file);
 }
 
-/** Warn once per launch when the Intel build runs translated on an Apple Silicon Mac. */
+/** Warn once per launch when an old Intel-only build runs translated on an Apple Silicon Mac. */
 export function warnIfTranslated(c: Controller): void {
   if (!isMac || !app.runningUnderARM64Translation || !c.win) return;
+  const universal = `https://github.com/sirmmo/chord/releases/latest/download/Chord-${app.getVersion()}-mac-universal.dmg`;
   void dialog.showMessageBox(c.win, {
     type: 'warning',
-    message: 'Chord is running the Intel build through Rosetta',
-    detail: `Pages are much slower that way. Download Chord-${app.getVersion()}-mac-arm64.dmg from the releases page instead.`,
-    buttons: ['Open Releases Page', 'Continue'],
+    message: 'Chord is running through Rosetta: this is the Intel build on an Apple Silicon Mac',
+    detail:
+      'Pages load several times slower this way and startup takes much longer.\n\n' +
+      'Download the universal build, which runs natively on M-series and Intel Macs, drag it over the copy in Applications, and relaunch.',
+    buttons: ['Download Universal Build', 'Keep Using This One'],
     defaultId: 0,
     cancelId: 1,
   }).then(({ response }) => {
-    if (response === 0) void shell.openExternal('https://github.com/sirmmo/chord/releases/latest');
+    if (response === 0) void shell.openExternal(universal);
   });
 }

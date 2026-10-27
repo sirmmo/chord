@@ -177,7 +177,7 @@ On Windows and Linux use `Ctrl` for `⌘` and `Alt` for `⌥`.
 
 ## Install
 
-Installers for macOS (Apple Silicon and Intel), Windows and Linux are attached to each
+Installers for macOS (one universal `.dmg` for Apple Silicon and Intel), Windows and Linux are attached to each
 [release](https://github.com/sirmmo/chord/releases/latest). They are not signed or
 notarised yet: on macOS run `xattr -cr /Applications/Chord.app` once if the app refuses
 to open; on Windows choose "More info → Run anyway" in SmartScreen.
@@ -257,7 +257,7 @@ npm start          # builds and launches
 npm run watch      # rebuild on change (run `npx electron .` in another terminal)
 npm test           # model unit tests
 npm run typecheck
-npm run dist:mac   # .dmg for Apple Silicon and Intel in release/
+npm run dist:mac   # universal .dmg (Apple Silicon + Intel) in release/
 ```
 
 The Electron binary is downloaded by a postinstall script; `package.json` already
