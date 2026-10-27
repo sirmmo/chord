@@ -94,6 +94,10 @@ async function loadBlocker(): Promise<ElectronBlocker | null> {
   return loading;
 }
 
+export function shieldsStatus(): { enabled: boolean; loaded: boolean } {
+  return { enabled: shieldsOn, loaded: blocker !== null };
+}
+
 export async function setShields(enabled: boolean): Promise<void> {
   const ses = browsingSession();
   if (enabled) {

@@ -6,6 +6,7 @@ import { computeLayout } from '../shared/layout.ts';
 import { PARTITION } from './session.ts';
 import { pageContextMenu } from './menu.ts';
 import type { Controller } from './controller.ts';
+import { navDomReady, navFinished, navStarted } from './diagnostics.ts';
 
 const CONTENT_RADIUS = 10;
 
@@ -148,7 +149,14 @@ export class TabManager {
       if (isMainFrame) patch({ url, ...navState() });
     });
     wc.on('did-start-loading', () => patch({ loading: true }));
-    wc.on('did-stop-loading', () => patch({ loading: false, ...navState() }));
+    wc.on('did-stop-loading', () => {
+      navFinished(id);
+      patch({ loading: false, ...navState() });
+    });
+    wc.on('did-start-navigation', (details) => {
+      if (details.isMainFrame && !details.isSameDocument) navStarted(id, details.url);
+    });
+    wc.on('dom-ready', () => navDomReady(id));
     wc.on('audio-state-changed', (e) => patch({ audible: e.audible }));
     wc.on('focus', () => this.c.apply({ type: 'pane.focus', id }));
     wc.on('input-event', (_e, input) => {

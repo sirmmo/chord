@@ -121,6 +121,8 @@ export function buildAppMenu(c: Controller): void {
       submenu: [
         { label: 'Chord on GitHub', click: () => shell.openExternal('https://github.com/sirmmo/chord') },
         { label: 'Set Chord as Default Browser', click: d({ type: 'app.setDefaultBrowser' }) },
+        sep,
+        { label: 'Copy Diagnostics', click: d({ type: 'diagnostics.copy' }) },
       ],
     },
   ];

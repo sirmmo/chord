@@ -178,14 +178,15 @@ export type Command =
   | { type: 'app.setDefaultBrowser' }
   | { type: 'extension.pickFolder' }
   | { type: 'config.export'; spaceId?: SpaceId }
-  | { type: 'config.importFile' };
+  | { type: 'config.importFile' }
+  | { type: 'diagnostics.copy' };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy',
 ]);
 
 export type Message = Action | Command;

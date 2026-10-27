@@ -236,6 +236,7 @@ function compute(raw: string): Item[] {
     { title: 'Add Unpacked Extension…', keywords: 'extension add-in addin chrome', run: () => dispatch({ type: 'extension.pickFolder' }) },
     { title: 'Set Chord as Default Browser', keywords: 'default', run: () => dispatch({ type: 'app.setDefaultBrowser' }) },
     { title: 'Toggle Developer Tools', keywords: 'devtools inspect', when: !!current, run: () => dispatch({ type: 'devtools.toggle' }) },
+    { title: 'Copy Diagnostics', keywords: 'diagnostics slow performance debug report', subtitle: 'Environment, event-loop stalls and page timings for bug reports', run: () => dispatch({ type: 'diagnostics.copy' }) },
   ];
   const matched = commands.filter((c) => c.when !== false && score(query, c.title, c.keywords ?? '') > 0).slice(0, query ? 6 : 4);
   for (const c of matched) out.push({ group: 'Commands', icon: '⌘', title: c.title, subtitle: c.subtitle, run: c.run });

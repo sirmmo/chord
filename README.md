@@ -117,6 +117,13 @@ cookies and settings in a `ChordData` folder next to the executable, so it can l
 USB stick. Quit with `Ctrl+Q` or the window's close button; Chord never stays running in
 the background.
 
+## Something slow or broken?
+
+Help → Copy Diagnostics puts a text report on the clipboard (and in `diagnostics.txt` in
+the profile folder): versions, whether the build is signed or translated by Rosetta, GPU
+status, main-process event-loop stalls, recent page-load timings and the focused page's
+navigation timing. Paste it into a GitHub issue.
+
 ## Run it from source
 
 Requires Node 22 or newer.

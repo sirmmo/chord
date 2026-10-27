@@ -2,6 +2,7 @@ import { app } from 'electron';
 import { join } from 'node:path';
 import { Controller } from './controller.ts';
 import { configureSession } from './session.ts';
+import { warnIfTranslated } from './diagnostics.ts';
 
 app.setName('Chord');
 
@@ -46,6 +47,7 @@ if (!app.requestSingleInstanceLock()) {
     controller = new Controller();
     controller.init();
     controller.createWindow();
+    warnIfTranslated(controller);
     const url = pendingUrl ?? urlFromArgv(process.argv.slice(1));
     if (url) controller.openUrl(url);
   });

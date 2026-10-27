@@ -15,6 +15,7 @@ import { buildAppMenu, spaceContextMenu, tabContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
 import { isMac, TITLEBAR_HEIGHT, TOP_INSET, ADDRESS_BAR_HEIGHT } from './platform.ts';
 import { ExtensionManager } from './extensions.ts';
+import { copyDiagnostics, startLagMonitor } from './diagnostics.ts';
 
 const CHROME_DARK = '#1b1b22';
 const CHROME_LIGHT = '#f4f4f7';
@@ -49,6 +50,7 @@ export class Controller {
   init(): void {
     this.state = hydrate(this.store.load(), this.ctx());
     setInterval(() => this.apply({ type: 'tick' }), 60_000).unref();
+    startLagMonitor();
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -348,6 +350,9 @@ export class Controller {
         return;
       case 'config.importFile':
         void this.importConfig();
+        return;
+      case 'diagnostics.copy':
+        void copyDiagnostics(this);
         return;
     }
   }
