@@ -212,6 +212,22 @@ cookies and settings live in a `ChordData` folder beside it. The earlier single-
 portable `.exe` is gone: it re-extracted the whole application on every launch, which
 made starting it take ages. Quit with `Ctrl+Q` or the window's close button.
 
+## Updates
+
+Chord checks for new releases about half a minute after launch and every six hours
+(Settings → General → Updates; Help → Check for Updates… at any time). What happens
+next depends on the build:
+
+| Build | On a new release |
+| --- | --- |
+| Windows `-setup.exe` | Downloaded in the background (or on request) and installed when Chord restarts. |
+| Linux AppImage | Same: the new file replaces the current one on restart. |
+| macOS dmg | Not notarised, so it cannot replace itself: a banner offers the new dmg; drag it over the old copy. |
+| Windows portable zip, Linux deb | A banner offers the matching download. |
+
+Both the check and the automatic install can be turned off. Self-updating builds read the
+`latest*.yml` files electron-builder attaches to each GitHub release.
+
 ## Coming from Arc, Chrome or Brave
 
 File → Import from Another Browser… (also in the command bar and in Settings → General)

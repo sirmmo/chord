@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { AiStatus, ChordApi, DownloadsStatus, ExtensionsStatus, HistoryQuery, PasswordsStatus, ResearchStatus, SmartStatus, Message, OverlayMessage, SidebarMessage, State } from '../shared/types.ts';
+import type { AiStatus, ChordApi, UpdateStatus, DownloadsStatus, ExtensionsStatus, HistoryQuery, PasswordsStatus, ResearchStatus, SmartStatus, Message, OverlayMessage, SidebarMessage, State } from '../shared/types.ts';
 
 const listen =
   <T>(channel: string) =>
@@ -27,6 +27,8 @@ const api: ChordApi = {
   onHistory: listen<{ total: number }>('history'),
   getHistory: (query: HistoryQuery) => ipcRenderer.invoke('history', query),
   getInfo: () => ipcRenderer.invoke('info'),
+  onUpdates: listen<UpdateStatus>('updates'),
+  getUpdates: () => ipcRenderer.invoke('updates'),
   onPasswords: listen<PasswordsStatus>('passwords'),
   getPasswords: () => ipcRenderer.invoke('passwords'),
   revealPassword: (id: string) => ipcRenderer.invoke('passwords:reveal', id),

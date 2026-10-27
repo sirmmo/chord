@@ -50,6 +50,14 @@
           <label>Default browser</label>
           <div><button class="btn" id="s-default">Set Chord as default browser</button></div>
 
+          <label>Updates</label>
+          <div>
+            <label class="check"><input type="checkbox" id="s-upd-check"> Check for new releases after launch and every few hours</label><br>
+            <label class="check"><input type="checkbox" id="s-upd-auto"> Download and install them automatically when this build can replace itself</label>
+            <div class="row" style="margin-top:8px"><button class="btn" id="s-upd-now">Check Now</button><span id="s-upd-status"></span><button class="btn" id="s-upd-action" hidden></button></div>
+            <p class="s-foot" id="s-upd-note"></p>
+          </div>
+
           <label>Configuration</label>
           <div class="row"><button class="btn" id="s-browser">Import from Arc, Chrome, Brave…</button><button class="btn" id="s-export">Export…</button><button class="btn" id="s-import">Import…</button></div>
         </div>

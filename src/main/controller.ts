@@ -13,6 +13,7 @@ import { TabManager } from './tabs.ts';
 import { Overlay } from './overlay.ts';
 import { CaptureManager } from './capture.ts';
 import { PageTabsManager } from './pagetabs.ts';
+import { UpdateManager } from './updater.ts';
 import { setShields } from './session.ts';
 import { buildAppMenu, spaceContextMenu, tabContextMenu, groupContextMenu } from './menu.ts';
 import { PRELOAD, RENDERER_DIR } from './paths.ts';
@@ -50,6 +51,7 @@ export class Controller {
   readonly overlay = new Overlay(this);
   readonly capture = new CaptureManager(this);
   readonly pageTabs = new PageTabsManager(this);
+  readonly updates = new UpdateManager(this);
   readonly smart = new SmartManager(this);
   readonly tray = new TrayManager(this);
   /** set once the app is really quitting, so close-to-tray does not swallow the window close */
@@ -96,6 +98,7 @@ export class Controller {
     this.ai.init();
     this.capture.init();
     this.pageTabs.init();
+    this.updates.init();
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -104,6 +107,7 @@ export class Controller {
     ipcMain.handle('state', (event) => (this.trusted(event) ? this.state : null));
     ipcMain.handle('extensions', (event) => (this.trusted(event) ? this.extensions.getStatus() : {}));
     ipcMain.handle('info', (event) => (this.trusted(event) ? this.appInfo() : null));
+    ipcMain.handle('updates', (event) => (this.trusted(event) ? this.updates.status : null));
     ipcMain.handle('smart', (event) => (this.trusted(event) ? this.smart.getStatus() : {}));
     ipcMain.handle('downloads', (event) => (this.trusted(event) ? this.downloads.status() : { items: [], active: 0 }));
 
@@ -298,6 +302,7 @@ export class Controller {
     }
     if (soundChanged) this.tray.refresh();
     this.pageTabs.diff(prev, next);
+    if (prev.settings.updates.check !== next.settings.updates.check) this.updates.schedule();
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
@@ -534,6 +539,18 @@ export class Controller {
         return;
       case 'group.renamePrompt':
         void this.renameGroup(cmd.id);
+        return;
+      case 'update.check':
+        void this.updates.check(true);
+        return;
+      case 'update.download':
+        void this.updates.download();
+        return;
+      case 'update.install':
+        this.updates.install();
+        return;
+      case 'update.openPage':
+        this.updates.openPage();
         return;
       case 'pageTabs.forget':
         this.apply({ type: 'settings.update', patch: { pageTabs: this.state.settings.pageTabs.filter((o) => o !== cmd.origin) } });

@@ -133,6 +133,7 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Chord on GitHub', click: () => shell.openExternal('https://github.com/sirmmo/chord') },
         { label: 'Set Chord as Default Browser', click: d({ type: 'app.setDefaultBrowser' }) },
         sep,
+        { label: 'Check for Updates…', click: d({ type: 'update.check' }) },
         { label: 'Copy Diagnostics', click: d({ type: 'diagnostics.copy' }) },
         { label: 'About Chord', click: d({ type: 'settings.open', page: 'about' }) },
       ],

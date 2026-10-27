@@ -2,7 +2,7 @@
 // around the tab views (native children painted above it). Rendering is
 // keyed: existing elements are updated in place, never rebuilt.
 
-import type { CallAction, CallInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabGroup, TimerInfo, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
+import type { CallAction, CallInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabGroup, TimerInfo, Message, Space, SpaceId, State, Tab, TabId, UpdateStatus } from '../shared/types.ts';
 import { activeSpace, isLocked, panelVisible, visiblePanes } from '../shared/model.ts';
 import { clampPanel } from '../shared/modes.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
@@ -475,6 +475,40 @@ function renderChip(): void {
     chip.classList.add('hidden');
   }
 }
+
+/** A new Chord: a banner above the lists while an update is available or downloaded. */
+const updateBanner = $('#update');
+let updateStatus: UpdateStatus | null = null;
+let updateDismissed = '';
+$('#update-go').onclick = () => {
+  const u = updateStatus;
+  if (!u) return;
+  dispatch(u.state === 'ready' ? { type: 'update.install' } : u.canInstall ? { type: 'update.download' } : { type: 'update.openPage' });
+};
+$('#update-no').onclick = () => {
+  updateDismissed = `${updateStatus?.version ?? ''}:${updateStatus?.state ?? ''}`;
+  renderUpdate();
+};
+function renderUpdate(): void {
+  const u = updateStatus;
+  const show = Boolean(u && (u.state === 'available' || u.state === 'ready' || u.state === 'downloading') && updateDismissed !== `${u.version ?? ''}:${u.state}`);
+  updateBanner.classList.toggle('hidden', !show);
+  if (!u || !show) return;
+  setText($('#update-text'), u.state === 'ready' ? `Chord ${u.version} is ready` : u.state === 'downloading' ? `Downloading Chord ${u.version}… ${u.progress ?? 0}%` : `Chord ${u.version} is available`);
+  const go = $('#update-go');
+  setText(go, u.state === 'ready' ? 'Restart' : u.state === 'downloading' ? '…' : u.canInstall ? 'Update' : 'Download');
+  (go as HTMLButtonElement).disabled = u.state === 'downloading';
+}
+api.onUpdates((u) => {
+  updateStatus = u;
+  renderUpdate();
+});
+void api.getUpdates().then((u) => {
+  if (u) {
+    updateStatus = u;
+    renderUpdate();
+  }
+});
 
 /** A site offering a space: a banner above the lists, dismissable per manifest. */
 const installBanner = $('#install');

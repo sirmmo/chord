@@ -234,6 +234,30 @@ export interface Settings {
   flags: TroubleFlags;
   /** origins allowed to open and close tabs of their own through navigator.chord */
   pageTabs: string[];
+  updates: UpdateSettings;
+}
+
+export interface UpdateSettings {
+  /** look for new releases a short while after launch and every few hours */
+  check: boolean;
+  /** download and install them without asking, where the build can replace itself */
+  auto: boolean;
+}
+
+export type UpdateChannel = 'mac' | 'nsis' | 'portable' | 'appimage' | 'deb' | 'dev';
+
+export interface UpdateStatus {
+  state: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'error';
+  channel: UpdateChannel;
+  /** this build can download and install the update itself */
+  canInstall: boolean;
+  current: string;
+  version?: string;
+  /** download or release page for builds that cannot self-update */
+  url?: string;
+  progress?: number;
+  error?: string;
+  checkedAt?: number;
 }
 
 export interface TroubleFlags {
@@ -392,7 +416,11 @@ export type Command =
   | { type: 'group.contextmenu'; id: string }
   | { type: 'group.new'; tabId: TabId }
   | { type: 'group.renamePrompt'; id: string }
-  | { type: 'pageTabs.forget'; origin: string };
+  | { type: 'pageTabs.forget'; origin: string }
+  | { type: 'update.check' }
+  | { type: 'update.download' }
+  | { type: 'update.install' }
+  | { type: 'update.openPage' };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
@@ -401,7 +429,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage',
 ]);
 
 export type Message = Action | Command;
@@ -552,6 +580,8 @@ export interface ChordApi {
   onHistory(cb: (info: { total: number }) => void): () => void;
   getHistory(query: HistoryQuery): Promise<HistoryResult>;
   getInfo(): Promise<AppInfo>;
+  onUpdates(cb: (status: UpdateStatus) => void): () => void;
+  getUpdates(): Promise<UpdateStatus>;
   onPasswords(cb: (status: PasswordsStatus) => void): () => void;
   getPasswords(): Promise<PasswordsStatus>;
   revealPassword(id: string): Promise<string | null>;

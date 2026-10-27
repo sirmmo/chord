@@ -47,12 +47,14 @@ jobs:
             files: |
               release/*.exe
               release/*.zip
+              release/latest*.yml
           - name: Linux (x64)
             os: ubuntu-latest
             args: --linux --x64
             files: |
               release/*.AppImage
               release/*.deb
+              release/latest*.yml
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

@@ -137,7 +137,7 @@
           <a class="btn primary" href="https://github.com/sirmmo/chord/releases/latest">Download</a>
           <a class="btn" href="https://github.com/sirmmo/chord">Source on GitHub</a>
         </div>
-        <p class="platforms">macOS (Apple Silicon and Intel), Windows and Linux. Early 0.1: usable, unpolished, unsigned builds.</p>
+        <p class="platforms">macOS (one universal build), Windows (installer or portable) and Linux (AppImage, deb). Early and moving fast; builds are unsigned, and Chord tells you when a new release is out.</p>
       </div>
       <div class="mock" aria-hidden="true">
         <div class="side">
@@ -168,13 +168,15 @@
       <div class="grid">
         <div class="card"><span class="k">Profiles</span><h3>Separate logins per space</h3><p>Give a space its own profile and its cookies and logins stay apart from the rest; give several spaces the same profile and they share it. Two Google accounts, two spaces.</p></div>
 <div class="card"><span class="k">Modes</span><h3>Research and AI, per space</h3><p>Turn on Research for notes, clips, sources and one-click saving to Zotero, or AI for a side-panel assistant on a local or remote model that reads and drives the tabs of that space and calls the tools pages expose through WebMCP.</p></div>
-<div class="card"><span class="k">Subspaces</span><h3>Groups inside a space</h3><p>Collapse related tabs under a header, drop tabs onto it, rename or dissolve it. Pages can manage a subspace of their own through <code>navigator.chord</code>: a dashboard keeps one tab per job and tidies up after itself.</p></div>
+<div class="card"><span class="k">Updates</span><h3>Keeps itself current</h3><p>Chord checks for new releases after launch and every few hours. The Windows installer and the AppImage update themselves on restart; the macOS build, the portable zip and the deb get a one-click download instead.</p></div>
+        <div class="card"><span class="k">Share</span><h3>Screen sharing and calls</h3><p>Meet, Zoom and Jitsi get mute, camera and leave controls in the sidebar. Sharing uses the system picker on macOS 15 and Chord's own screen, window and tab picker elsewhere.</p></div>
+        <div class="card"><span class="k">Subspaces</span><h3>Groups inside a space</h3><p>Collapse related tabs under a header, drop tabs onto it, rename or dissolve it. Pages can manage a subspace of their own through <code>navigator.chord</code>: a dashboard keeps one tab per job and tidies up after itself.</p></div>
         <div class="card"><span class="k">Add to Chord</span><h3>Installable spaces</h3><p>A site can publish a space manifest: one click sets up a space with all its pages, and optional boosts for that site. Declare it with a link tag or an “Add to Chord” link.</p></div>
 <div class="card"><span class="k">CSS · JS</span><h3>Boosts</h3><p>Your own CSS and JavaScript per site, applied live. Passwords saved with the OS keychain, picture in picture that follows you between tabs.</p></div>
 <div class="card"><span class="k">🔒</span><h3>Private spaces</h3><p>Give a space a password: it locks on launch and when you leave it, and its tabs are never exported, archived, or written to history.</p></div>
 <div class="card"><span class="k">♪ · ☎ · ⏱</span><h3>Smart pages</h3><p>Players get a now-playing card with play, pause, previous and next. Screen sharing works with the system picker on macOS 15+ and Chord's own screen/window/tab picker elsewhere. Calls on Meet, Zoom or Jitsi get a card with duration, mute, camera and leave. Timers, unread counts and notifications show as chips and badges. All of it from every space.</p></div>
 <div class="card"><span class="k">Skins</span><h3>LCARS</h3><p>One switch in Appearance turns the chrome into an LCARS homage: black panels, peach and lavender pills, condensed uppercase type. Pages stay as they are.</p></div>
-        <div class="card"><span class="k">Tray</span><h3>Keep playing when closed</h3><p>Optionally the window hides instead of closing: music and calls go on, and the menu bar / tray item offers play, pause, mute, volume, leave and downloads.</p></div>
+        <div class="card"><span class="k">Tray</span><h3>Keep playing when closed</h3><p>Optionally the window hides instead of closing: music and calls go on, and the menu bar / tray item offers play, pause, mute, a volume submenu per player, leave and downloads. Per-tab volume lives on the player card and the tab's speaker icon too.</p></div>
 <div class="card"><span class="k">⌘S</span><h3>Collapsible sidebar</h3><p>Vertical tabs with the page's navigation controls, a URL pill and the lists below. Collapse it to go full page and hover the left edge to peek; drag its edge to resize.</p></div>
         <div class="card"><span class="k">⌘⇧L</span><h3>Address bar, if you want one</h3><p>An optional editable URL field across the top of the page. Off by default, one shortcut away.</p></div>
         <div class="card"><span class="k">Add-ins</span><h3>Shields and extensions</h3><p>Built-in ad and tracker blocking, plus unpacked Chrome extensions you add from a folder, each switchable in Settings. Toolbar popups are not shown.</p></div>
@@ -233,6 +235,8 @@
             <li><strong>Linux</strong>: <code>.AppImage</code> and <code>.deb</code> (x64).</li>
           </ul>
           <div class="note">Builds are not signed or notarised yet. On macOS, if the app refuses to open, run <code>xattr -cr /Applications/Chord.app</code> once. On Windows, choose “More info → Run anyway” in SmartScreen.</div>
+          <h3>Staying up to date</h3>
+          <p>Chord looks for new releases a short while after launch and every few hours (Settings → General → Updates, or Help → Check for Updates…). The Windows installer and the Linux AppImage download the new version and install it when Chord restarts. The macOS build is not notarised and cannot replace itself, so Chord offers the new dmg and you drag it over the old copy; the portable zip and the deb work the same way.</p>
         </div>
         <div>
           <h3>From source</h3>

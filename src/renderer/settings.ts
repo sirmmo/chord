@@ -1,7 +1,7 @@
 // chord://settings — the settings page.
 
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
-import type { AiStatus, Boost, ExtensionsStatus, Message, PasswordsStatus, State, TroubleFlags } from '../shared/types.ts';
+import type { AiStatus, Boost, ExtensionsStatus, Message, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { SEARCH_ENGINES } from '../shared/url.ts';
@@ -93,6 +93,53 @@ $('#s-flags').replaceChildren(
   }),
 );
 $('#s-relaunch').onclick = () => dispatch({ type: 'app.relaunch' });
+
+// ---- updates ----
+const sUpdCheck = $<HTMLInputElement>('#s-upd-check');
+const sUpdAuto = $<HTMLInputElement>('#s-upd-auto');
+const sUpdAction = $<HTMLButtonElement>('#s-upd-action');
+sUpdCheck.onchange = () => state && dispatch({ type: 'settings.update', patch: { updates: { ...state.settings.updates, check: sUpdCheck.checked } } });
+sUpdAuto.onchange = () => state && dispatch({ type: 'settings.update', patch: { updates: { ...state.settings.updates, auto: sUpdAuto.checked } } });
+$('#s-upd-now').onclick = () => dispatch({ type: 'update.check' });
+let updates: UpdateStatus | null = null;
+function renderUpdates(): void {
+  const u = updates;
+  if (!u) return;
+  const channelNote: Record<UpdateStatus['channel'], string> = {
+    nsis: 'This Windows installer updates itself: the new version is installed when Chord restarts.',
+    appimage: 'This AppImage updates itself: the new file replaces the current one when Chord restarts.',
+    mac: 'The macOS build is not notarised, so it cannot replace itself: Chord offers the new dmg to download and you drag it over the old copy.',
+    portable: 'The portable build never writes outside its folder: Chord offers the new zip to download.',
+    deb: 'The .deb is managed by your package manager: Chord offers the new package to download.',
+    dev: 'Update checks are off in development builds.',
+  };
+  $('#s-upd-note').textContent = channelNote[u.channel];
+  const when = u.checkedAt ? ` (checked ${new Date(u.checkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : '';
+  const text: Record<UpdateStatus['state'], string> = {
+    idle: `Chord ${u.current}`,
+    checking: 'Checking…',
+    none: `Chord ${u.current} is up to date${when}`,
+    available: `Chord ${u.version} is available${when}`,
+    downloading: `Downloading Chord ${u.version}… ${u.progress ?? 0}%`,
+    ready: `Chord ${u.version} is downloaded`,
+    error: `Could not check: ${u.error ?? 'unknown error'}`,
+  };
+  $('#s-upd-status').textContent = text[u.state];
+  const action = u.state === 'available' ? (u.canInstall ? 'Download' : 'Open Download') : u.state === 'ready' ? 'Restart to Update' : '';
+  sUpdAction.hidden = !action;
+  sUpdAction.textContent = action;
+  sUpdAction.onclick = () => dispatch(u.state === 'ready' ? { type: 'update.install' } : u.canInstall ? { type: 'update.download' } : { type: 'update.openPage' });
+}
+api.onUpdates((u) => {
+  updates = u;
+  renderUpdates();
+});
+void api.getUpdates().then((u) => {
+  if (u) {
+    updates = u;
+    renderUpdates();
+  }
+});
 $('#s-dldir-choose').onclick = () => dispatch({ type: 'downloads.chooseFolder' });
 sDlDirReset.onclick = () => dispatch({ type: 'settings.update', patch: { downloadDir: null } });
 $('#s-default').onclick = () => dispatch({ type: 'app.setDefaultBrowser' });
@@ -197,6 +244,8 @@ function fillSettings(): void {
   sTray.checked = s.settings.closeToTray;
   sAutoPip.checked = s.settings.autoPip;
   for (const [k, input] of flagInputs) input.checked = s.settings.flags[k] === true;
+  sUpdCheck.checked = s.settings.updates.check;
+  sUpdAuto.checked = s.settings.updates.auto;
   $('#s-pagetabs').replaceChildren(
     ...(s.settings.pageTabs.length
       ? s.settings.pageTabs.map((origin) => h('div', { class: 'row' }, h('span', {}, origin), h('button', { class: 'btn', onclick: () => dispatch({ type: 'pageTabs.forget', origin }) }, 'Forget')))
