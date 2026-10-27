@@ -167,11 +167,15 @@ export class TabManager {
     wc.on('page-title-updated', (_e, title) => {
       patch({ title });
       this.c.smart.title(id, title);
+      this.c.history.title(wc.getURL(), title);
     });
     wc.on('page-favicon-updated', (_e, favicons) => {
       if (favicons[0]) patch({ favicon: favicons[0] });
     });
-    wc.on('did-navigate', (_e, url) => patch({ url, favicon: undefined, ...navState() }));
+    wc.on('did-navigate', (_e, url) => {
+      patch({ url, favicon: undefined, ...navState() });
+      this.c.history.record(url, wc.getTitle());
+    });
     wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
       if (isMainFrame) patch({ url, ...navState() });
     });

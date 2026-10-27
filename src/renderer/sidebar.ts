@@ -156,6 +156,9 @@ const dlBar = $('#dl-bar');
 let dlHideTimer = 0;
 dlBtn.replaceChildren(svg(ICONS.download), dlBtn.querySelector('.ring')!, dlBtn.querySelector('.badge')!);
 dlBtn.onclick = () => dispatch({ type: 'downloads.open' });
+const settingsBtn = $<HTMLButtonElement>('#settings-btn');
+settingsBtn.replaceChildren(svg(ICONS.settings));
+settingsBtn.onclick = () => dispatch({ type: 'settings.open' });
 dlRow.onclick = () => dispatch({ type: 'downloads.open' });
 api.onDownloads((d) => {
   downloads = d;
@@ -573,7 +576,7 @@ function iconKey(tab: Tab, spinner: boolean): string {
 
 function makeIcon(tab: Tab, spinner: boolean): Node {
   if (spinner && tab.loading) return h('div', { class: 'spinner' });
-  if (isInternal(tab.url)) return h('div', { class: 'glyph internal' }, svg(hostOf(tab.url) === 'downloads' ? ICONS.download : hostOf(tab.url) === 'settings' ? ICONS.settings : ICONS.globe, 12));
+  if (isInternal(tab.url)) return h('div', { class: 'glyph internal' }, svg(hostOf(tab.url) === 'downloads' ? ICONS.download : hostOf(tab.url) === 'settings' ? ICONS.settings : hostOf(tab.url) === 'history' ? ICONS.clock : ICONS.globe, 12));
   const glyph = h('div', { class: 'glyph' }, initialOf(hostOf(tab.url) || tab.title));
   if (!tab.favicon) return glyph;
   const img = h('img', { class: 'favicon', src: tab.favicon, alt: '', draggable: 'false' });

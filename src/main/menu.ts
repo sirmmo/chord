@@ -76,6 +76,7 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Show Address Bar', type: 'checkbox', checked: c.state.settings.addressBar, accelerator: 'CmdOrCtrl+Shift+L', click: () => c.apply({ type: 'settings.update', patch: { addressBar: !c.state.settings.addressBar } }) },
         { label: 'Settings…', accelerator: isMac ? undefined : 'Ctrl+,', click: d({ type: 'settings.open' }) },
         { label: 'Downloads', accelerator: 'CmdOrCtrl+Shift+J', click: d({ type: 'downloads.open' }) },
+        { label: 'History', accelerator: 'CmdOrCtrl+Y', click: d({ type: 'history.open' }) },
         sep,
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: d({ type: 'nav.reload' }) },
         { label: 'Back', accelerator: 'CmdOrCtrl+[', click: d({ type: 'nav.back' }) },

@@ -20,6 +20,7 @@ import { SmartManager } from './smart.ts';
 import { TrayManager } from './tray.ts';
 import { confirmImport, importFromBrowser } from './importers.ts';
 import { DownloadManager } from './downloads.ts';
+import { HistoryManager } from './history.ts';
 import { browsingSession } from './session.ts';
 import { isInternal } from '../shared/url.ts';
 
@@ -38,6 +39,7 @@ export class Controller {
   /** set once the app is really quitting, so close-to-tray does not swallow the window close */
   quitting = false;
   readonly downloads = new DownloadManager(this);
+  readonly history = new HistoryManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
     onStatus: (status) => this.sendAll('extensions', status),
@@ -65,6 +67,7 @@ export class Controller {
     this.smart.init();
     this.tray.sync(this.state.settings.closeToTray);
     this.downloads.init(browsingSession());
+    this.history.init();
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -78,6 +81,10 @@ export class Controller {
     void setShields(this.state.settings.shields);
     void this.extensions.sync(this.state);
     this.refreshMenu();
+  }
+
+  trustedEvent(event: IpcMainInvokeEvent): boolean {
+    return this.trusted(event);
   }
 
   private trusted(event: IpcMainInvokeEvent): boolean {
@@ -186,6 +193,7 @@ export class Controller {
 
   flush(): void {
     this.downloads.flush();
+    this.history.flush();
     this.store.save(this.state);
     this.store.flush();
   }
@@ -428,6 +436,15 @@ export class Controller {
         return;
       case 'downloads.open':
         this.openInternal('chord://downloads/');
+        return;
+      case 'history.open':
+        this.openInternal('chord://history/');
+        return;
+      case 'history.remove':
+        this.history.remove(cmd.id);
+        return;
+      case 'history.clear':
+        this.history.clear();
         return;
     }
   }

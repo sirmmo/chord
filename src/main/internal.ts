@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { RENDERER_DIR } from './paths.ts';
 
 /** Internal pages served as chord://<page>/ from the renderer bundle. */
-export const INTERNAL_PAGES = new Set(['downloads', 'settings']);
+export const INTERNAL_PAGES = new Set(['downloads', 'settings', 'history']);
 
 /** Must run before app.whenReady(). */
 export function registerInternalScheme(): void {

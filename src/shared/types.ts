@@ -204,7 +204,10 @@ export type Command =
   | { type: 'download.remove'; id: string }
   | { type: 'downloads.clear' }
   | { type: 'downloads.openFolder' }
-  | { type: 'downloads.open' };
+  | { type: 'downloads.open' }
+  | { type: 'history.open' }
+  | { type: 'history.remove'; id: string }
+  | { type: 'history.clear' };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
@@ -213,7 +216,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.open',
+  'downloads.clear', 'downloads.openFolder', 'downloads.open', 'history.open', 'history.remove', 'history.clear',
 ]);
 
 export type Message = Action | Command;
@@ -276,6 +279,21 @@ export interface SmartInfo {
 }
 export type SmartStatus = Record<TabId, SmartInfo>;
 
+export interface HistoryEntry {
+  id: string;
+  url: string;
+  title: string;
+  at: number;
+}
+export interface HistoryQuery {
+  query?: string;
+  limit?: number;
+}
+export interface HistoryResult {
+  entries: HistoryEntry[];
+  total: number;
+}
+
 export type DownloadState = 'progressing' | 'completed' | 'cancelled' | 'interrupted';
 export interface DownloadEntry {
   id: string;
@@ -312,4 +330,6 @@ export interface ChordApi {
   getSmart(): Promise<SmartStatus>;
   onDownloads(cb: (status: DownloadsStatus) => void): () => void;
   getDownloads(): Promise<DownloadsStatus>;
+  onHistory(cb: (info: { total: number }) => void): () => void;
+  getHistory(query: HistoryQuery): Promise<HistoryResult>;
 }

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; style-src 'self' 'unsafe-inline'">
+  <title>History</title>
+  <link rel="stylesheet" href="internal.css">
+  <style>
+    .search { display: flex; gap: 8px; margin: 0 0 20px; }
+    .search input { flex: 1; font: inherit; font-size: 14px; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; outline: none; }
+    .search input:focus { border-color: var(--accent); }
+    .day { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 6px; }
+    .entry { display: grid; grid-template-columns: 52px 22px 1fr auto; gap: 10px; align-items: center; padding: 6px 10px; border-radius: 8px; }
+    .entry:hover { background: var(--hover); }
+    .entry .time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .entry .glyph { width: 20px; height: 20px; border-radius: 5px; background: var(--card); display: grid; place-items: center; font-size: 10px; font-weight: 700; color: var(--muted); }
+    .entry .text { min-width: 0; display: flex; gap: 8px; align-items: baseline; }
+    .entry .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .entry .host { font-size: 12px; color: var(--muted); flex: none; }
+    .entry .remove { visibility: hidden; border: 0; background: transparent; color: var(--muted); font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 5px; }
+    .entry:hover .remove { visibility: visible; }
+    .entry .remove:hover { background: var(--bar); color: var(--fg); }
+    .btn.confirm { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>History</h1>
+      <div class="actions"><button class="btn" id="clear">Clear History</button></div>
+    </header>
+    <div class="search"><input id="q" type="search" placeholder="Search history" autocomplete="off" spellcheck="false"></div>
+    <p class="summary" id="summary"></p>
+    <div id="list"></div>
+    <p class="empty" id="empty">No history yet. Pages you visit show up here.</p>
+  </main>
+  <script src="history.js"></script>
+</body>
+</html>

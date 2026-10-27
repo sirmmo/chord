@@ -48,6 +48,8 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
 - **Keep running in the menu bar / tray**: with Settings → "Closing the window", the
   window hides instead of closing, music and calls go on, and the tray menu offers
   show, play/pause, next, mute, leave, downloads and quit.
+- **History** (`⌘Y`) at `chord://history`: every page you visit, grouped by day, with
+  search, per-entry removal and clear all. Kept locally in `history.json` (last 5000).
 - **Downloads** (`⌘⇧J`): files go straight to your Downloads folder (or ask every time,
   from Settings). The title bar shows a progress ring and a count while anything is in
   flight, a row above the player shows the current file, and the `chord://downloads`
