@@ -83,6 +83,8 @@ export type ExtensionsStatus = Record<string, { loaded: boolean; error?: string 
 
 export interface Settings {
   theme: Theme;
+  /** show media controls for pages that expose a Media Session (YouTube Music, Spotify…) */
+  smartPages: boolean;
   /** editable address bar across the top of the page */
   addressBar: boolean;
   extensions: ExtensionEntry[];
@@ -179,14 +181,15 @@ export type Command =
   | { type: 'extension.pickFolder' }
   | { type: 'config.export'; spaceId?: SpaceId }
   | { type: 'config.importFile' }
-  | { type: 'diagnostics.copy' };
+  | { type: 'diagnostics.copy' }
+  | { type: 'media.action'; id: TabId; action: MediaAction };
 
 export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'tab.navigate', 'tab.home', 'tab.duplicate', 'tab.mute', 'tab.contextmenu', 'space.contextmenu', 'space.rename',
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action',
 ]);
 
 export type Message = Action | Command;
@@ -207,6 +210,23 @@ export type OverlayMessage =
 export type SidebarMessage =
   | { kind: 'space.renameStart'; id: SpaceId };
 
+/** Media Session actions Chord can send back to a page. */
+export type MediaAction = 'play' | 'pause' | 'previoustrack' | 'nexttrack' | 'seekbackward' | 'seekforward' | 'stop';
+
+/** What a "smart page" reports about its player. */
+export interface MediaInfo {
+  title: string;
+  artist: string;
+  album: string;
+  artwork: string;
+  playing: boolean;
+  /** actions the page registered handlers for */
+  actions: MediaAction[];
+  host: string;
+  updatedAt: number;
+}
+export type MediaStatus = Record<TabId, MediaInfo>;
+
 export interface ChordApi {
   platform: string;
   dispatch(message: Message): Promise<void>;
@@ -216,4 +236,6 @@ export interface ChordApi {
   onSidebar(cb: (message: SidebarMessage) => void): () => void;
   onExtensions(cb: (status: ExtensionsStatus) => void): () => void;
   getExtensions(): Promise<ExtensionsStatus>;
+  onMedia(cb: (status: MediaStatus) => void): () => void;
+  getMedia(): Promise<MediaStatus>;
 }

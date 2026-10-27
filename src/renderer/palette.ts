@@ -298,6 +298,7 @@ const sArchive = $<HTMLSelectElement>('#s-archive');
 const sEngine = $<HTMLSelectElement>('#s-engine');
 const sShields = $<HTMLInputElement>('#s-shields');
 const sAddressBar = $<HTMLInputElement>('#s-addressbar');
+const sSmart = $<HTMLInputElement>('#s-smart');
 const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = {};
@@ -309,6 +310,7 @@ const showPage = (page: string) => {
 };
 $('#s-tabs').querySelectorAll('button').forEach((b) => (b.onclick = () => showPage(b.dataset.v ?? 'general')));
 sAddressBar.onchange = () => dispatch({ type: 'settings.update', patch: { addressBar: sAddressBar.checked } });
+sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages: sSmart.checked } });
 $('#s-default').onclick = () => dispatch({ type: 'app.setDefaultBrowser' });
 $('#s-export').onclick = () => dispatch({ type: 'config.export' });
 $('#s-import').onclick = () => {
@@ -411,6 +413,7 @@ function fillSettings(): void {
   sEngine.value = s.settings.searchEngine;
   sShields.checked = s.settings.shields;
   sAddressBar.checked = s.settings.addressBar;
+  sSmart.checked = s.settings.smartPages;
   renderExtensions();
 }
 

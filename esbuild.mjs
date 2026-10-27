@@ -10,6 +10,7 @@ const node = (entry, outfile) => ({ ...common, entryPoints: [entry], outfile, pl
 const configs = [
   node('src/main/index.ts', 'dist/main.js'),
   node('src/preload/index.ts', 'dist/preload.js'),
+  node('src/preload/page.ts', 'dist/page-preload.js'),
   { ...common, entryPoints: ['src/renderer/sidebar.ts', 'src/renderer/palette.ts'], outdir: 'dist/renderer', platform: 'browser', format: 'iife' },
 ];
 

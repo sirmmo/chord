@@ -10,6 +10,8 @@
   <aside id="sidebar">
     <div class="titlebar">
       <button class="icon-btn" id="collapse" title="Hide sidebar (⌘S)"></button>
+      <button class="now-mini hidden" id="now-mini" title="Now playing"><span class="art"></span><span class="t"></span></button>
+      <button class="icon-btn now-mini-pp hidden" id="now-mini-pp" title="Play/Pause"></button>
       <span class="spacer"></span>
       <button class="icon-btn" id="back" title="Back (⌘[)"></button>
       <button class="icon-btn" id="forward" title="Forward (⌘])"></button>
@@ -31,6 +33,10 @@
       <div id="today" class="list"></div>
       <button class="new-tab" id="new-tab"><span class="plus"></span>New Tab</button>
     </div>
+    <div class="now hidden" id="now">
+      <button class="now-main" id="now-open" title="Go to this tab"><span class="art" id="now-art"></span><span class="text"><span class="title" id="now-title"></span><span class="sub" id="now-sub"></span></span></button>
+      <div class="now-controls"><button class="icon-btn" id="now-prev" title="Previous"></button><button class="icon-btn" id="now-pp" title="Play/Pause"></button><button class="icon-btn" id="now-next" title="Next"></button></div>
+    </div>
     <footer>
       <div id="spaces"></div>
       <button class="icon-btn" id="add-space" title="New space (⌘⇧N)"></button>
@@ -45,6 +51,8 @@
       <button class="icon-btn" id="ab-forward" title="Forward"></button>
       <button class="icon-btn" id="ab-reload" title="Reload"></button>
       <div class="field"><span class="lock" id="ab-lock"></span><input id="address" type="text" placeholder="Search or enter URL" autocomplete="off" spellcheck="false"></div>
+      <button class="now-mini hidden" id="ab-now" title="Now playing"><span class="art"></span><span class="t"></span></button>
+      <button class="icon-btn now-mini-pp hidden" id="ab-now-pp" title="Play/Pause"></button>
     </div>
     <div class="stage-body">
       <div class="empty-msg">

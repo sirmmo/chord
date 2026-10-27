@@ -2,7 +2,7 @@
 // around the tab views (native children painted above it). Rendering is
 // keyed: existing elements are updated in place, never rebuilt.
 
-import type { ListName, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
+import type { ListName, MediaAction, MediaInfo, MediaStatus, Message, Space, SpaceId, State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace } from '../shared/model.ts';
 import { hostOf, isSecure, searchUrl, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
@@ -141,6 +141,101 @@ api.onSidebar((m) => {
 });
 
 let lastSpaceKey = '';
+let media: MediaStatus = {};
+
+// ---- smart pages: the current player, across spaces ----
+
+api.onMedia((m) => {
+  media = m;
+  renderMedia();
+});
+api.getMedia().then((m) => {
+  if (m) {
+    media = m;
+    renderMedia();
+  }
+});
+
+const now = $('#now');
+const nowArt = $('#now-art');
+const nowTitle = $('#now-title');
+const nowSub = $('#now-sub');
+const nowPrev = $<HTMLButtonElement>('#now-prev');
+const nowPP = $<HTMLButtonElement>('#now-pp');
+const nowNext = $<HTMLButtonElement>('#now-next');
+const minis = [
+  { pill: $<HTMLButtonElement>('#now-mini'), pp: $<HTMLButtonElement>('#now-mini-pp') },
+  { pill: $<HTMLButtonElement>('#ab-now'), pp: $<HTMLButtonElement>('#ab-now-pp') },
+];
+let playerTab: TabId | null = null;
+const mediaAction = (action: MediaAction) => () => {
+  if (playerTab) dispatch({ type: 'media.action', id: playerTab, action });
+};
+const openPlayer = () => {
+  if (playerTab) dispatch({ type: 'tab.activate', id: playerTab });
+};
+const togglePlay = () => {
+  const info = playerTab ? media[playerTab] : undefined;
+  if (info) mediaAction(info.playing ? 'pause' : 'play')();
+};
+$('#now-open').onclick = openPlayer;
+nowPrev.onclick = mediaAction('previoustrack');
+nowNext.onclick = mediaAction('nexttrack');
+nowPP.onclick = togglePlay;
+for (const m of minis) {
+  m.pill.onclick = openPlayer;
+  m.pp.onclick = togglePlay;
+}
+
+/** The player to show: a playing one first, then the most recently updated. */
+function currentPlayer(): [TabId, MediaInfo] | null {
+  if (!state || !state.settings.smartPages) return null;
+  let best: [TabId, MediaInfo] | null = null;
+  for (const [id, info] of Object.entries(media)) {
+    if (!state.tabs[id]) continue;
+    if (!best || (info.playing && !best[1].playing) || (info.playing === best[1].playing && info.updatedAt > best[1].updatedAt)) best = [id, info];
+  }
+  return best;
+}
+
+function renderMedia(): void {
+  const player = currentPlayer();
+  playerTab = player ? player[0] : null;
+  now.classList.toggle('hidden', !player);
+  for (const m of minis) {
+    m.pill.classList.toggle('hidden', !player);
+    m.pp.classList.toggle('hidden', !player);
+  }
+  if (!player || !state) return;
+  const [id, info] = player;
+  const tab = state.tabs[id];
+  const title = info.title || tab.title || info.host;
+  const sub = [info.artist, info.host].filter(Boolean).join(' · ');
+  setText(nowTitle, title);
+  setText(nowSub, sub);
+  const artKey = info.artwork ? `img:${info.artwork}` : 'icon';
+  const makeArt = () => (info.artwork ? document.createTextNode('') : svg(ICONS.music));
+  setIconKey(nowArt, artKey, makeArt);
+  if (nowArt.style.backgroundImage !== (info.artwork ? `url("${info.artwork}")` : '')) nowArt.style.backgroundImage = info.artwork ? `url("${info.artwork}")` : '';
+  setClass(now, 'playing', info.playing);
+  const can = (a: MediaAction) => info.actions.length === 0 || info.actions.includes(a);
+  nowPrev.disabled = !info.actions.includes('previoustrack');
+  nowNext.disabled = !info.actions.includes('nexttrack');
+  nowPP.disabled = !(can('play') || can('pause'));
+  const ppKey = info.playing ? 'pause' : 'play';
+  setIconKey(nowPP, ppKey, () => svg(info.playing ? ICONS.pause : ICONS.play));
+  setIconKey(nowPrev, 'prev', () => svg(ICONS.prev));
+  setIconKey(nowNext, 'next', () => svg(ICONS.next));
+  for (const m of minis) {
+    const art = m.pill.querySelector('.art') as HTMLElement;
+    setIconKey(art, artKey, makeArt);
+    if (art.style.backgroundImage !== nowArt.style.backgroundImage) art.style.backgroundImage = nowArt.style.backgroundImage;
+    setText(m.pill.querySelector('.t') as HTMLElement, title);
+    m.pill.title = `${title}${sub ? ` — ${sub}` : ''}`;
+    setIconKey(m.pp, ppKey, () => svg(info.playing ? ICONS.pause : ICONS.play));
+    m.pp.disabled = nowPP.disabled;
+  }
+}
 
 function render(): void {
   if (!state) return;
@@ -193,6 +288,7 @@ function render(): void {
     syncChildren($('#spaces'), s.spaces, (sp) => sp.id, makeSpaceDot, (el, sp) => updateSpaceDot(el, sp, s));
   }
   $('#stage').classList.toggle('empty', space.panes.length === 0);
+  renderMedia();
 }
 
 /** Keyed child reconciliation: reuse elements by key, reorder, drop the rest. */

@@ -159,3 +159,9 @@ test('export carries the address bar setting but never extension paths', () => {
     assert.deepEqual(next.settings.extensions, []);
   }
 });
+
+test('smart pages setting travels with the configuration', () => {
+  const parsed = parseConfig('{"format":"chord-config","version":1,"spaces":[{"name":"A"}],"settings":{"smartPages":false}}');
+  assert.ok(parsed.ok);
+  if (parsed.ok) assert.deepEqual(parsed.config.settings, { smartPages: false });
+});

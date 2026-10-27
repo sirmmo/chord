@@ -36,6 +36,11 @@ export function svg(paths: string, size = 16): SVGSVGElement {
 
 export const ICONS = {
   back: '<path d="M15 18l-6-6 6-6"/>',
+  play: '<path d="M7 5v14l12-7z" fill="currentColor" stroke="none"/>',
+  pause: '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/>',
+  next: '<path d="M5 5v14l10-7z" fill="currentColor" stroke="none"/><path d="M18 5v14"/>',
+  prev: '<path d="M19 5v14L9 12z" fill="currentColor" stroke="none"/><path d="M6 5v14"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
   forward: '<path d="M9 18l6-6-6-6"/>',
   reload: '<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/>',
   stop: '<path d="M6 6l12 12M18 6L6 18"/>',

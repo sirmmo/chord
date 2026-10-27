@@ -254,3 +254,24 @@ footer { flex: none; display: flex; align-items: center; gap: 4px; padding-top: 
 .space-dot.drop-target { outline: 2px solid var(--fg); }
 
 .resizer { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 2; }
+
+/* smart pages: the current player, shown across spaces */
+.now { flex: none; display: flex; align-items: center; gap: 2px; margin-top: 6px; padding: 6px; border-radius: 10px; background: var(--hover); }
+.now.hidden, .now-mini.hidden, .now-mini-pp.hidden { display: none; }
+.now-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--fg); padding: 0; text-align: left; cursor: default; }
+.now .art, .now-mini .art { flex: none; width: 34px; height: 34px; border-radius: 7px; background: var(--active) center/cover no-repeat; display: grid; place-items: center; color: var(--muted); overflow: hidden; }
+.now .art svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.now .text { min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.now .title { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.now .sub { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.now-controls { display: flex; flex: none; }
+.now-controls .icon-btn { width: 26px; height: 26px; }
+.now.playing .art::after { content: ""; position: absolute; }
+.now-mini { -webkit-app-region: no-drag; display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 160px; height: 28px; padding: 0 8px 0 3px; border: 0; border-radius: 8px; background: var(--hover); color: var(--fg); font: inherit; font-size: 12px; cursor: default; }
+.now-mini .art { width: 22px; height: 22px; border-radius: 5px; }
+.now-mini .art svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
+.now-mini .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.now-mini:hover, .now-main:hover .title { color: var(--accent); }
+.now-mini-pp { margin-left: -2px; }
+.titlebar .now-mini { margin-left: 2px; }
+#addressbar .now-mini { margin-left: 6px; }

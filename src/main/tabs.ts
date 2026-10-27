@@ -4,6 +4,7 @@ import type { State, Tab, TabId } from '../shared/types.ts';
 import { activeSpace } from '../shared/model.ts';
 import { computeLayout } from '../shared/layout.ts';
 import { PARTITION } from './session.ts';
+import { PAGE_PRELOAD } from './paths.ts';
 import { pageContextMenu } from './menu.ts';
 import type { Controller } from './controller.ts';
 import { navDomReady, navFinished, navStarted } from './diagnostics.ts';
@@ -28,6 +29,12 @@ export class TabManager {
 
   get(id: TabId): WebContentsView | undefined {
     return this.views.get(id);
+  }
+
+  /** The tab whose page view owns this WebContents, if it is one of ours. */
+  tabIdOf(wc: WebContents): TabId | undefined {
+    for (const [id, view] of this.views) if (view.webContents === wc) return id;
+    return undefined;
   }
 
   focusedView(): WebContentsView | undefined {
@@ -105,6 +112,7 @@ export class TabManager {
       new WebContentsView({
         webPreferences: {
           partition: PARTITION,
+          preload: PAGE_PRELOAD,
           sandbox: true,
           contextIsolation: true,
           nodeIntegration: false,
@@ -126,6 +134,7 @@ export class TabManager {
     const view = this.views.get(id);
     if (!view) return;
     this.views.delete(id);
+    this.c.media.clear(id);
     if (this.fullscreenTab === id) this.fullscreenTab = null;
     if (this.lastFocused === id) this.lastFocused = null;
     const win = this.c.win;
@@ -154,7 +163,10 @@ export class TabManager {
       patch({ loading: false, ...navState() });
     });
     wc.on('did-start-navigation', (details) => {
-      if (details.isMainFrame && !details.isSameDocument) navStarted(id, details.url);
+      if (details.isMainFrame && !details.isSameDocument) {
+        navStarted(id, details.url);
+        this.c.media.clear(id);
+      }
     });
     wc.on('dom-ready', () => navDomReady(id));
     wc.on('audio-state-changed', (e) => patch({ audible: e.audible }));
@@ -179,6 +191,7 @@ export class TabManager {
       this.c.apply({ type: 'tab.sleep', id });
     });
     wc.on('destroyed', () => {
+      this.c.media.clear(id);
       if (!this.views.has(id)) return; // we closed it ourselves
       this.views.delete(id);
       if (this.c.state.tabs[id]?.awake) this.c.apply({ type: 'tab.sleep', id });

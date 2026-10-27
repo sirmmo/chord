@@ -16,6 +16,7 @@ import { PRELOAD, RENDERER_DIR } from './paths.ts';
 import { isMac, TITLEBAR_HEIGHT, TOP_INSET, ADDRESS_BAR_HEIGHT } from './platform.ts';
 import { ExtensionManager } from './extensions.ts';
 import { copyDiagnostics, startLagMonitor } from './diagnostics.ts';
+import { MediaManager } from './media.ts';
 
 const CHROME_DARK = '#1b1b22';
 const CHROME_LIGHT = '#f4f4f7';
@@ -27,6 +28,7 @@ export class Controller {
   readonly store: Store<State>;
   readonly tabs = new TabManager(this);
   readonly overlay = new Overlay(this);
+  readonly media = new MediaManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
     onStatus: (status) => this.sendAll('extensions', status),
@@ -51,6 +53,7 @@ export class Controller {
     this.state = hydrate(this.store.load(), this.ctx());
     setInterval(() => this.apply({ type: 'tick' }), 60_000).unref();
     startLagMonitor();
+    this.media.init();
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
@@ -192,6 +195,7 @@ export class Controller {
     this.store.save(next);
     this.broadcast();
     if (prev.settings.shields !== next.settings.shields) void setShields(next.settings.shields);
+    if (prev.settings.smartPages && !next.settings.smartPages) this.media.clearAll();
     if (prev.settings.theme.mode !== next.settings.theme.mode) this.applyChromeColors();
     if (prev.settings.extensions !== next.settings.extensions && JSON.stringify(prev.settings.extensions) !== JSON.stringify(next.settings.extensions)) {
       void this.extensions.sync(next);
@@ -220,7 +224,7 @@ export class Controller {
     this.win?.webContents.send('sidebar', message);
   }
 
-  private sendAll(channel: string, payload: unknown): void {
+  sendAll(channel: string, payload: unknown): void {
     for (const wc of [this.win?.webContents, this.overlay.webContents]) if (wc && !wc.isDestroyed()) wc.send(channel, payload);
   }
 
@@ -353,6 +357,9 @@ export class Controller {
         return;
       case 'diagnostics.copy':
         void copyDiagnostics(this);
+        return;
+      case 'media.action':
+        this.media.act(cmd.id, cmd.action);
         return;
     }
   }

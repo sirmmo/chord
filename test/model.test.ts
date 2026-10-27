@@ -235,6 +235,7 @@ test('theme settings merge over defaults and clamp the tint', () => {
   assert.equal(h.settings.theme.mode, 'system', 'missing theme fields fall back to defaults');
   assert.equal(h.settings.sidebarWidth, 300);
   assert.equal(h.settings.shields, true);
+  assert.equal(h.settings.smartPages, true);
 });
 
 test('layout honours a top inset for platforms with a native window-controls strip', () => {

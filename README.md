@@ -29,6 +29,10 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   open tabs, archived tabs, and commands. `⌘↩` forces a new tab.
 - **Split view**: `⌘⇧D` adds the next tab beside the current one (up to four),
   or use "Open in Split View" from a tab's or a link's context menu.
+- **Smart pages**: a page that exposes a Media Session (YouTube Music, Spotify, Amazon
+  Music, most players) gets a now-playing card above the spaces strip and a pill in the
+  title bar, visible from every space, with play/pause, previous and next. Click the
+  title to jump to the tab. Toggle in Settings → General.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
 - **Find in page** `⌘F`, tab sleep, mute, reopen closed tab `⌘⇧T`, per-site
