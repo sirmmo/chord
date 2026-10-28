@@ -308,14 +308,15 @@ function runSelected(newTab: boolean): void {
 }
 
 function update(): void {
-  const q = input.value.trim();
-  if (q.length >= 2 && q !== historyQuery) {
+  const scoped = scopeOf(input.value);
+  const q = scoped.query;
+  if ((q.length >= 2 || scoped.scope === 'history') && q !== historyQuery) {
     window.clearTimeout(historyTimer);
     historyTimer = window.setTimeout(() => {
-      void api.getHistory({ query: q, limit: 8 }).then((r) => {
+      void api.getHistory({ query: q, limit: scoped.scope === 'history' ? 80 : 16 }).then((r) => {
         historyQuery = q;
         historyHits = r.entries;
-        if (mode === 'palette' && input.value.trim() === q) update();
+        if (mode === 'palette' && scopeOf(input.value).query === q) update();
       });
     }, 120);
   }
@@ -356,10 +357,23 @@ function score(query: string, ...fields: string[]): number {
   return words.every((w) => text.includes(w)) ? 1 : 0;
 }
 
+/** "h ", "b ", "t " and ">" narrow the command bar to history, bookmarks, tabs or commands. */
+function scopeOf(raw: string): { scope: 'all' | 'history' | 'bookmarks' | 'tabs' | 'commands'; query: string } {
+  const t = raw.trim();
+  const m = /^(h|b|t|history|bookmarks|bm|tabs)\s+(.*)$/i.exec(t);
+  if (m) {
+    const k = m[1].toLowerCase();
+    return { scope: k.startsWith('h') ? 'history' : k.startsWith('b') ? 'bookmarks' : 'tabs', query: m[2].trim() };
+  }
+  if (t.startsWith('>')) return { scope: 'commands', query: t.slice(1).trim() };
+  return { scope: 'all', query: t };
+}
+
 function compute(raw: string): Item[] {
   const s = state;
   if (!s) return [];
-  const query = raw.trim();
+  const { scope, query } = scopeOf(raw);
+  const only = (k: typeof scope) => scope === 'all' || scope === k;
   const out: Item[] = [];
   const space = activeSpace(s);
   const current = focusedTab(s);
@@ -367,7 +381,7 @@ function compute(raw: string): Item[] {
   const navigate = (url: string) => (o: { newTab: boolean }) =>
     dispatch(o.newTab || intent === 'new' || !current ? { type: 'tab.new', url, activate: true } : { type: 'tab.navigate', url });
 
-  if (query) {
+  if (query && scope === 'all') {
     const url = toUrl(query);
     if (url) out.push({ group: 'Go', icon: svg(ICONS.globe, 18), title: url, subtitle: 'Open page', hint: '↩', run: navigate(url) });
     out.push({ group: 'Go', icon: svg(ICONS.search, 18), title: query, subtitle: `Search with ${engine.name}`, hint: url ? undefined : '↩', run: navigate(searchUrl(s.settings.searchEngine, query)) });
@@ -381,8 +395,8 @@ function compute(raw: string): Item[] {
     .map((t) => ({ t, score: score(query, `${t.name ? `${t.name} ` : ''}${t.title}`, t.url) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score || b.t.lastActiveAt - a.t.lastActiveAt)
-    .slice(0, query ? 6 : 8);
-  for (const { t } of tabs) {
+    .slice(0, scope === 'tabs' ? 30 : query ? 6 : 8);
+  for (const { t } of only('tabs') ? tabs : []) {
     out.push({
       group: 'Open tabs',
       icon: faviconOf(t),
@@ -463,17 +477,29 @@ function compute(raw: string): Item[] {
     { title: 'Toggle Developer Tools', keywords: 'devtools inspect', when: !!current, run: () => dispatch({ type: 'devtools.toggle' }) },
     { title: 'Copy Diagnostics', keywords: 'diagnostics slow performance debug report', subtitle: 'Environment, event-loop stalls and page timings for bug reports', run: () => dispatch({ type: 'diagnostics.copy' }) },
   ];
-  const matched = commands.filter((c) => c.when !== false && score(query, c.title, c.keywords ?? '') > 0).slice(0, query ? 6 : 4);
+  const matched = only('commands') ? commands.filter((c) => c.when !== false && score(query, c.title, c.keywords ?? '') > 0).slice(0, scope === 'commands' ? 40 : query ? 6 : 4) : [];
   for (const c of matched) out.push({ group: 'Commands', icon: '⌘', title: c.title, subtitle: c.subtitle, run: c.run });
 
-  if (query) {
-    if (query.length >= 2 && query === historyQuery) {
+  const openNavigate = (url: string) => ({ newTab }: { newTab: boolean }) => (newTab || intent === 'new' ? dispatch({ type: 'tab.new', url, activate: true }) : dispatch({ type: 'tab.navigate', url }));
+  if (only('bookmarks') && (query || scope === 'bookmarks')) {
+    const hits = s.bookmarks
+      .filter((b) => !b.deletedAt && score(query, b.title, b.url, b.tags.join(' '), b.note) > 0)
+      .sort((a, b) => b.addedAt - a.addedAt)
+      .slice(0, scope === 'bookmarks' ? 30 : 4);
+    for (const b of hits) {
+      const note = b.note.split('\n')[0].replace(/^#+\s*/, '').trim();
+      out.push({ group: 'Bookmarks', icon: svg(ICONS.star, 18), title: b.title || hostOf(b.url), subtitle: [hostOf(b.url), b.tags.length ? b.tags.map((t) => `#${t}`).join(' ') : '', note ? note.slice(0, 80) : ''].filter(Boolean).join(' · '), run: openNavigate(b.url) });
+    }
+  }
+  if (query || scope === 'history') {
+    if (only('history') && query === historyQuery) {
     const open = new Set(Object.values(s.tabs).map((t) => t.url));
-    for (const e of historyHits.filter((x) => !open.has(x.url)).slice(0, 4)) {
+    const seen = new Set<string>();
+    for (const e of historyHits.filter((x) => !open.has(x.url) && !seen.has(x.url) && seen.add(x.url)).slice(0, scope === 'history' ? 40 : 6)) {
       out.push({ group: 'History', icon: svg(ICONS.clock, 18), title: e.title || hostOf(e.url), subtitle: hostOf(e.url), run: ({ newTab }) => (newTab || intent === 'new' ? dispatch({ type: 'tab.new', url: e.url }) : dispatch({ type: 'tab.navigate', url: e.url })) });
     }
   }
-  const archived = s.archived.filter((a) => !(a.spaceId && lockedSpaces.has(a.spaceId)) && score(query, a.title, a.url) > 0).slice(0, 4);
+  const archived = scope === 'all' ? s.archived.filter((a) => !(a.spaceId && lockedSpaces.has(a.spaceId)) && score(query, a.title, a.url) > 0).slice(0, 4) : [];
     for (const a of archived) {
       out.push({ group: 'Archived', icon: faviconOf(a), title: a.title || hostOf(a.url), subtitle: hostOf(a.url), hint: 'Restore', run: () => dispatch({ type: 'archived.restore', id: a.id }) });
     }

@@ -26,7 +26,9 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   (configurable from the command bar). Archived tabs are searchable from the
   command bar.
 - **Command bar** (`⌘T` for a new tab, `⌘L` to edit the current URL): URLs, search,
-  open tabs, archived tabs, and commands. `⌘↩` forces a new tab.
+  open tabs, bookmarks (title, tags and notes), history, archived tabs, and commands.
+  Narrow it with a prefix: `h ` history, `b ` bookmarks, `t ` open tabs, `>` commands.
+  `⌘↩` forces a new tab.
 - **Split view**: `⌘⇧D` adds the next tab beside the current one (up to four),
   tiled any way you like: pick a layout from Tabs → Split Layout, cycle with `⌘⌥L`,
   or write your own in Settings → Layouts (`50/50 | 100` is two panes on top and one
