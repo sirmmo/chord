@@ -129,9 +129,16 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   bar on any page that advertises a feed; the tab menu and command bar offer the same.
   Import an OPML file and it becomes a subspace of its own (its folders too); export your
   subscriptions as OPML. Keys: j/k, o, s, m, r, u, shift+a. Refreshes every 20 minutes.
+- **Notes** (`⌘⇧M`, page at `chord://notes`): every space has a notes page in Markdown
+  (headings, lists, task boxes, code, quotes, tables, links), with a split editor and
+  preview, autosave, and a button that inserts a link to the current page. Notes travel
+  with the space in exports and in sync. "Notes of Every Space" shows them all.
 - **Bookmarks** (`⌘⌥B`, page at `chord://bookmarks`): save any page privately (`⌘⇧B`, the
-  tab menu, the command bar) or publicly, with tags and a note, search and filter them.
-  Saving an item in a curated space bookmarks it too.
+  tab menu, the command bar) or publicly, with tags and a note in Markdown (rendered on
+  the public page too), search and filter them. A bookmark is tagged with the space it
+  was saved from: the global page shows spaces as sections, and each space has its own
+  page (space menu → Bookmarks of This Space). Saving an item in a curated space
+  bookmarks it too.
 - **Sync through GitHub** (Settings → Sync): sign in with GitHub (the device flow: a short
   code typed on github.com, no secret in the app), reuse the GitHub CLI's login when `gh`
   is installed, or paste a personal access token with the `repo` scope; Chord then creates

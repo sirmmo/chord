@@ -19,7 +19,12 @@
     .bm .title { font-weight: 600; color: var(--fg); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .bm .title:hover { color: var(--accent); }
     .bm .host { font-size: 12px; color: var(--muted); }
-    .bm .note { grid-column: 1 / -1; font-size: 13px; color: var(--fg); white-space: pre-wrap; }
+    .bm .note { grid-column: 1 / -1; font-size: 13px; color: var(--fg); line-height: 1.5; }
+    .bm .note p { margin: 0 0 4px; } .bm .note ul, .bm .note ol { margin: 2px 0 4px; padding-left: 20px; } .bm .note code { background: var(--hover); padding: 1px 4px; border-radius: 4px; } .bm .note a { color: var(--accent); }
+    .bm .sp { padding: 0 7px; border-radius: 4px; background: var(--hover); font-size: 11px; }
+    h2.section { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; display: flex; gap: 10px; align-items: baseline; }
+    h2.section .open { font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--accent); }
+    .bm form select { font: inherit; font-size: 13px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; }
     .bm .meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 12px; color: var(--muted); }
     .bm .tag { color: var(--accent); }
     .bm .vis { padding: 0 7px; border-radius: 4px; background: var(--hover); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
@@ -50,7 +55,7 @@
     <div class="chips" id="chips"></div>
     <p class="summary" id="summary"></p>
     <div id="list"></div>
-    <p class="empty" id="empty">No bookmarks yet. ⌘⇧B bookmarks the current page; the tab menu and the command bar offer public ones, which are published on your GitHub Pages linkroll once sync is on.</p>
+    <p class="empty" id="empty">No bookmarks yet. ⌘⇧B bookmarks the current page (it is tagged with the space you are in); the tab menu and the command bar offer public ones, which are published on your GitHub Pages linkroll once sync is on. Notes take Markdown.</p>
   </main>
   <script src="bookmarks.js"></script>
 </body>

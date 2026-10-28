@@ -2,6 +2,7 @@
 // the public ones are published as (GitHub Pages). Pure, unit-tested.
 
 import type { Bookmark } from './types.ts';
+import { renderMarkdown } from './markdown.ts';
 
 export const TOMBSTONE_DAYS = 90;
 
@@ -68,6 +69,7 @@ export function sanitize(b: Bookmark): Bookmark {
     addedAt: typeof b.addedAt === 'number' ? b.addedAt : Date.now(),
     updatedAt: typeof b.updatedAt === 'number' ? b.updatedAt : Date.now(),
     ...(typeof b.deletedAt === 'number' ? { deletedAt: b.deletedAt } : {}),
+    ...(typeof b.spaceId === 'string' ? { spaceId: b.spaceId } : {}),
   };
 }
 
@@ -200,7 +202,7 @@ function renderPragmatic(list: Bookmark[], opts: SiteOptions): string {
     .map((b) => {
       const host = hostOf(b.url);
       const d = new Date(b.addedAt).toISOString().slice(0, 10);
-      return `<li class="bm" ${dataAttrs(b, host)}><span class="d">${d}</span> <a href="${esc(b.url)}" rel="noopener">${esc(b.title || b.url)}</a> <span class="h">${esc(host)}</span>${b.tags.map((t) => ` <a class="tag" href="#tag=${encodeURIComponent(t)}">#${esc(t)}</a>`).join('')}${b.note ? `<div class="n">${esc(b.note)}</div>` : ''}</li>`;
+      return `<li class="bm" ${dataAttrs(b, host)}><span class="d">${d}</span> <a href="${esc(b.url)}" rel="noopener">${esc(b.title || b.url)}</a> <span class="h">${esc(host)}</span>${b.tags.map((t) => ` <a class="tag" href="#tag=${encodeURIComponent(t)}">#${esc(t)}</a>`).join('')}${b.note ? `<div class="n">${renderMarkdown(b.note)}</div>` : ''}</li>`;
     })
     .join('\n');
   return `<!doctype html>
@@ -215,7 +217,7 @@ main{max-width:900px;margin:0 auto;padding:28px 16px 60px}h1{font-size:18px;marg
 .search{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);background:transparent;color:var(--fg);outline:none;margin-bottom:8px}
 .chips{display:flex;flex-wrap:wrap;gap:4px 10px;margin:0 0 16px}.chip{font:inherit;font-size:12px;border:0;background:none;color:var(--accent);padding:0;cursor:pointer}.chip span{color:var(--muted)}.chip.on{text-decoration:underline;font-weight:700}
 ul{list-style:none;margin:0;padding:0}.bm{padding:4px 0;border-bottom:1px dotted var(--line)}.bm.hide{display:none}.bm a{color:var(--accent);text-decoration:none}.bm a:hover{text-decoration:underline}
-.d{color:var(--muted);margin-right:6px}.h{color:var(--muted);font-size:12px}.tag{font-size:12px}.n{color:var(--muted);font-size:13px;padding:2px 0 2px 96px}
+.d{color:var(--muted);margin-right:6px}.h{color:var(--muted);font-size:12px}.tag{font-size:12px}.n{color:var(--muted);font-size:13px;padding:2px 0 2px 96px}.n p{margin:0}
 footer{margin-top:28px;color:var(--muted);font-size:12px}footer a{color:inherit}
 </style>
 </head>
@@ -248,7 +250,7 @@ function renderDigg(list: Bookmark[], opts: SiteOptions): string {
   <div class="diggbox"><strong>${total - i}</strong><span>bookmark</span></div>
   <div class="body">
     <h3><a href="${esc(b.url)}" rel="noopener">${esc(b.title || b.url)}</a> <span class="src">(${esc(host)})</span></h3>
-    <p class="meta">bookmarked by <a href="https://github.com/${esc(opts.user)}">${esc(opts.user)}</a> ${ago(b.addedAt)}${b.tags.length ? ` in ${b.tags.map((t) => `<a class="tag" href="#tag=${encodeURIComponent(t)}">${esc(t)}</a>`).join(', ')}` : ''}</p>${b.note ? `\n    <p class="desc">${esc(b.note)}</p>` : ''}
+    <p class="meta">bookmarked by <a href="https://github.com/${esc(opts.user)}">${esc(opts.user)}</a> ${ago(b.addedAt)}${b.tags.length ? ` in ${b.tags.map((t) => `<a class="tag" href="#tag=${encodeURIComponent(t)}">${esc(t)}</a>`).join(', ')}` : ''}</p>${b.note ? `\n    <div class="desc">${renderMarkdown(b.note)}</div>` : ''}
   </div>
 </div>`;
     })
@@ -273,7 +275,7 @@ a{color:#1b5790}a:hover{color:#f00}
 .story{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #e5e5e5}.story.hide{display:none}
 .diggbox{flex:none;width:52px;height:48px;border:1px solid #c8c8a8;background:#fffbcc;text-align:center;font-size:10px;color:#777;padding-top:4px;box-sizing:border-box}.diggbox strong{display:block;font-size:17px;color:#1b5790;line-height:1.1}
 .story h3{margin:0;font-size:16px;font-weight:bold}.story h3 a{text-decoration:none}.story h3 a:hover{text-decoration:underline}.story .src{font-size:12px;font-weight:normal;color:#777}
-.story .meta{margin:3px 0 0;font-size:11px;color:#777}.story .meta a{color:#1b5790}.story .desc{margin:6px 0 0;font-size:12px;color:#444;line-height:1.5}
+.story .meta{margin:3px 0 0;font-size:11px;color:#777}.story .meta a{color:#1b5790}.story .desc{margin:6px 0 0;font-size:12px;color:#444;line-height:1.5}.story .desc p{margin:0 0 4px}
 aside h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;color:#1b5790;border-bottom:2px solid #1b5790;padding-bottom:3px}
 aside ul{list-style:none;margin:0 0 20px;padding:0}aside li{padding:2px 0;font-size:12px}aside .chip{font:inherit;border:0;background:none;color:#1b5790;padding:0;cursor:pointer;text-align:left}aside .chip.on{font-weight:bold;color:#f00}aside .chip span{color:#999}
 .box{border:1px solid #d7e0ea;background:#f5f8fb;padding:8px 10px;font-size:11px;color:#555;margin-bottom:16px}.box a{color:#1b5790}
@@ -315,7 +317,7 @@ function renderElegant(list: Bookmark[], opts: SiteOptions): string {
       const d = new Date(b.addedAt);
       return `<li class="bm" data-tags="${esc(b.tags.join(' '))}" data-text="${esc(`${b.title} ${host} ${b.note} ${b.tags.join(' ')}`.toLowerCase())}">
   <a class="t" href="${esc(b.url)}" rel="noopener">${esc(b.title || b.url)}</a>
-  <span class="h">${esc(host)}</span>${b.note ? `\n  <p class="n">${esc(b.note)}</p>` : ''}
+  <span class="h">${esc(host)}</span>${b.note ? `\n  <div class="n">${renderMarkdown(b.note)}</div>` : ''}
   <span class="m"><time datetime="${d.toISOString()}">${d.toISOString().slice(0, 10)}</time>${b.tags.map((t) => ` <a class="tag" href="#tag=${encodeURIComponent(t)}">#${esc(t)}</a>`).join('')}</span>
 </li>`;
     })
@@ -338,7 +340,7 @@ main{max-width:760px;margin:0 auto;padding:40px 20px 80px}h1{font-size:26px;marg
 .search{width:100%;font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);outline:none}.search:focus{border-color:var(--accent)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 22px}.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:3px 10px;cursor:pointer}.chip span{color:var(--muted)}.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}.chip.on span{color:#fff}
 ul{list-style:none;margin:0;padding:0}.bm{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:10px}.bm.hide{display:none}
-.bm .t{font-weight:600;color:var(--fg);text-decoration:none}.bm .t:hover{color:var(--accent)}.bm .h{color:var(--muted);font-size:13px;margin-left:8px}.bm .n{margin:6px 0 0;color:var(--fg)}.bm .m{display:block;margin-top:6px;font-size:12.5px;color:var(--muted)}.tag{color:var(--accent);text-decoration:none;margin-right:2px}
+.bm .t{font-weight:600;color:var(--fg);text-decoration:none}.bm .t:hover{color:var(--accent)}.bm .h{color:var(--muted);font-size:13px;margin-left:8px}.bm .n{margin:6px 0 0;color:var(--fg)}.bm .n p{margin:0 0 4px}.bm .m{display:block;margin-top:6px;font-size:12.5px;color:var(--muted)}.tag{color:var(--accent);text-decoration:none;margin-right:2px}
 footer{margin-top:40px;color:var(--muted);font-size:13px}footer a{color:inherit}.empty{color:var(--muted)}
 </style>
 </head>

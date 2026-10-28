@@ -802,9 +802,24 @@ export class Controller {
       case 'bookmark.page': {
         const tab = cmd.id ? this.state.tabs[cmd.id] : focusedTab(this.state);
         if (!tab || isInternal(tab.url)) return;
-        this.apply({ type: 'bookmark.add', url: tab.url, title: tab.title, public: cmd.public });
+        const space = tab.spaceId ? spaceById(this.state, tab.spaceId) : undefined;
+        const spaceId = space && !space.reader ? space.id : null;
+        if (cmd.withNote) {
+          void this.prompt(`Bookmark “${tab.title || tab.url}” with a note`, 'A note, in Markdown (optional)').then((note) => {
+            if (note === null) return;
+            this.apply({ type: 'bookmark.add', url: tab.url, title: tab.title, public: cmd.public, note, spaceId });
+          });
+          return;
+        }
+        this.apply({ type: 'bookmark.add', url: tab.url, title: tab.title, public: cmd.public, spaceId });
         return;
       }
+      case 'bookmarks.openSpace':
+        this.openSpacePage('bookmarks', cmd.spaceId ?? this.state.activeSpaceId);
+        return;
+      case 'notes.open':
+        this.openSpacePage('notes', cmd.spaceId === undefined ? this.state.activeSpaceId : cmd.spaceId);
+        return;
       case 'sync.connect':
         void this.sync.connect(cmd.token);
         return;
@@ -1181,6 +1196,15 @@ export class Controller {
       if (tab.kind === 'today') this.apply({ type: 'tab.pin', id: tab.id });
       if (!tab.keepLoaded) this.apply({ type: 'tab.keepLoaded', id: tab.id, on: true });
     }
+  }
+
+  /** A space's own notes or bookmarks page (null: the global page listing every space). */
+  openSpacePage(page: 'notes' | 'bookmarks', spaceId: SpaceId | null): void {
+    const sp = spaceId ? spaceById(this.state, spaceId) : undefined;
+    if (sp && !sp.reader) {
+      if (this.state.activeSpaceId !== sp.id) this.apply({ type: 'space.activate', id: sp.id });
+      this.openInternal(`chord://${page}/?space=${encodeURIComponent(sp.id)}`);
+    } else this.openInternal(`chord://${page}/?space=all`);
   }
 
   openInternal(url: string, hash?: string): void {

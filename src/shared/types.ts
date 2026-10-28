@@ -264,6 +264,8 @@ export interface Space {
   curators?: Curator[];
   /** the global reader space: every feed of every space, spaces as tags */
   reader?: boolean;
+  /** the space's notes, Markdown */
+  notes?: string;
   /** runtime: a private space starts locked and locks again when left alone */
   locked?: boolean;
   /** when the user last switched away from this space */
@@ -452,7 +454,10 @@ export interface Bookmark {
   id: string;
   url: string;
   title: string;
+  /** Markdown */
   note: string;
+  /** the space it was bookmarked from; null or unset: none */
+  spaceId?: string | null;
   tags: string[];
   public: boolean;
   addedAt: number;
@@ -531,8 +536,9 @@ export type Action =
   | { type: 'tab.sleep'; id: TabId }
   | { type: 'tab.keepLoaded'; id: TabId; on: boolean }
   | { type: 'space.setCurators'; id: SpaceId; curators: Curator[] }
-  | { type: 'bookmark.add'; url: string; title: string; public: boolean; tags?: string[]; note?: string }
-  | { type: 'bookmark.update'; id: string; patch: Partial<Pick<Bookmark, 'title' | 'note' | 'tags' | 'public' | 'url'>> }
+  | { type: 'bookmark.add'; url: string; title: string; public: boolean; tags?: string[]; note?: string; spaceId?: string | null }
+  | { type: 'space.notes'; id: SpaceId; text: string }
+  | { type: 'bookmark.update'; id: string; patch: Partial<Pick<Bookmark, 'title' | 'note' | 'tags' | 'public' | 'url' | 'spaceId'>> }
   | { type: 'bookmark.remove'; id: string }
   | { type: 'bookmarks.merge'; remote: Bookmark[] }
   | { type: 'tab.volume'; id: TabId; volume: number }
@@ -646,7 +652,9 @@ export type Command =
   | { type: 'reader.group'; op: 'create' | 'rename' | 'delete' | 'toggle'; id?: string; name?: string }
   | { type: 'reader.move'; id: string; groupId: string | null }
   | { type: 'reader.feedMenu'; id: string }
-  | { type: 'bookmark.page'; public: boolean; id?: TabId }
+  | { type: 'bookmark.page'; public: boolean; id?: TabId; withNote?: boolean }
+  | { type: 'bookmarks.openSpace'; spaceId?: SpaceId }
+  | { type: 'notes.open'; spaceId?: SpaceId | null }
   | { type: 'sync.connect'; token: string }
   | { type: 'sync.login' }
   | { type: 'sync.loginCancel' }
@@ -719,7 +727,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'little.open', 'little.nav', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
 
 export type Message = Action | Command;

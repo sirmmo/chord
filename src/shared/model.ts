@@ -150,6 +150,7 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
   for (const sp of s.spaces) {
     if (sp.lock) sp.locked = true;
     if (sp.modes) sp.modes = sp.modes.filter(isModeId);
+    if (sp.notes !== undefined && typeof sp.notes !== 'string') delete sp.notes;
     if (sp.curators) {
       sp.curators = sp.curators.filter((c) => c && typeof c.id === 'string' && typeof c.feed === 'string' && (c.kind === 'feed' || c.kind === 'github'));
       if (sp.curators.length === 0) delete sp.curators;
@@ -493,7 +494,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
         existing.updatedAt = now;
         return s;
       }
-      s.bookmarks.unshift({ id: ctx.newId(), url, title: (a.title || url).slice(0, 300), note: (a.note ?? '').slice(0, 2000), tags: normalizeTags(a.tags ?? []), public: a.public, addedAt: now, updatedAt: now });
+      s.bookmarks.unshift({ id: ctx.newId(), url, title: (a.title || url).slice(0, 300), note: (a.note ?? '').slice(0, 2000), tags: normalizeTags(a.tags ?? []), public: a.public, addedAt: now, updatedAt: now, spaceId: a.spaceId ?? null });
       return s;
     }
     case 'bookmark.update': {
@@ -503,6 +504,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       if (typeof a.patch.note === 'string') b.note = a.patch.note.slice(0, 2000);
       if (a.patch.tags) b.tags = normalizeTags(a.patch.tags);
       if (typeof a.patch.public === 'boolean') b.public = a.patch.public;
+      if (a.patch.spaceId !== undefined) b.spaceId = a.patch.spaceId && spaceById(s, a.patch.spaceId) ? a.patch.spaceId : null;
       if (typeof a.patch.url === 'string' && /^(https?|file):/i.test(a.patch.url)) b.url = normalizeBookmarkUrl(a.patch.url);
       b.updatedAt = now;
       return s;
@@ -518,6 +520,15 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       const { merged, changed } = mergeBookmarks(s.bookmarks, a.remote);
       if (!changed) return prev;
       s.bookmarks = merged;
+      return s;
+    }
+    case 'space.notes': {
+      const sp = spaceById(s, a.id);
+      if (!sp) return prev;
+      const text = a.text.slice(0, 200_000);
+      if ((sp.notes ?? '') === text) return prev;
+      if (text.trim()) sp.notes = text;
+      else delete sp.notes;
       return s;
     }
     case 'space.setCurators': {

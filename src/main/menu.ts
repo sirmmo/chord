@@ -85,6 +85,9 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Subscribe to This Site', click: d({ type: 'reader.subscribeFrom' }) },
         { label: 'Bookmark This Page', accelerator: 'CmdOrCtrl+Shift+B', click: d({ type: 'bookmark.page', public: false }) },
         { label: 'Bookmark This Page Publicly', click: d({ type: 'bookmark.page', public: true }) },
+        { label: 'Bookmark This Page with a Note…', click: d({ type: 'bookmark.page', public: false, withNote: true }) },
+        { label: 'Notes of This Space', accelerator: 'CmdOrCtrl+Shift+M', click: d({ type: 'notes.open' }) },
+        { label: 'Notes of Every Space', click: d({ type: 'notes.open', spaceId: null }) },
         { label: 'Picture in Picture', accelerator: 'CmdOrCtrl+Alt+P', click: d({ type: 'media.pip' }) },
         { label: 'Side Panel', accelerator: 'CmdOrCtrl+Shift+U', type: 'checkbox', checked: c.state.settings.panelOpen, click: d({ type: 'panel.toggle' }) },
         sep,
@@ -206,7 +209,7 @@ export function tabContextMenu(c: Controller, id: TabId): void {
   }
   items.push(sep);
   items.push({ label: 'Keep Loaded', type: 'checkbox', checked: Boolean(tab.keepLoaded), click: d({ type: 'tab.keepLoaded', id, on: !tab.keepLoaded }) });
-  items.push({ label: 'Bookmark', submenu: [{ label: 'Private', click: d({ type: 'bookmark.page', public: false, id }) }, { label: 'Public (on your linkroll)', click: d({ type: 'bookmark.page', public: true, id }) }] });
+  items.push({ label: 'Bookmark', submenu: [{ label: 'Private', click: d({ type: 'bookmark.page', public: false, id }) }, { label: 'Public (on your linkroll)', click: d({ type: 'bookmark.page', public: true, id }) }, { label: 'With a Note…', click: d({ type: 'bookmark.page', public: false, id, withNote: true }) }] });
   if (tab.awake) {
     items.push({ label: tab.muted ? 'Unmute' : 'Mute', click: d({ type: 'tab.mute', id }) });
   items.push(volumeMenu(c, tab));
@@ -253,7 +256,11 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
   const d = (m: Message) => () => c.dispatch(m);
   const items: MenuItemConstructorOptions[] = [
     { label: 'Rename…', click: () => c.sendSidebar({ kind: 'space.renameStart', id }) },
-    ...(space.reader ? [] : [{ label: 'Feeds of This Space', click: d({ type: 'reader.openSpace', spaceId: id }) }]),
+    ...(space.reader ? [] : [
+      { label: 'Notes of This Space', click: d({ type: 'notes.open', spaceId: id }) },
+      { label: 'Bookmarks of This Space', click: d({ type: 'bookmarks.openSpace', spaceId: id }) },
+      { label: 'Feeds of This Space', click: d({ type: 'reader.openSpace', spaceId: id }) },
+    ]),
     { label: c.windowForSpace(id) && c.windowForSpace(id) !== c.active ? 'Show Its Window' : 'Open in New Window', enabled: c.windowForSpace(id) !== c.active, click: d({ type: 'space.openInWindow', id }) },
     {
       label: 'Icon',
