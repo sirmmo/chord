@@ -1,5 +1,5 @@
 import { ipcMain, type IpcMainEvent } from 'electron';
-import type { CallAction, CallInfo, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabId, WebMcpTool } from '../shared/types.ts';
+import type { CallAction, CallInfo, DevAction, DevInfo, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabId, WebMcpTool } from '../shared/types.ts';
 import { parseTitleSignals } from '../shared/signals.ts';
 import { hostOf } from '../shared/url.ts';
 import type { Controller } from './controller.ts';
@@ -53,6 +53,13 @@ export class SmartManager {
         return;
       }
       if (!this.c.state.settings.smartPages) return;
+      if (r.kind === 'dev') {
+        const prev = this.status[id] ?? empty();
+        const dev = sanitizeDev(r.dev);
+        if (!dev && !prev.dev) return;
+        this.set(id, { ...prev, dev: dev ?? undefined });
+        return;
+      }
       if (r.kind === 'notification') {
         const prev = this.status[id] ?? empty();
         this.set(id, {
@@ -112,6 +119,10 @@ export class SmartManager {
     this.send(id, `call:${action}`);
   }
 
+  devAction(id: TabId, action: DevAction): void {
+    this.send(id, `dev:${action}`);
+  }
+
   private send(id: TabId, action: string): void {
     const wc = this.c.tabs.get(id)?.webContents;
     if (!wc || wc.isDestroyed()) return;
@@ -120,7 +131,7 @@ export class SmartManager {
 
   private set(id: TabId, info: SmartInfo): void {
     const next = { ...info, updatedAt: Date.now() };
-    const isEmpty = !next.media && !next.call && !next.timer && next.unread === undefined && next.notifications === 0 && !next.manifest && !next.tools;
+    const isEmpty = !next.media && !next.call && !next.dev && !next.timer && next.unread === undefined && next.notifications === 0 && !next.manifest && !next.tools;
     if (isEmpty) {
       this.clear(id);
       return;
@@ -174,5 +185,34 @@ function sanitizeCall(raw: unknown, url: string, prev: CallInfo | undefined): Ca
     sharing: r.sharing === true,
     canLeave: r.canLeave === true,
     site: hostOf(url),
+  };
+}
+
+const DEV_ACTIONS = new Set<DevAction>(['notifications', 'rerun', 'problems', 'stopDebug', 'checks']);
+const DEV_STATES = new Set(['open', 'draft', 'merged', 'closed', 'success', 'failure', 'pending', 'cancelled', 'skipped', 'neutral']);
+
+function sanitizeDev(raw: unknown): DevInfo | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  if (r.kind !== 'github' && r.kind !== 'vscode') return null;
+  const int = (v: unknown, max = 9999) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.min(max, Math.floor(v)) : 0);
+  const checks = typeof r.checks === 'object' && r.checks !== null ? (r.checks as Record<string, unknown>) : null;
+  const problems = typeof r.problems === 'object' && r.problems !== null ? (r.problems as Record<string, unknown>) : null;
+  const state = str(r.state, 20);
+  return {
+    kind: r.kind,
+    project: str(r.project, 120),
+    subject: str(r.subject, 160),
+    state: DEV_STATES.has(state) ? state : '',
+    branch: str(r.branch, 80),
+    remote: str(r.remote, 60),
+    checks: checks ? { ok: int(checks.ok), failed: int(checks.failed), pending: int(checks.pending), total: int(checks.total) } : undefined,
+    problems: problems ? { errors: int(problems.errors), warnings: int(problems.warnings) } : undefined,
+    unsaved: r.unsaved === true,
+    debugging: r.debugging === true,
+    tasks: int(r.tasks, 99),
+    unread: int(r.unread, 999),
+    actions: Array.isArray(r.actions) ? r.actions.filter((a): a is DevAction => typeof a === 'string' && DEV_ACTIONS.has(a as DevAction)) : [],
+    updatedAt: Date.now(),
   };
 }

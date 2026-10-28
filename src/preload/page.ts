@@ -6,6 +6,7 @@
 // Only the top frame reports.
 
 import { contextBridge, ipcRenderer, webFrame } from 'electron';
+import { installDevAdapter } from './dev.ts';
 
 const REPORT_KEY = '__chordSmart';
 const ACTION_KEY = '__chordSmartAction';
@@ -417,6 +418,8 @@ if (process.isMainFrame) {
   } catch (err) {
     console.warn('Chord page hook not installed', err);
   }
+  // GitHub and VS Code are read from this world, which sees the DOM but not the page's scripts.
+  const dev = installDevAdapter();
 
   window.addEventListener('message', (e: MessageEvent) => {
     if (e.source !== window || !e.data || typeof e.data !== 'object' || !(REPORT_KEY in e.data)) return;
@@ -432,6 +435,7 @@ if (process.isMainFrame) {
     ipcRenderer.send('smart', payload);
   });
   ipcRenderer.on('smart:action', (_event, action: string) => {
+    if (action.startsWith('dev:')) return dev.act(action.slice(4));
     window.postMessage({ [ACTION_KEY]: action }, '*');
   });
   ipcRenderer.on('pagetabs:event', (_event, ev: unknown) => {

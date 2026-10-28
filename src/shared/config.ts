@@ -157,6 +157,7 @@ export function parseConfig(text: string): ParseResult {
         if (typeof t.tint === 'number') theme.tint = clampTint(t.tint);
         if (isHex(t.accent) || t.accent === null) theme.accent = t.accent;
         if (t.iconStyle === 'color' || t.iconStyle === 'mono') theme.iconStyle = t.iconStyle;
+      if (t.favicons === 'on' || t.favicons === 'active' || t.favicons === 'off') theme.favicons = t.favicons;
         if (isHex(t.iconColor) || t.iconColor === null) theme.iconColor = t.iconColor;
         if (t.font === 'system' || t.font === 'rounded' || t.font === 'mono' || t.font === 'serif') theme.font = t.font;
         if (t.skin === 'chord' || t.skin === 'lcars') theme.skin = t.skin;

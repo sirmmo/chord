@@ -184,7 +184,11 @@ export interface Theme {
   font: FontStyle;
   /** overall look of the chrome: Chord's own, or an LCARS homage */
   skin: Skin;
+  /** tab icons: site favicons, favicons in colour only for the active tab, or letters */
+  favicons: Favicons;
 }
+
+export type Favicons = 'on' | 'active' | 'off';
 
 export type Skin = 'chord' | 'lcars';
 
@@ -431,6 +435,7 @@ export type Command =
   | { type: 'diagnostics.copy' }
   | { type: 'media.action'; id: TabId; action: MediaAction }
   | { type: 'call.action'; id: TabId; action: CallAction }
+  | { type: 'dev.action'; id: TabId; action: DevAction }
   | { type: 'media.pip'; id?: TabId }
   | { type: 'space.install'; url: string }
   | { type: 'space.modesMenu'; id: SpaceId }
@@ -492,7 +497,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus',
 ]);
@@ -563,10 +568,43 @@ export interface TimerInfo {
   /** 0–1 when the title carries a percentage */
   progress: number | null;
 }
+export type DevKind = 'github' | 'vscode';
+export type DevAction = 'notifications' | 'rerun' | 'problems' | 'stopDebug' | 'checks';
+export interface DevChecks {
+  ok: number;
+  failed: number;
+  pending: number;
+  total: number;
+}
+/** What a developer page (GitHub, VS Code in the browser) is showing. */
+export interface DevInfo {
+  kind: DevKind;
+  /** "owner/repo" on GitHub, the workspace name in VS Code */
+  project: string;
+  /** "PR #42", "Run #123", "main.ts" */
+  subject: string;
+  /** github: open | draft | merged | closed | success | failure | pending | cancelled | '' */
+  state: string;
+  branch: string;
+  /** the remote VS Code is attached to (Codespaces, a server) */
+  remote: string;
+  /** GitHub checks or workflow jobs */
+  checks?: DevChecks;
+  /** VS Code problems */
+  problems?: { errors: number; warnings: number };
+  unsaved: boolean;
+  debugging: boolean;
+  tasks: number;
+  /** GitHub has unread notifications; VS Code has new ones */
+  unread: number;
+  actions: DevAction[];
+  updatedAt: number;
+}
 /** Everything a tab gives away that is worth showing across spaces. */
 export interface SmartInfo {
   media?: MediaInfo;
   call?: CallInfo;
+  dev?: DevInfo;
   timer?: TimerInfo;
   unread?: number;
   /** notifications the page created since it was last looked at */

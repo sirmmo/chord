@@ -2,7 +2,7 @@
 // around the tab views (native children painted above it). Rendering is
 // keyed: existing elements are updated in place, never rebuilt.
 
-import type { CallAction, CallInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabGroup, TimerInfo, Message, Space, SpaceId, State, Tab, TabId, UpdateStatus } from '../shared/types.ts';
+import type { CallAction, CallInfo, DevAction, DevInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabGroup, TimerInfo, Message, Space, SpaceId, State, Tab, TabId, UpdateStatus } from '../shared/types.ts';
 import { activeSpace, isLocked, panelVisible, visiblePanes } from '../shared/model.ts';
 import { clampPanel } from '../shared/modes.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
@@ -298,6 +298,13 @@ function currentCall(): [TabId, CallInfo] | null {
   return best;
 }
 
+/** Developer pages: pending runs first, then the most recently changed. */
+function currentDevs(): [TabId, DevInfo][] {
+  const out: [TabId, DevInfo][] = [];
+  for (const [id, s] of entries()) if (s.dev) out.push([id, s.dev]);
+  return out.sort((a, b) => Number(b[1].state === 'pending') - Number(a[1].state === 'pending') || b[1].updatedAt - a[1].updatedAt);
+}
+
 function currentTimer(): [TabId, TimerInfo] | null {
   let best: [TabId, SmartInfo] | null = null;
   for (const [id, s] of entries()) if (s.timer && (!best || s.updatedAt > best[1].updatedAt)) best = [id, s];
@@ -332,10 +339,78 @@ function fmtDuration(ms: number): string {
 
 function renderSmart(): void {
   renderInstall();
+  renderDevs();
   renderPlayer();
   renderCall();
   renderChip();
   renderBadges();
+}
+
+const devs = $('#devs');
+const DEV_BUTTONS: { action: DevAction; icon: string; title: string }[] = [
+  { action: 'checks', icon: 'checks', title: 'Show the checks' },
+  { action: 'rerun', icon: 'reload', title: 'Re-run all jobs' },
+  { action: 'problems', icon: 'warning', title: 'Show problems' },
+  { action: 'stopDebug', icon: 'stop', title: 'Stop debugging' },
+  { action: 'notifications', icon: 'bell', title: 'Notifications' },
+];
+const DEV_ICON: Record<string, string> = { checks: ICONS.archive, reload: ICONS.reload, warning: ICONS.warning, stop: ICONS.stop, bell: ICONS.bell };
+const STATE_LABEL: Record<string, string> = { open: 'Open', draft: 'Draft', merged: 'Merged', closed: 'Closed', success: 'Passed', failure: 'Failed', pending: 'Running', cancelled: 'Cancelled', skipped: 'Skipped', neutral: 'Neutral' };
+
+function makeDevCard(entry: [TabId, DevInfo]): HTMLElement {
+  const id = entry[0];
+  return h(
+    'div',
+    { class: 'dev', 'data-id': id },
+    h(
+      'button',
+      { class: 'dev-main', title: 'Go to this tab', onclick: () => dispatch({ type: 'tab.activate', id }) },
+      h('span', { class: 'ico' }),
+      h('span', { class: 'text' }, h('span', { class: 'title' }), h('span', { class: 'sub' })),
+    ),
+    h('div', { class: 'now-controls' }, ...DEV_BUTTONS.map((b) => h('button', { class: `icon-btn ${b.action}`, title: b.title, onclick: () => dispatch({ type: 'dev.action', id, action: b.action }) }, svg(DEV_ICON[b.icon], 14)))),
+  );
+}
+
+function devSummary(d: DevInfo): string {
+  const parts: string[] = [];
+  if (d.kind === 'github') {
+    if (d.state) parts.push(STATE_LABEL[d.state] ?? d.state);
+    if (d.checks) parts.push(d.checks.pending ? `${d.checks.ok + d.checks.failed}/${d.checks.total} checks` : d.checks.failed ? `${d.checks.failed} of ${d.checks.total} checks failed` : `${d.checks.total} check${d.checks.total === 1 ? '' : 's'} ok`);
+    if (d.branch) parts.push(d.branch);
+    if (d.unread) parts.push('unread notifications');
+  } else {
+    if (d.branch) parts.push(d.branch);
+    if (d.problems && (d.problems.errors || d.problems.warnings)) parts.push([d.problems.errors ? `${d.problems.errors} error${d.problems.errors === 1 ? '' : 's'}` : '', d.problems.warnings ? `${d.problems.warnings} warning${d.problems.warnings === 1 ? '' : 's'}` : ''].filter(Boolean).join(', '));
+    if (d.debugging) parts.push('debugging');
+    if (d.tasks) parts.push(`${d.tasks} task${d.tasks === 1 ? '' : 's'} running`);
+    if (d.remote) parts.push(d.remote);
+    if (d.unread) parts.push(`${d.unread} new notification${d.unread === 1 ? '' : 's'}`);
+  }
+  return parts.join(' · ');
+}
+
+function updateDevCard(el: HTMLElement, entry: [TabId, DevInfo]): void {
+  const [, d] = entry;
+  for (const cls of ['pending', 'failure', 'success', 'merged', 'closed', 'open']) setClass(el, cls, d.state === cls);
+  setIconKey(el.querySelector('.ico') as HTMLElement, d.kind, () => svg(d.kind === 'github' ? ICONS.branch : ICONS.code));
+  const title = el.querySelector('.title') as HTMLElement;
+  const titleText = d.kind === 'vscode' && d.subject ? `${d.unsaved ? '● ' : ''}${d.subject} — ${d.project}` : d.subject ? `${d.project} · ${d.subject}` : d.project;
+  setText(title, titleText);
+  setClass(title, 'unsaved', d.kind === 'vscode' && d.unsaved);
+  const sub = el.querySelector('.sub') as HTMLElement;
+  setText(sub, devSummary(d) || (d.kind === 'github' ? 'GitHub' : 'VS Code'));
+  setClass(sub, 'err', d.state === 'failure' || Boolean(d.problems?.errors));
+  el.title = `${d.kind === 'github' ? 'GitHub' : 'VS Code'} · ${titleText}\n${devSummary(d)}`;
+  for (const b of DEV_BUTTONS) {
+    const btn = el.querySelector(`.icon-btn.${b.action}`) as HTMLButtonElement;
+    btn.hidden = !d.actions.includes(b.action);
+    setClass(btn, 'alert', b.action === 'notifications' && d.unread > 0);
+  }
+}
+
+function renderDevs(): void {
+  syncChildren(devs, currentDevs(), (e) => e[0], makeDevCard, updateDevCard);
 }
 
 function makePlayerCard(entry: [TabId, MediaInfo]): HTMLElement {
@@ -447,10 +522,18 @@ function renderCall(): void {
 /** One chip in the title bar: the call, else a running timer, else unseen notifications. */
 function renderChip(): void {
   const call = currentCall();
-  const timer = call ? null : currentTimer();
-  const notes = call || timer ? null : notificationsTotal();
+  const dev = call ? null : currentDevs().find(([, d]) => d.state === 'pending') ?? null;
+  const timer = call || dev ? null : currentTimer();
+  const notes = call || timer || dev ? null : notificationsTotal();
   chip.className = 'chip';
-  if (call) {
+  if (dev) {
+    chipTab = dev[0];
+    chip.classList.add('dev');
+    setIconKey(chipIcon, 'spin', () => svg(ICONS.reload));
+    const c = dev[1].checks;
+    setText(chipText, c && c.total > 1 ? `${c.ok + c.failed}/${c.total}` : dev[1].subject.split(' · ')[0] || 'running');
+    chip.title = `${dev[1].project} · ${dev[1].subject} is running — click to go there`;
+  } else if (call) {
     chipTab = call[0];
     chip.classList.add('call');
     setClass(chip, 'muted', call[1].muted === true);
@@ -652,14 +735,16 @@ function setIconKey(slot: HTMLElement, key: string, make: () => Node): void {
 function iconKey(tab: Tab, spinner: boolean): string {
   if (spinner && tab.loading) return 'spinner';
   if (isInternal(tab.url)) return `internal:${hostOf(tab.url)}`;
-  return tab.favicon ? `img:${tab.favicon}` : `glyph:${initialOf(hostOf(tab.url) || tab.title)}`;
+  return tab.favicon && faviconsOn() ? `img:${tab.favicon}` : `glyph:${initialOf(hostOf(tab.url) || tab.title)}`;
 }
+
+const faviconsOn = (): boolean => state?.settings.theme.favicons !== 'off';
 
 function makeIcon(tab: Tab, spinner: boolean): Node {
   if (spinner && tab.loading) return h('div', { class: 'spinner' });
   if (isInternal(tab.url)) return h('div', { class: 'glyph internal' }, svg(hostOf(tab.url) === 'downloads' ? ICONS.download : hostOf(tab.url) === 'settings' ? ICONS.settings : hostOf(tab.url) === 'history' ? ICONS.clock : ICONS.globe, 12));
   const glyph = h('div', { class: 'glyph' }, initialOf(hostOf(tab.url) || tab.title));
-  if (!tab.favicon) return glyph;
+  if (!tab.favicon || !faviconsOn()) return glyph;
   const img = h('img', { class: 'favicon', src: tab.favicon, alt: '', draggable: 'false' });
   img.onerror = () => img.replaceWith(glyph);
   return img;

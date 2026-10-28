@@ -21,7 +21,7 @@ import { SourcesManager } from './sources.ts';
 import { initIdentityIpc, setGoogleSignIn } from './identity.ts';
 import { setShields } from './session.ts';
 import { buildAppMenu, spaceContextMenu, tabContextMenu, groupContextMenu } from './menu.ts';
-import { PRELOAD, RENDERER_DIR } from './paths.ts';
+import { PRELOAD, RENDERER_DIR, DIST } from './paths.ts';
 import { isMac, TITLEBAR_HEIGHT, TOP_INSET, ADDRESS_BAR_HEIGHT } from './platform.ts';
 import { ExtensionManager } from './extensions.ts';
 import { copyDiagnostics, mark, startLagMonitor } from './diagnostics.ts';
@@ -234,6 +234,7 @@ export class Controller {
       titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
       trafficLightPosition: { x: 14, y: 15 },
       titleBarOverlay: isMac ? undefined : this.titleBarOverlay(),
+      icon: join(DIST, 'renderer', 'icon.png'),
       webPreferences: { preload: PRELOAD, sandbox: true, contextIsolation: true },
     });
     const w = new ChordWindow(this, win, spaceId);
@@ -648,6 +649,9 @@ export class Controller {
         return;
       case 'call.action':
         this.smart.callAction(cmd.id, cmd.action);
+        return;
+      case 'dev.action':
+        this.smart.devAction(cmd.id, cmd.action);
         return;
       case 'import.browser':
         void importFromBrowser(this);

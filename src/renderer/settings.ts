@@ -30,6 +30,7 @@ api.getState().then((s) => {
 
 const sMode = $('#s-mode');
 const sSkin = $('#s-skin');
+const sFavicons = $('#s-favicons');
 const sIcons = $('#s-icons');
 const sSwatches = $('#s-swatches');
 const sSpaceColor = $<HTMLInputElement>('#s-space-color');
@@ -222,6 +223,7 @@ const segment = (el: HTMLElement, onPick: (v: string) => void) => {
 segment(sMode, (v) => dispatch({ type: 'theme.update', patch: { mode: v as 'system' | 'light' | 'dark' } }));
 segment(sSkin, (v) => dispatch({ type: 'theme.update', patch: { skin: v as 'chord' | 'lcars' } }));
 segment(sIcons, (v) => dispatch({ type: 'theme.update', patch: { iconStyle: v as 'color' | 'mono' } }));
+segment(sFavicons, (v) => dispatch({ type: 'theme.update', patch: { favicons: v as 'on' | 'active' | 'off' } }));
 sSpaceColor.oninput = () => state && dispatch({ type: 'space.update', id: state.activeSpaceId, patch: { color: sSpaceColor.value } });
 sTint.oninput = () => {
   sTintVal.textContent = `${sTint.value}%`;
@@ -254,6 +256,7 @@ function fillSettings(): void {
   pick(sMode, t.mode);
   pick(sSkin, t.skin);
   pick(sIcons, t.iconStyle);
+  pick(sFavicons, t.favicons);
   $('#s-space-name').textContent = `“${space.name}”`;
   sSwatches.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.title.toLowerCase() === space.color.toLowerCase()));
   if (active !== sSpaceColor) sSpaceColor.value = space.color;

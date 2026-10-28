@@ -81,6 +81,22 @@ export class TrayManager {
       );
     }
 
+    const devs = Object.entries(smart).filter(([id, s]) => s.dev && tabs[id]);
+    for (const [id, s] of devs.slice(0, 3)) {
+      const d = s.dev!;
+      const detail = d.kind === 'github'
+        ? [d.state, d.checks ? `${d.checks.ok}/${d.checks.total} checks` : ''].filter(Boolean).join(' · ')
+        : [d.unsaved ? 'unsaved' : '', d.problems?.errors ? `${d.problems.errors} errors` : '', d.debugging ? 'debugging' : ''].filter(Boolean).join(' · ');
+      items.push({
+        label: `${d.project}${d.subject ? ` · ${d.subject}` : ''}${detail ? ` — ${detail}` : ''}`.slice(0, 70),
+        click: () => {
+          this.c.dispatch({ type: 'tab.activate', id });
+          this.c.focusWindow();
+        },
+      });
+    }
+    if (devs.length) items.push({ type: 'separator' });
+
     const active = this.c.downloads.status().active;
     items.push({ label: active ? `Downloads (${active} in progress)` : 'Downloads', click: () => this.c.openInternalFromTray('chord://downloads/') });
     items.push({ type: 'separator' }, { label: 'Quit Chord', click: () => app.quit() });

@@ -21,7 +21,7 @@ export interface Ctx {
 }
 
 export function defaultTheme(): Theme {
-  return { mode: 'system', tint: 30, accent: null, iconStyle: 'color', iconColor: null, font: 'system', skin: 'chord' };
+  return { mode: 'system', tint: 30, accent: null, iconStyle: 'color', iconColor: null, font: 'system', skin: 'chord', favicons: 'on' };
 }
 
 export function defaultSettings(): Settings {

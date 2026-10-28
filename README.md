@@ -89,6 +89,17 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
     chip in the title bar that jumps to the tab.
   - Unread counts from the title (`(3) Inbox`, `[2] Slack`) and notifications the page
     fires: a badge on the tab, a total on each space's dot, a bell in the title bar.
+  - GitHub: a card for the pull request, issue, workflow run, commit or file you are on,
+    with its state (open, draft, merged, closed; passed, failed, running), the checks
+    tally and the branch, a spinning chip in the title bar while a run or the checks are
+    in progress, a notification when they finish while you are elsewhere, re-run all
+    jobs from the card, and a bell when you have unread notifications. Works on GitHub
+    Enterprise too.
+  - VS Code in the browser (vscode.dev, github.dev, Codespaces, code-server,
+    openvscode-server): the file in front with its unsaved mark, the workspace, the
+    branch, errors and warnings, running tasks and debug sessions, the remote it is
+    attached to; buttons open the Problems panel and the notifications or stop the
+    debugger.
   Toggle in Settings → General.
 - **Keep running in the menu bar / tray**: with Settings → "Closing the window", the
   window hides instead of closing, music and calls go on, and the tray menu offers
@@ -105,6 +116,8 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   permission prompts, OAuth-style popups opened as tabs. Middle-click and ⌘-click open
   links in a new tab regardless of what the page's scripts do; `magnet:`, `zoommtg:` and
   other non-web links go to the matching app after a confirmation (once per scheme).
+- **Tab icons**: favicons (the default), favicons in colour only for the active tab and
+  grey elsewhere, or letter glyphs — Settings → Appearance → Tab icons.
 - **Settings page** at `chord://settings` (`⌘,`), a tab like any other: General
   (smart pages, tray, downloads, address bar, archiving, search engine, default browser,
   import and export), Appearance, Layouts, Add-ins, and About (version, runtime and the
