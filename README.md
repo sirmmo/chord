@@ -19,7 +19,8 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
 - **Spaces**: each has its own colour, icon, pinned and today tabs. `⌘⌥←/→` or
   `Ctrl+1…9` switch, `⌘⇧N` creates one. Right-click a space for icon, colour, rename
   or delete.
-- **Favorites**: a grid at the top shared by all spaces.
+- **Favorites**: a grid of fixed-size tiles at the top shared by all spaces; a wider sidebar
+  fits more per row.
 - **Pinned tabs** survive closing: closing one puts it to sleep and resets it to the page
   it was pinned at. Closing a sleeping pinned tab removes it (undo with "Reopen closed
   tab"). `⌘D` pins or unpins.

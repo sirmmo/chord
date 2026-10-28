@@ -773,6 +773,7 @@ function render(): void {
   }
 
   syncChildren($('#favorites'), s.favorites.map((id) => s.tabs[id]).filter(Boolean), (t) => t.id, makeFavorite, (el, t) => updateFavorite(el, t, space));
+  $('#favorites').dataset.count = String(Math.min(s.favorites.length, 3));
   setText($('#space-icon'), space.icon ?? '');
   renderSpaceName(space);
   const rows = (ids: TabId[]) => listRows(s, space, ids);

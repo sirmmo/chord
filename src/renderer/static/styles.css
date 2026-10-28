@@ -142,7 +142,9 @@ kbd { font: inherit; font-size: 12px; padding: 1px 6px; border-radius: 5px; back
 
 .list { display: flex; flex-direction: column; gap: 1px; min-height: 6px; border-radius: 8px; transition: background 0.15s; }
 .list.drop-target { background: var(--hover); }
-.list.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0 2px; }
+/* favorites keep their size: a wider sidebar fits more of them per row, a narrower one fewer */
+.list.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 50px)); justify-content: space-between; gap: 6px; margin: 12px 0 2px; }
+.list.grid[data-count="1"], .list.grid[data-count="2"] { justify-content: start; }
 .list.grid:empty { display: none; }
 
 .fav {
