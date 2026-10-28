@@ -27,8 +27,16 @@ export interface ConfigSpace {
   icon?: string;
   modes?: ModeId[];
   profile?: string;
+  /** curated mode: who the space follows */
+  curators?: ConfigCurator[];
   pinned: ConfigTab[];
   today: ConfigTab[];
+}
+export interface ConfigCurator {
+  name: string;
+  input: string;
+  feed: string;
+  kind: 'feed' | 'github';
 }
 
 export interface ChordConfig {
@@ -77,6 +85,7 @@ export function exportConfig(s: State, now: number, spaceId?: SpaceId): ChordCon
       color: sp.color,
       icon: sp.icon,
       modes: sp.modes && sp.modes.length ? sp.modes : undefined,
+      curators: sp.curators && sp.curators.length ? sp.curators.map((c) => ({ name: c.name, input: c.input, feed: c.feed, kind: c.kind })) : undefined,
       profile: sp.profile,
       pinned: tabsToConfig(s, sp.pinned, sp),
       today: tabsToConfig(s, sp.today, sp),
@@ -128,6 +137,7 @@ export function parseConfig(text: string): ParseResult {
         color: isHex(sp.color) ? sp.color : undefined,
         icon: typeof sp.icon === 'string' && sp.icon ? sp.icon.slice(0, 4) : undefined,
         modes: Array.isArray(sp.modes) ? sp.modes.filter(isModeId) : undefined,
+        curators: Array.isArray(sp.curators) ? sp.curators.filter((c): c is ConfigCurator => isRecord(c) && typeof c.feed === 'string' && /^https?:\/\//i.test(c.feed) && (c.kind === 'feed' || c.kind === 'github')).map((c) => ({ name: typeof c.name === 'string' ? c.name.slice(0, 100) : '', input: typeof c.input === 'string' ? c.input.slice(0, 300) : c.feed, feed: c.feed, kind: c.kind })) : undefined,
         profile: typeof sp.profile === 'string' && sp.profile.trim() ? sp.profile.trim().slice(0, 40) : undefined,
         pinned: parseTabs(sp.pinned, `spaces[${i}].pinned`),
         today: parseTabs(sp.today, `spaces[${i}].today`),
@@ -252,6 +262,11 @@ export function importConfig(s: State, config: ChordConfig, mode: ImportMode, ct
       if (cs.icon) space.icon = cs.icon;
     }
     if (cs.profile && !space.profile) space.profile = cs.profile;
+    if (cs.curators && cs.curators.length) {
+      const have = new Set((space.curators ?? []).map((c) => c.feed));
+      const add = cs.curators.filter((c) => !have.has(c.feed)).map((c) => ({ id: ctx.newId(), name: c.name, input: c.input, feed: c.feed, kind: c.kind, addedAt: ctx.now }));
+      if (add.length) space.curators = [...(space.curators ?? []), ...add];
+    }
     if (cs.modes && cs.modes.length) {
       space.modes = [...new Set([...(space.modes ?? []), ...cs.modes])];
       if (!space.panelMode) space.panelMode = space.modes[0];

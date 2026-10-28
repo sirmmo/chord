@@ -36,6 +36,7 @@ import { PasskeyManager } from './passkeys.ts';
 import { PIP_JS } from './pip.ts';
 import { installSpace } from './installer.ts';
 import { ResearchManager } from './research.ts';
+import { CuratedManager } from './curated.ts';
 import { AiManager } from './ai.ts';
 import { modesMenu } from './menu.ts';
 import { installUrlFrom } from '../shared/installer.ts';
@@ -72,6 +73,7 @@ export class Controller {
   readonly passwords = new PasswordManager(this);
   readonly passkeys = new PasskeyManager(this);
   readonly research = new ResearchManager(this);
+  readonly curated = new CuratedManager(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
@@ -171,7 +173,13 @@ export class Controller {
     this.history.init();
     this.passwords.init();
     this.passkeys.init();
+    // a horizontal two-finger swipe on a page that cannot scroll sideways (see preload/page.ts)
+    ipcMain.on('nav:gesture', (event, direction: unknown) => {
+      if (!this.tabs.tabIdOf(event.sender)) return;
+      if (direction === 'back' || direction === 'forward') this.gesture(direction, event.sender);
+    });
     this.research.init();
+    this.curated.init();
     this.ai.init();
     this.capture.init();
     this.pageTabs.init();
@@ -267,6 +275,11 @@ export class Controller {
     });
     win.webContents.on('did-finish-load', () => this.broadcast());
     win.on('focus', () => this.setActive(w));
+    // macOS with "swipe between pages" set to two or three fingers: the system reports the swipe
+    win.on('swipe', (_e, direction) => {
+      if (direction === 'right') this.gesture('back', this.tabs.focusedViewIn(w)?.webContents);
+      else if (direction === 'left') this.gesture('forward', this.tabs.focusedViewIn(w)?.webContents);
+    });
     win.on('hide', () => this.apply({ type: 'space.lockAll' }));
     const relayout = () => {
       this.relayoutWindow(w);
@@ -359,6 +372,17 @@ export class Controller {
     w.overlay.layout();
   }
 
+  private lastGesture = 0;
+  /** Back or forward from a swipe; the system event and the wheel detector may both report one. */
+  gesture(direction: 'back' | 'forward', wc: WebContents | undefined): void {
+    if (!wc || wc.isDestroyed()) return;
+    const now = Date.now();
+    if (now - this.lastGesture < 600) return;
+    this.lastGesture = now;
+    if (direction === 'back') wc.navigationHistory.goBack();
+    else wc.navigationHistory.goForward();
+  }
+
   focusWindow(): void {
     const w = this.active;
     if (!w) {
@@ -391,6 +415,7 @@ export class Controller {
     this.passwords.flush();
     this.passkeys.flush();
     this.research.flush();
+    this.curated.flush();
     this.ai.flush();
     this.store.save(this.state);
     this.store.flush();
@@ -460,6 +485,7 @@ export class Controller {
     if (prev.settings.googleSignIn !== next.settings.googleSignIn) setGoogleSignIn(next.settings.googleSignIn);
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
+    if (prev.activeSpaceId !== next.activeSpaceId || JSON.stringify(activeSpace(prev).modes) !== JSON.stringify(activeSpace(next).modes)) this.curated.touch(next.activeSpaceId);
     if (prev.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() !== next.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() || JSON.stringify(prev.settings.sourceror) !== JSON.stringify(next.settings.sourceror)) this.sources.refresh();
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
     if (prev.settings.extensions !== next.settings.extensions && JSON.stringify(prev.settings.extensions) !== JSON.stringify(next.settings.extensions)) {
@@ -797,6 +823,24 @@ export class Controller {
         resolve?.(cmd.text);
         return;
       }
+      case 'curated.add':
+        void this.curated.add(cmd.spaceId, cmd.input);
+        return;
+      case 'curated.remove':
+        this.curated.remove(cmd.spaceId, cmd.id);
+        return;
+      case 'curated.refresh':
+        void this.curated.refresh(cmd.spaceId);
+        return;
+      case 'curated.read':
+        this.curated.markRead(cmd.spaceId, cmd.id);
+        return;
+      case 'curated.save':
+        this.curated.toggleSaved(cmd.spaceId, cmd.id);
+        return;
+      case 'curated.open':
+        this.curated.open(cmd.spaceId, cmd.id);
+        return;
       case 'research.note':
         this.research.note(cmd.spaceId, cmd.text);
         return;

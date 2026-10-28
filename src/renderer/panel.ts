@@ -1,6 +1,6 @@
 // chord://panel — the side panel: the active space's mode views.
 
-import type { AiStatus, Message, ModeId, ResearchStatus, SourcesStatus, Space, State } from '../shared/types.ts';
+import type { AiStatus, CuratedStatus, Message, ModeId, ResearchStatus, SourcesStatus, Space, State } from '../shared/types.ts';
 import { initSourcesView } from './sources-view.ts';
 import { activeSpace } from '../shared/model.ts';
 import { MODES } from '../shared/modes.ts';
@@ -16,6 +16,7 @@ let state: State | null = null;
 let research: ResearchStatus | null = null;
 let ai: AiStatus | null = null;
 let sources: SourcesStatus | null = null;
+let curated: CuratedStatus | null = null;
 const sourcesView = initSourcesView($('#view-sources'), () => state, dispatch);
 let shownSpace = '';
 let shownMode: ModeId | 'none' = 'none';
@@ -53,18 +54,28 @@ api.onSources((r) => {
     sourcesView.update(r);
   }
 });
+api.onCurated((r) => {
+  if (state && r.spaceId === state.activeSpaceId) {
+    curated = r;
+    renderCurated();
+    render();
+  }
+});
 
 async function loadSpace(): Promise<void> {
   if (!state) return;
   const id = state.activeSpaceId;
-  const [r, a, src] = await Promise.all([api.getResearch(id), api.getAi(id), api.getSources(id)]);
+  const [r, a, src, cur] = await Promise.all([api.getResearch(id), api.getAi(id), api.getSources(id), api.getCurated(id)]);
   if (state.activeSpaceId !== id) return;
   research = r;
   ai = a;
   sources = src;
+  curated = cur;
   renderResearch();
   renderAi();
   if (src) sourcesView.update(src);
+  renderCurated();
+  render();
 }
 
 $('#close').onclick = () => dispatch({ type: 'panel.toggle', open: false });
@@ -79,7 +90,10 @@ function render(): void {
   const modes = sp.modes ?? [];
   const mode: ModeId | 'none' = modes.length ? (sp.panelMode && modes.includes(sp.panelMode) ? sp.panelMode : modes[0]) : 'none';
   $('#modes').replaceChildren(
-    ...MODES.filter((m) => modes.includes(m.id)).map((m) => h('button', { class: m.id === mode ? 'on' : '', onclick: () => dispatch({ type: 'panel.mode', mode: m.id }) }, m.name)),
+    ...MODES.filter((m) => modes.includes(m.id)).map((m) => {
+      const unread = m.id === 'curated' && curated && curated.spaceId === sp.id ? curated.items.filter((it) => !it.read).length : 0;
+      return h('button', { class: m.id === mode ? 'on' : '', onclick: () => dispatch({ type: 'panel.mode', mode: m.id }) }, unread ? `${m.name} (${unread > 99 ? '99+' : unread})` : m.name);
+    }),
   );
   for (const v of document.querySelectorAll<HTMLElement>('.view')) v.classList.toggle('on', v.id === `view-${mode}`);
   if (sp.id !== shownSpace || mode !== shownMode) {
@@ -133,6 +147,81 @@ function renderResearch(): void {
         h('a', { class: 'src', href: s.url, title: s.url, style: 'margin:0;font-size:13px;color:var(--fg)', onclick: (e: MouseEvent) => { e.preventDefault(); dispatch({ type: 'tab.new', url: s.url }); } }, s.title || s.url),
         h('span', { class: 'src' }, `${hostOf(s.url)} · ${when(s.at)}`, s.zotero ? h('span', { class: 'z' }, 'in Zotero') : ''),
         h('button', { class: 'rm', title: 'Remove', onclick: () => dispatch({ type: 'research.remove', spaceId: sp.id, kind: 'source', id: s.id }) }, '×'),
+      ),
+    ),
+  );
+}
+
+// ---- curated ----
+
+let curFilter: 'all' | 'unread' | 'link' | 'repo' | 'saved' = 'all';
+const curFilterEl = $('#cur-filter');
+curFilterEl.querySelectorAll('button').forEach((b) => (b.onclick = () => {
+  curFilter = (b.dataset.v as typeof curFilter) ?? 'all';
+  curFilterEl.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+  renderCurated();
+}));
+$('#cur-refresh').onclick = () => state && dispatch({ type: 'curated.refresh', spaceId: state.activeSpaceId });
+$('#cur-readall').onclick = () => state && dispatch({ type: 'curated.read', spaceId: state.activeSpaceId });
+$('#cur-manage').onclick = () => {
+  const box = $('#cur-curators');
+  box.hidden = !box.hidden;
+  if (!box.hidden) $<HTMLInputElement>('#cur-add').focus();
+};
+$<HTMLFormElement>('#cur-add-form').onsubmit = (e) => {
+  e.preventDefault();
+  const input = $<HTMLInputElement>('#cur-add');
+  const v = input.value.trim();
+  if (!v || !state) return;
+  dispatch({ type: 'curated.add', spaceId: state.activeSpaceId, input: v });
+  input.value = '';
+};
+
+function ago(ts: number): string {
+  const d = Date.now() - ts;
+  if (d < 3600_000) return `${Math.max(1, Math.round(d / 60_000))} min ago`;
+  if (d < 86_400_000) return `${Math.round(d / 3600_000)} h ago`;
+  if (d < 14 * 86_400_000) return `${Math.round(d / 86_400_000)} d ago`;
+  return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function renderCurated(): void {
+  const c = curated;
+  const sp = currentSpace();
+  if (!c || !sp || c.spaceId !== sp.id) return;
+  const byId = new Map(c.curators.map((cu) => [cu.id, cu]));
+  $('#cur-list').replaceChildren(
+    ...c.curators.map((cu) =>
+      h(
+        'div',
+        { class: 'cur-curator' },
+        h('span', { class: 'name', title: cu.input }, cu.name),
+        c.errors[cu.id] ? h('span', { class: 'err', title: c.errors[cu.id] }, 'error') : h('span', { class: 'feed', title: cu.feed }, hostOf(cu.feed)),
+        h('button', { class: 'rm', title: 'Unfollow', onclick: () => dispatch({ type: 'curated.remove', spaceId: sp.id, id: cu.id }) }, '×'),
+      ),
+    ),
+  );
+  $('#cur-add-error').textContent = c.errors.add ?? '';
+  if (c.curators.length === 0) $('#cur-curators').hidden = false;
+  const unread = c.items.filter((it) => !it.read).length;
+  $('#cur-status').textContent = c.refreshing ? 'Refreshing…' : c.curators.length === 0 ? 'Follow someone to start.' : `${c.curators.length} curator${c.curators.length === 1 ? '' : 's'} · ${unread} unread${c.lastRefresh ? ` · updated ${ago(c.lastRefresh)}` : ''}`;
+  const items = c.items.filter((it) => (curFilter === 'all' ? true : curFilter === 'unread' ? !it.read : curFilter === 'saved' ? it.saved : curFilter === 'link' ? it.kind === 'link' || it.kind === 'post' || it.kind === 'video' : it.kind === 'repo')).slice(0, 200);
+  $('#cur-items').replaceChildren(
+    ...items.map((it) =>
+      h(
+        'div',
+        { class: `cur-item${it.read ? ' read' : ''}` },
+        h('a', { class: 'title', href: it.url, title: it.url, onclick: (e: MouseEvent) => { e.preventDefault(); dispatch({ type: 'curated.open', spaceId: sp.id, id: it.id }); } }, it.title),
+        it.summary ? h('div', { class: 'summary' }, it.summary) : '',
+        h(
+          'div',
+          { class: 'meta' },
+          h('span', { class: 'kind' }, it.kind),
+          h('span', {}, [byId.get(it.curatorId)?.name ?? '', hostOf(it.url), ago(it.publishedAt)].filter(Boolean).join(' · ')),
+          h('span', { class: 'spacer' }),
+          h('button', { class: `act${it.saved ? ' on' : ''}`, title: it.saved ? 'Unsave' : 'Save', onclick: () => dispatch({ type: 'curated.save', spaceId: sp.id, id: it.id }) }, it.saved ? '★' : '☆'),
+          it.read ? '' : h('button', { class: 'act', title: 'Mark read', onclick: () => dispatch({ type: 'curated.read', spaceId: sp.id, id: it.id }) }, '✓'),
+        ),
       ),
     ),
   );

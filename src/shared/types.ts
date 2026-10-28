@@ -83,7 +83,7 @@ export interface PasskeysStatus {
   entries: PasskeyEntry[];
 }
 
-export type ModeId = 'research' | 'ai' | 'sources';
+export type ModeId = 'research' | 'ai' | 'sources' | 'curated';
 
 export interface ResearchClip {
   id: string;
@@ -105,6 +105,40 @@ export interface ResearchData {
   clips: ResearchClip[];
   sources: ResearchSource[];
 }
+/** Someone whose finds a curated space follows. */
+export interface Curator {
+  id: string;
+  name: string;
+  /** what the user typed */
+  input: string;
+  /** feed URL, or the GitHub starred API URL */
+  feed: string;
+  kind: 'feed' | 'github';
+  addedAt: number;
+}
+export interface CuratedItem {
+  id: string;
+  curatorId: string;
+  title: string;
+  url: string;
+  summary: string;
+  author: string;
+  publishedAt: number;
+  fetchedAt: number;
+  kind: 'link' | 'repo' | 'post' | 'video';
+  read?: boolean;
+  saved?: boolean;
+}
+export interface CuratedStatus {
+  spaceId: SpaceId;
+  curators: Curator[];
+  items: CuratedItem[];
+  refreshing: boolean;
+  lastRefresh: number;
+  /** per curator id */
+  errors: Record<string, string>;
+}
+
 export interface ResearchStatus {
   spaceId: SpaceId;
   data: ResearchData;
@@ -170,6 +204,8 @@ export interface Space {
   lock?: SpaceLock;
   /** subspaces */
   groups?: TabGroup[];
+  /** curated mode: the people and feeds this space follows */
+  curators?: Curator[];
   /** runtime: a private space starts locked and locks again when left alone */
   locked?: boolean;
   /** when the user last switched away from this space */
@@ -372,6 +408,7 @@ export type Action =
   | { type: 'tab.patch'; id: TabId; patch: Partial<Tab> }
   | { type: 'tab.sleep'; id: TabId }
   | { type: 'tab.keepLoaded'; id: TabId; on: boolean }
+  | { type: 'space.setCurators'; id: SpaceId; curators: Curator[] }
   | { type: 'tab.volume'; id: TabId; volume: number }
   | { type: 'tab.pin'; id: TabId }
   | { type: 'tab.unpin'; id: TabId }
@@ -464,6 +501,12 @@ export type Command =
   | { type: 'space.newProfile'; id: SpaceId }
   | { type: 'space.forgetProfile'; id: SpaceId }
   | { type: 'prompt.answer'; token: string; text: string }
+  | { type: 'curated.add'; spaceId: SpaceId; input: string }
+  | { type: 'curated.remove'; spaceId: SpaceId; id: string }
+  | { type: 'curated.refresh'; spaceId: SpaceId }
+  | { type: 'curated.read'; spaceId: SpaceId; id?: string }
+  | { type: 'curated.save'; spaceId: SpaceId; id: string }
+  | { type: 'curated.open'; spaceId: SpaceId; id: string }
   | { type: 'research.note'; spaceId: SpaceId; text: string }
   | { type: 'research.clip'; spaceId?: SpaceId; text?: string; url?: string; title?: string }
   | { type: 'research.remove'; spaceId: SpaceId; kind: 'clip' | 'source'; id: string }
@@ -522,7 +565,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
 
 export type Message = Action | Command;
@@ -721,4 +764,6 @@ export interface ChordApi {
   getAi(spaceId: SpaceId): Promise<AiStatus>;
   onSources(cb: (status: SourcesStatus) => void): () => void;
   getSources(spaceId: SpaceId): Promise<SourcesStatus>;
+  onCurated(cb: (status: CuratedStatus) => void): () => void;
+  getCurated(spaceId: SpaceId): Promise<CuratedStatus>;
 }

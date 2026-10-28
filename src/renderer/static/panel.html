@@ -68,6 +68,27 @@
     </div>
   </section>
 
+  <section class="view cur" id="view-curated">
+    <div class="cur-bar">
+      <div class="seg" id="cur-filter"><button data-v="all" class="on">All</button><button data-v="unread">Unread</button><button data-v="link">Sites</button><button data-v="repo">Repos</button><button data-v="saved">Saved</button></div>
+      <span class="spacer"></span>
+      <button class="icon" id="cur-refresh" title="Refresh now">↻</button>
+      <button class="icon" id="cur-readall" title="Mark everything read">✓</button>
+      <button class="icon" id="cur-manage" title="Curators">⚙</button>
+    </div>
+    <div class="cur-manage" id="cur-curators" hidden>
+      <div id="cur-list" class="cur-list"></div>
+      <form id="cur-add-form" class="cur-add">
+        <input id="cur-add" type="text" spellcheck="false" placeholder="A site, a feed, @handle, @user@mastodon, github.com/user…">
+        <button class="btn primary" type="submit">Follow</button>
+      </form>
+      <p class="hint" id="cur-add-error"></p>
+      <p class="hint">Anyone who shares links works: a blog or newsletter (RSS/Atom/JSON Feed), a Bluesky or Mastodon account, a GitHub user (their starred repos) or a repo (its releases), a subreddit, a YouTube channel, a Hacker News user.</p>
+    </div>
+    <p class="hint" id="cur-status"></p>
+    <div id="cur-items" class="cur-items"></div>
+  </section>
+
   <section class="view" id="view-none"><p class="hint">This space has no modes. Add one from the space’s menu.</p></section>
   <script src="panel.js"></script>
 </body>

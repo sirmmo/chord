@@ -505,6 +505,44 @@ if (process.isMainFrame) {
   }
   // GitHub and VS Code are read from this world, which sees the DOM but not the page's scripts.
   const dev = installDevAdapter();
+  // Two-finger horizontal swipe on a page that cannot scroll sideways: back and forward.
+  let gestureX = 0;
+  let gestureTimer = 0;
+  let gestureDone = false;
+  const canScrollX = (start: EventTarget | null, dx: number): boolean => {
+    let el = start instanceof Element ? start : null;
+    while (el) {
+      if (el.scrollWidth > el.clientWidth + 1) {
+        const ox = getComputedStyle(el).overflowX;
+        const scrolls = el === document.documentElement || el === document.body ? ox !== 'hidden' : ox === 'auto' || ox === 'scroll' || ox === 'overlay';
+        if (scrolls && (dx > 0 ? el.scrollLeft + el.clientWidth < el.scrollWidth - 1 : el.scrollLeft > 0)) return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  };
+  window.addEventListener('wheel', (e) => {
+    if (e.deltaMode !== 0 || e.ctrlKey) return; // pixel deltas only: a touchpad, not a mouse wheel
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      gestureX = 0;
+      return;
+    }
+    if (canScrollX(e.target, e.deltaX)) {
+      gestureX = 0;
+      return;
+    }
+    gestureX += e.deltaX;
+    window.clearTimeout(gestureTimer);
+    gestureTimer = window.setTimeout(() => {
+      gestureX = 0;
+      gestureDone = false;
+    }, 300);
+    if (!gestureDone && Math.abs(gestureX) > 240) {
+      gestureDone = true;
+      ipcRenderer.send('nav:gesture', gestureX > 0 ? 'forward' : 'back');
+    }
+  }, { passive: true, capture: true });
+
   // Passkeys: when Chord is the authenticator, the page asks it before every WebAuthn call.
   if (location.protocol === 'https:' || location.hostname === 'localhost') {
     try {

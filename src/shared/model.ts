@@ -142,6 +142,10 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
   for (const sp of s.spaces) {
     if (sp.lock) sp.locked = true;
     if (sp.modes) sp.modes = sp.modes.filter(isModeId);
+    if (sp.curators) {
+      sp.curators = sp.curators.filter((c) => c && typeof c.id === 'string' && typeof c.feed === 'string' && (c.kind === 'feed' || c.kind === 'github'));
+      if (sp.curators.length === 0) delete sp.curators;
+    }
     if (sp.panelMode && !(sp.modes ?? []).includes(sp.panelMode)) delete sp.panelMode;
   }
   if (!isLocked(activeSpace(s))) for (const id of activeSpace(s).panes) s.tabs[id].awake = true;
@@ -467,6 +471,13 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       const tab = s.tabs[a.id];
       if (!tab) return prev;
       Object.assign(tab, a.patch);
+      return s;
+    }
+    case 'space.setCurators': {
+      const sp = spaceById(s, a.id);
+      if (!sp) return prev;
+      sp.curators = a.curators.length ? a.curators.map((c) => ({ ...c })) : undefined;
+      if (!sp.curators) delete sp.curators;
       return s;
     }
     case 'tab.keepLoaded': {

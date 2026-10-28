@@ -112,6 +112,14 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   page lists everything with pause, resume, cancel, retry, open and show-in-folder.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
+- **Curated mode**: a space follows curators — people and feeds that share sites,
+  repositories and finds — and their items arrive in the side panel, newest first, with
+  unread marks, filters (sites, repos, saved) and one-click opening in the space. Follow
+  a blog or newsletter (RSS, Atom, JSON Feed, discovered from the site's address), a
+  Bluesky `@handle`, a Mastodon `@user@instance`, a GitHub user (their starred repos),
+  a repo (its releases), a subreddit, a YouTube channel or a Hacker News user. Who a
+  space follows is exported with the space; what was read stays local. Refreshes every
+  30 minutes and when you come back to the space.
 - **Protected media (DRM)**: Chord is built on castLabs' Electron for Content Security,
   which carries Google's Widevine CDM, so Amazon Music, Spotify's web player, Netflix,
   Prime Video and the like play instead of saying "your browser does not support this
@@ -132,6 +140,9 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   the command bar). It wakes at launch and whenever its space is unlocked, loads in the
   background in spaces you are not looking at, and is never archived. Off by default for
   every tab; a dot on the tab's icon shows it is on, and it travels with exports.
+- **Swipe to go back and forward**: a two-finger horizontal swipe on the trackpad, on a
+  page that cannot scroll sideways, goes back (swipe right) or forward (swipe left); on
+  macOS the system's own page swipe is honoured too.
 - **Find in page** `⌘F`, tab sleep, mute, reopen closed tab `⌘⇧T`, per-site
   permission prompts, OAuth-style popups opened as tabs. Middle-click and ⌘-click open
   links in a new tab regardless of what the page's scripts do; `magnet:`, `zoommtg:` and
