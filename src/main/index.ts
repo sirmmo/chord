@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, components } from 'electron';
 import { dirname, join } from 'node:path';
 import { existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { Controller } from './controller.ts';
@@ -51,8 +51,12 @@ if (!app.requestSingleInstanceLock()) {
     else pendingUrl = url;
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     mark('app-ready');
+    // Widevine (castLabs ECS): the CDM installs on first launch. Give it a moment so a
+    // player opened right away can use it, but never hold the window for a download.
+    const widevine = components.whenReady().then(() => mark('widevine-ready')).catch((err: unknown) => console.warn('Widevine CDM unavailable', err));
+    await Promise.race([widevine, new Promise((r) => setTimeout(r, 1500))]);
     configureSession();
     controller = new Controller();
     controller.init();

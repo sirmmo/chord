@@ -1,7 +1,7 @@
 {
   "name": "chord-browser",
   "productName": "Chord",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "description": "An open-source browser inspired by Arc: sidebar tabs, spaces, command bar, split view.",
   "license": "MIT",
   "main": "dist/main.js",
@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^24",
-    "electron": "^45",
+    "electron": "github:castlabs/electron-releases#v44.9.3+wvcus",
     "electron-builder": "^26",
     "esbuild": "^0.28",
     "typescript": "^5.9"
@@ -24,6 +24,11 @@
   "build": {
     "appId": "org.chordbrowser.app",
     "productName": "Chord",
+    "electronVersion": "44.9.3+wvcus",
+    "electronDownload": {
+      "mirror": "https://github.com/castlabs/electron-releases/releases/download/v"
+    },
+    "afterPack": "build/afterPack.js",
     "files": [
       "dist/**",
       "package.json"

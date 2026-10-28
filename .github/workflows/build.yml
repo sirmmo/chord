@@ -46,7 +46,7 @@ jobs:
           - name: macOS (legacy, Electron 43 for macOS 12)
             artifact: mac-legacy
             os: macos-latest
-            args: --mac --universal -c.electronVersion=43.8.4 '-c.artifactName=Chord-${version}-${os}-${arch}-legacy.${ext}'
+            args: --mac --universal -c.electronVersion=43.8.3+wvcus '-c.artifactName=Chord-${version}-${os}-${arch}-legacy.${ext}'
             files: release/*-legacy.dmg
           - name: Windows (x64)
             artifact: windows
@@ -77,11 +77,19 @@ jobs:
         shell: bash
         run: npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
       - run: npm run build
+      - name: castLabs EVS client (Widevine VMP signing)
+        if: runner.os != 'Linux'
+        shell: bash
+        run: python3 -m pip install --upgrade castlabs-evs || python -m pip install --upgrade castlabs-evs
       - name: Package with electron-builder
         run: npx electron-builder ${{ matrix.args }} --publish never
         env:
           # Builds are unsigned until signing certificates are configured as secrets.
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          # Widevine: build/afterPack.js VMP-signs macOS and Windows builds when these secrets exist.
+          EVS_ACCOUNT_NAME: ${{ secrets.EVS_ACCOUNT_NAME }}
+          EVS_PASSWD: ${{ secrets.EVS_PASSWD }}
+          EVS_NO_ASK: 1
       - name: Portable zip (Windows)
         if: runner.os == 'Windows'
         shell: pwsh

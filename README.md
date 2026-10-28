@@ -112,6 +112,13 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   page lists everything with pause, resume, cancel, retry, open and show-in-folder.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
+- **Protected media (DRM)**: Chord is built on castLabs' Electron for Content Security,
+  which carries Google's Widevine CDM, so Amazon Music, Spotify's web player, Netflix,
+  Prime Video and the like play instead of saying "your browser does not support this
+  content". The CDM downloads on first launch. On macOS and Windows Widevine only
+  decrypts for a VMP-signed binary: the release builds are signed through castLabs' EVS
+  service when the `EVS_ACCOUNT_NAME` / `EVS_PASSWD` secrets are set for the workflow
+  (`build/afterPack.js`); Linux needs no signature.
 - **Passkeys**: Chord is a passkey provider. When a site offers to create a passkey or
   to sign in with one, Chord asks you (Touch ID on Macs that have it, a dialog elsewhere),
   then answers the site with a software authenticator it attaches for that one request.
