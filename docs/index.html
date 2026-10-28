@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Chord — an open-source browser inspired by Arc</title>
-  <meta name="description" content="Chord is an open-source browser with a sidebar, Spaces, a command bar, split view and built-in ad blocking. Built on Electron for macOS, Windows and Linux.">
-  <meta property="og:title" content="Chord browser">
-  <meta property="og:description" content="An open-source browser inspired by Arc: sidebar tabs, Spaces, command bar, split view, Shields.">
+  <title>Chord — the open-source browser for people leaving Arc</title>
+  <meta name="description" content="Leaving Arc? Chord keeps the way you browse: Spaces, a sidebar, the command bar, split view, Boosts, Easels, Little windows, Live Folders and Air Traffic Control. Open source, on macOS, Windows and Linux, with your data in your own GitHub. Import your Arc spaces in one step.">
+  <meta property="og:title" content="Chord — the open-source browser for people leaving Arc">
+  <meta property="og:description" content="Spaces, sidebar, command bar, Boosts, Easels, Little windows, Live Folders. Open source, three platforms, your data in your GitHub. Import from Arc in one step.">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <meta property="og:image" content="https://ingmmo.com/chord/icon.png">
@@ -107,6 +107,28 @@
       .mock { height: 300px; }
       nav .links a:not(:last-child) { display: none; }
     }
+  
+    /* landing page */
+    .band { display: flex; flex-wrap: wrap; gap: 10px 28px; font-size: 14px; color: var(--muted); padding: 18px 0 0; }
+    .band b { color: var(--fg); font-weight: 600; }
+    .why { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+    .why .card h3 { font-size: 17px; }
+    .why .card .a { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--fg); font-size: 15px; }
+    .why .card .a b { color: var(--accent); }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; counter-reset: step; }
+    .steps .card { position: relative; padding-top: 22px; }
+    .steps .card::before { counter-increment: step; content: counter(step); position: absolute; top: -14px; left: 18px; width: 28px; height: 28px; border-radius: 50%; background: var(--space); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 14px; }
+    .cmp td:first-child { color: var(--muted); width: 34%; }
+    .cmp td b { font-weight: 600; }
+    .cmp .y { color: #7ee2a8; font-weight: 700; }
+    .cmp .n { color: var(--muted); }
+    .quote { font-size: 22px; line-height: 1.4; max-width: 760px; margin: 0; letter-spacing: -.01em; }
+    .quote span { color: var(--accent); }
+    .small { font-size: 14px; color: var(--muted); }
+    .dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .dl .card h3 { display: flex; align-items: center; gap: 8px; }
+    .dl .card .btn { margin-top: 10px; }
+    .honest li { margin: 6px 0; }
   </style>
 </head>
 <body>
@@ -117,14 +139,12 @@
         Chord
       </a>
       <div class="links">
-        <a href="#features">Features</a>
-        <a href="#shortcuts">Shortcuts</a>
-        <a href="#install">Install</a>
-        <a href="#sites">For sites</a>
-        <a href="#mcp">MCP</a>
-        <a href="#config">Config files</a>
-        <a href="#architecture">How it works</a>
-        <a href="#contribute">Contribute</a>
+        <a href="#why">Why Chord</a>
+        <a href="#switch">Coming from Arc</a>
+        <a href="#compare">Compared</a>
+        <a href="#more">Beyond Arc</a>
+        <a href="#download">Download</a>
+        <a href="docs.html">Docs</a>
         <a href="guide.html">Guide</a>
         <a href="https://github.com/sirmmo/chord">GitHub</a>
       </div>
@@ -134,13 +154,13 @@
   <header>
     <div class="wrap">
       <div>
-        <h1>The browser you missed, <span>open source</span>.</h1>
-        <p class="lead">Chord is a browser inspired by Arc: a sidebar instead of a tab strip, Spaces to keep contexts apart, a command bar instead of a URL bar, split view, and ad blocking built in. MIT licensed, built on Electron.</p>
+        <h1>Leaving Arc? <span>Keep the way you browse.</span></h1>
+        <p class="lead">Chord is an open-source browser built around the ideas that made Arc worth switching to: Spaces, a sidebar instead of a tab strip, a command bar, split view, Boosts, Easels, Little windows, Live Folders and Air Traffic Control. On macOS, Windows and Linux, with your data in your own GitHub, and nothing that phones home.</p>
         <div class="cta">
-          <a class="btn primary" href="https://github.com/sirmmo/chord/releases/latest">Download</a>
-          <a class="btn" href="https://github.com/sirmmo/chord">Source on GitHub</a>
+          <a class="btn primary" id="dl" href="https://github.com/sirmmo/chord/releases/latest">Download Chord</a>
+          <a class="btn" href="#switch">Import from Arc in one step</a>
         </div>
-        <p class="platforms">macOS (one universal build), Windows (installer or portable) and Linux (AppImage, deb). Early and moving fast; builds are unsigned, and Chord tells you when a new release is out.</p>
+        <p class="platforms">Free, MIT licensed. One universal build for macOS, an installer or a portable zip for Windows, AppImage and deb for Linux.</p>
       </div>
       <div class="mock" aria-hidden="true">
         <div class="side">
@@ -161,248 +181,127 @@
           <div><b></b><s></s><s class="short"></s><s></s><s></s><s class="short"></s></div>
         </div>
       </div>
+
+      <div class="band" style="grid-column: 1 / -1">
+        <span><b>Open source</b> · MIT, every line on GitHub</span>
+        <span><b>Three platforms</b> · macOS, Windows, Linux</span>
+        <span><b>Your data, your GitHub</b> · sync through repositories you own</span>
+        <span><b>Chromium inside</b> · pages render as in Arc and Chrome</span>
+        <span><b>Releases every week</b> · with auto-update</span>
+      </div>
     </div>
   </header>
 
-  <section id="features">
+  <section id="why">
     <div class="wrap">
-      <h2>What it does</h2>
-      <p class="sub">The parts of Arc that change how you browse, without the parts that phone home.</p>
+      <h2>Why people are leaving Arc, and what Chord does about it</h2>
+      <p class="sub">Arc was the best idea browsers had in a decade. Its future is not in its users' hands any more. Chord's is.</p>
+      <div class="why">
+        <div class="card"><span class="k">The product</span><h3>Arc stopped moving</h3><p>Its maker moved on to a new browser and was acquired in 2025. Arc still runs, but it is in maintenance: no new features, and no promise about tomorrow.</p><div class="a"><b>Chord:</b> an open project that ships a release most weeks, with the roadmap in the open. If it ever stalls, you have the source and the installers.</div></div>
+        <div class="card"><span class="k">The data</span><h3>Your Spaces live in someone's cloud</h3><p>Arc sync goes through its maker's servers; a closed app, with your setup locked inside it.</p><div class="a"><b>Chord:</b> everything is a JSON file you can read, export and hand-edit. Sync goes through two GitHub repositories Chord creates in your account. Private, password-locked spaces never leave your computer.</div></div>
+        <div class="card"><span class="k">The platforms</span><h3>Mac first, everyone else later</h3><p>Windows arrived late, Linux never did. Switching computers meant switching browsers.</p><div class="a"><b>Chord:</b> the same app on macOS (Apple Silicon and Intel), Windows and Linux, from the same release, on the same day.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="switch">
+    <div class="wrap">
+      <h2>Switch in five minutes</h2>
+      <p class="sub">Your Spaces, pinned tabs, favorites and history come along. Nothing to export from Arc first.</p>
+      <div class="steps">
+        <div class="card"><h3>Install Chord</h3><p>Download the build for your system below and open it. On macOS, right-click → Open the first time, because the builds are not notarised yet.</p></div>
+        <div class="card"><h3>Import from Arc</h3><p>File → Import from Another Browser → Arc. Chord finds Arc's sidebar file on its own and brings every Space with its name, emoji and colour, pinned and today tabs, and the favorites bar. Tick History too and the last 20,000 visits come with them.</p></div>
+        <div class="card"><h3>Sign in to GitHub (optional)</h3><p>Settings → Sync creates a private repository for your spaces, bookmarks and passwords, and a public one for the bookmarks you choose to publish. Any other computer picks it up from there.</p></div>
+        <div class="card"><h3>Add what Arc had</h3><p>Extensions from the Chrome Web Store, your Boosts as CSS and JavaScript, Air Traffic Control rules, and an easel per space. Your shortcuts are the same: ⌘T, ⌘L, ⌘D, ⌘⇧D, Ctrl+1…9.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="wrap">
+      <h2>Everything you loved in Arc, where it is in Chord</h2>
+      <p class="sub">The names changed where they had to. The habits did not.</p>
+      <table class="cmp">
+        <tr><th>In Arc</th><th>In Chord</th></tr>
+        <tr><td>Spaces with colours and emoji, Ctrl+1…9</td><td><b>Spaces</b>, the same, plus a private, password-locked kind and separate login profiles per space.</td></tr>
+        <tr><td>Sidebar with favorites, pinned and today tabs; auto-archiving</td><td><b>The same sidebar.</b> Pinned tabs reset to their page, today tabs archive after the hours you choose, favorites are shared by every space. Collapse it with ⌘S and hover the edge to peek.</td></tr>
+        <tr><td>Command bar (⌘T / ⌘L)</td><td><b>Command bar</b> for URLs, search, open tabs, bookmarks, history, archived tabs and commands. Prefixes narrow it to one of them.</td></tr>
+        <tr><td>Split view</td><td><b>Split view</b> with up to four panes, built-in and custom layouts, draggable gaps.</td></tr>
+        <tr><td>Folders in the sidebar</td><td><b>Subspaces</b>: collapsible groups of tabs, which pages and Chord itself can fill.</td></tr>
+        <tr><td>Little Arc</td><td><b>Little windows</b> for links from other apps, with one button to move the page into a space.</td></tr>
+        <tr><td>Boosts</td><td><b>Boosts</b>: CSS and JavaScript per site, applied live, plus an API that lets a boost put cards, badges and notifications in the sidebar.</td></tr>
+        <tr><td>Easels</td><td><b>Easels</b>: a freeform canvas per space for notes, links, clippings, pictures and page snapshots. Export as Markdown.</td></tr>
+        <tr><td>Air Traffic Control</td><td><b>Routes</b>: links from the sites you name land in the space you choose.</td></tr>
+        <tr><td>Live Folders</td><td><b>Live folders</b>: GitHub pull requests, issues and notifications, any feed, or a bookmark tag, kept current.</td></tr>
+        <tr><td>Peek, Picture in Picture</td><td><b>Peek</b> the sidebar on hover; <b>picture in picture</b> that follows you between tabs.</td></tr>
+        <tr><td>Rename and re-icon pinned tabs</td><td><b>The same</b>: double-click to rename, pick an emoji.</td></tr>
+        <tr><td>Shared Spaces</td><td><b>Shared spaces and pages</b> as links on your GitHub Pages, installable by anyone with Chord.</td></tr>
+        <tr><td>Arc Max (AI)</td><td><b>AI mode</b> per space, with your own key or a local model; it reads and drives the space's tabs.</td></tr>
+        <tr><td>iCloud sync</td><td><b>GitHub sync</b> through repositories you own. Bookmarks become a public linkroll with an RSS feed if you want.</td></tr>
+        <tr><td>Arc Search on mobile</td><td><span class="n">Not yet.</span> Chord is a desktop browser; your synced bookmarks are a web page you can open anywhere.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="more">
+    <div class="wrap">
+      <h2>And the things Arc never did</h2>
+      <p class="sub">Built by people who use the browser all day, for the things a browser should have had already.</p>
       <div class="grid">
-        <div class="card"><span class="k">Profiles</span><h3>Separate logins per space</h3><p>Give a space its own profile and its cookies and logins stay apart from the rest; give several spaces the same profile and they share it. Two Google accounts, two spaces.</p></div>
-<div class="card"><span class="k">Modes</span><h3>Research and AI, per space</h3><p>Turn on Research for notes, clips, sources and one-click saving to Zotero, Sources to audit an article’s references with Sourceror, or AI for a side-panel assistant on a local or remote model that reads and drives the tabs of that space and calls the tools pages expose through WebMCP.</p></div>
-<div class="card"><span class="k">Sources</span><h3>Sourceror, built in</h3><p>A Sources mode checks any article against the reliability lists Wikipedia editors keep, Crossref and OpenAlex: who is behind each link, dead links, retractions, claims that rest on nothing, and candidate sources for them, marked right in the page. Needs the free Sourceror server on your computer.</p></div>
-        <div class="card"><span class="k">MCP</span><h3>Drive it from Claude Desktop</h3><p>A local MCP server, off by default, lets an assistant on your computer read your tabs, open pages and use the tools sites expose. One click copies the Claude Desktop config.</p></div>
-        <div class="card"><span class="k">⌘N</span><h3>Several windows</h3><p>Each window shows one space; open a space in its own window from its context menu, drag tabs between spaces and therefore windows, and find every window back where you left it at the next launch.</p></div>
-        <div class="card"><span class="k">Updates</span><h3>Keeps itself current</h3><p>Chord checks for new releases after launch and every few hours. The Windows installer and the AppImage update themselves on restart; the macOS build, the portable zip and the deb get a one-click download instead.</p></div>
-        <div class="card"><span class="k">Share</span><h3>Screen sharing and calls</h3><p>Meet, Zoom and Jitsi get mute, camera and leave controls in the sidebar. Sharing uses the system picker on macOS 15 and Chord's own screen, window and tab picker elsewhere.</p></div>
-        <div class="card"><span class="k">Subspaces</span><h3>Groups inside a space</h3><p>Collapse related tabs under a header, drop tabs onto it, rename or dissolve it. Pages can manage a subspace of their own through <code>navigator.chord</code>: a dashboard keeps one tab per job and tidies up after itself.</p></div>
-        <div class="card"><span class="k">Add to Chord</span><h3>Installable spaces</h3><p>A site can publish a space manifest: one click sets up a space with all its pages, and optional boosts for that site. Declare it with a link tag or an “Add to Chord” link.</p></div>
-<div class="card"><span class="k">CSS · JS</span><h3>Boosts</h3><p>Your own CSS and JavaScript per site, applied live. Passwords saved with the OS keychain, picture in picture that follows you between tabs.</p></div>
-<div class="card"><span class="k">🔒</span><h3>Private spaces</h3><p>Give a space a password: it locks on launch and when you leave it, and its tabs are never exported, archived, or written to history.</p></div>
-<div class="card"><span class="k">♪ · ☎ · ⏱</span><h3>Smart pages</h3><p>Players get a now-playing card with play, pause, previous and next. Screen sharing works with the system picker on macOS 15+ and Chord's own screen/window/tab picker elsewhere. Calls on Meet, Zoom or Jitsi get a card with duration, mute, camera and leave. Timers, unread counts and notifications show as chips and badges. All of it from every space.</p></div>
-<div class="card"><span class="k">GitHub · VS Code</span><h3>Developer pages</h3><p>A pull request, issue or workflow run gets a card with its state, the checks tally and the branch, a spinning chip while checks run, a notification when they finish, and re-run from the sidebar. VS Code in the browser (vscode.dev, Codespaces, code-server) shows the file, unsaved mark, branch, errors and warnings, tasks and debug sessions, from every space.</p></div>
-<div class="card"><span class="k">Skins</span><h3>LCARS</h3><p>One switch in Appearance turns the chrome into an LCARS homage: black panels, peach and lavender pills, condensed uppercase type. Pages stay as they are.</p></div>
-        <div class="card"><span class="k">Tray</span><h3>Keep playing when closed</h3><p>Optionally the window hides instead of closing: music and calls go on, and the menu bar / tray item offers play, pause, mute, a volume submenu per player, leave and downloads. Per-tab volume lives on the player card and the tab's speaker icon too.</p></div>
-<div class="card"><span class="k">Little</span><h3>Little windows</h3><p>Links from other apps open in a small window of their own, with one button to move the page into a space. Hover the left edge to peek at a collapsed sidebar.</p></div>
-<div class="card"><span class="k">RSS</span><h3>A reader, built in</h3><p>Subscriptions in subspaces, unread marks, a reading pane, keyboard navigation. A feed button appears in the sidebar on every site that offers one; an OPML file becomes a subspace; export yours any time.</p></div>
-<div class="card"><span class="k">Share</span><h3>Share a space or a page</h3><p>Publish a space on your GitHub Pages as an installable link: anyone with Chord opens it as a space of their own, everyone else sees the tabs. Share a single page with a note the same way.</p></div>
-<div class="card"><span class="k">Live</span><h3>Live folders</h3><p>Subspaces that fill themselves: pull requests waiting for your review, issues assigned to you, GitHub notifications or any search, a feed's latest items, bookmarks with a tag. Tabs come and go with the source.</p></div>
-<div class="card"><span class="k">Routes</span><h3>Air Traffic Control</h3><p>Links from the sites you name land in the space you choose, wherever they come from: other apps, or pages a site opens in a new tab. Patterns with optional paths, first match wins.</p></div>
-<div class="card"><span class="k">Easel</span><h3>A canvas per space</h3><p>Sticky notes, links, clipped text, pictures and page snapshots on a freeform canvas you pan and zoom. Paste or drop anything; right-click any page to add a selection or an image. Export as Markdown.</p></div>
-<div class="card"><span class="k">Markdown</span><h3>Notes per space</h3><p>Every space has a notes page in Markdown with a split editor and preview; bookmarks take Markdown notes too, per space and across all spaces.</p></div>
-<div class="card"><span class="k">GitHub</span><h3>Bookmarks that sync and publish</h3><p>Private or public bookmarks with tags and notes. Paste a GitHub token and Chord creates two repositories for you: a private one that keeps your spaces and bookmarks on every computer, and a public one that GitHub Pages serves as your linkroll, with an RSS feed others can follow.</p></div>
-<div class="card"><span class="k">Curated</span><h3>Follow the finders</h3><p>A curated space follows people who share: blogs and newsletters, Bluesky and Mastodon accounts, a GitHub user’s stars, a repo’s releases, subreddits, channels. Their finds arrive in the side panel with unread marks and filters, and open in the space.</p></div>
-<div class="card"><span class="k">Widevine</span><h3>Music and video that play</h3><p>Built on castLabs’ Electron with the Widevine CDM, so Amazon Music, Spotify, Netflix and Prime Video work like in Chrome. The CDM downloads on first launch.</p></div>
-<div class="card"><span class="k">Passkeys</span><h3>Passkeys, built in</h3><p>Create and use passkeys on any site: Chord asks you (Touch ID where available) and answers the site itself. Keys are encrypted with the OS keychain and stay on your computer; security keys keep working, and Windows Hello is one setting away.</p></div>
-<div class="card"><span class="k">Keep loaded</span><h3>Tabs that are always on</h3><p>Mark a tab to keep it loaded: it wakes at launch, loads in the background in spaces you are not looking at, and is never archived. Off by default, one click in the tab menu.</p></div>
-<div class="card"><span class="k">⌘S</span><h3>Collapsible sidebar</h3><p>Vertical tabs with the page's navigation controls, a URL pill and the lists below. Collapse it to go full page and hover the left edge to peek; drag its edge to resize.</p></div>
-        <div class="card"><span class="k">⌘⇧L</span><h3>Address bar, if you want one</h3><p>An optional editable URL field across the top of the page. Off by default, one shortcut away.</p></div>
-        <div class="card"><span class="k">Add-ins</span><h3>Shields and extensions</h3><p>Built-in ad and tracker blocking, plus Chrome extensions installed straight from the Web Store (paste the address, or press the puzzle button on a store page) or unpacked from a folder, each switchable in Settings. Toolbar popups are not shown.</p></div>
-        <div class="card"><span class="k">⌘,</span><h3>Your colours, your icons</h3><p>Light, dark or system theme. Any colour per Space, tint strength, a separate accent, colour or monochrome icons with their own colour, and your choice of font.</p></div>
-        <div class="card"><span class="k">⌘⇧N · Ctrl+1…9</span><h3>Spaces</h3><p>Every Space has its own colour, icon, pinned and today tabs. Switch with the keyboard or the dots at the bottom of the sidebar.</p></div>
-        <div class="card"><span class="k">⌘D</span><h3>Favorites and pinned tabs</h3><p>Favorites sit in a grid shared by all Spaces. Pinned tabs never close: closing one puts it to sleep and resets it to the page it was pinned at.</p></div>
-        <div class="card"><span class="k">12 hours</span><h3>Today tabs that clean up</h3><p>Ephemeral tabs are archived after a period of inactivity you choose. The archive stays searchable from the command bar.</p></div>
-        <div class="card"><span class="k">⌘T · ⌘L</span><h3>Command bar</h3><p>One box for URLs, search, open tabs, archived tabs and commands. Hold ⌘ on Enter to force a new tab.</p></div>
-        <div class="card"><span class="k">⌘⇧D · ⌘⌥L</span><h3>Split view, your way</h3><p>Tile up to four panes with built-in layouts or your own, such as <code>50/50 | 100</code> for two on top and one below, and drag the gaps between panes to adjust. Up to four pages side by side. Add from the keyboard, a tab's context menu, or a link's context menu.</p></div>
-        <div class="card"><span class="k">⌘Y</span><h3>History</h3><p>Every page you visit, by day, searchable, with per-entry removal. Stored locally, never sent anywhere.</p></div>
-<div class="card"><span class="k">⌘⇧J</span><h3>Downloads</h3><p>A progress ring in the title bar, the current file above your spaces, and a downloads page with pause, resume, cancel, retry and open.</p></div>
-<div class="card"><span class="k">Arc · Chrome · Brave · Firefox</span><h3>Bring your tabs along</h3><p>Import Arc spaces, pinned and today tabs and favorites, the bookmarks of Chrome, Brave, Edge, Chromium and Firefox, and the history of any of them, as spaces of pinned tabs. Merge into what you have or replace it.</p></div>
-<div class="card"><span class="k">JSON</span><h3>Export and import</h3><p>Save all your Spaces, tabs, favorites and settings to a JSON file, or a single Space. Import it elsewhere, merging into what is there or replacing it.</p></div>
-        <div class="card"><span class="k">Chromium</span><h3>Renders like Chrome</h3><p>Pages behave exactly as in Chrome, Brave or Arc. Per-site permission prompts, OAuth popups opened as tabs, find in page, sleep and mute.</p></div>
+        <div class="card"><span class="k">Shields</span><h3>Ads and trackers blocked</h3><p>EasyList and EasyPrivacy built in, on by default, one switch to turn off per site.</p></div>
+        <div class="card"><span class="k">Passkeys · Passwords</span><h3>A password manager with passkeys</h3><p>Saved with the OS keychain, protected by Touch ID or Windows Hello, synced as a KeePass file you can open anywhere.</p></div>
+        <div class="card"><span class="k">♪ · ☎</span><h3>Smart pages</h3><p>Players get a now-playing card with controls, calls on Meet, Zoom and Jitsi get mute, camera and leave, GitHub pull requests show their checks, all from the sidebar, from any space.</p></div>
+        <div class="card"><span class="k">RSS</span><h3>A reader and curated spaces</h3><p>Subscribe to any site's feed from the sidebar, import OPML, and follow the people whose finds you trust in a space of its own.</p></div>
+        <div class="card"><span class="k">Markdown</span><h3>Notes and bookmarks per space</h3><p>A notes page in Markdown for every space, bookmarks with tags and notes, private or published on your own page.</p></div>
+        <div class="card"><span class="k">MCP</span><h3>An AI's browser</h3><p>A local MCP server lets Claude Desktop or any MCP client read your tabs, open pages and use the tools sites expose. Off by default, loopback only.</p></div>
+        <div class="card"><span class="k">Widevine</span><h3>Music and video that play</h3><p>Amazon Music, Spotify, Netflix and Prime Video work as in Chrome, through castLabs' Electron with the Widevine CDM.</p></div>
+        <div class="card"><span class="k">Extensions</span><h3>Chrome Web Store, one paste away</h3><p>Install from a store address or id, or unpacked from a folder. Content scripts and most page APIs work.</p></div>
+        <div class="card"><span class="k">Skins</span><h3>Yours to theme</h3><p>Any colour per space, tint, accent, icon style, font, light or dark, and an LCARS skin for the brave.</p></div>
+      </div>
+      <p class="small" style="margin-top:18px">Every feature in detail: <a href="docs.html#features">the full feature list</a>, <a href="docs.html#shortcuts">shortcuts</a> and the <a href="guide.html">getting-started guide</a>.</p>
+    </div>
+  </section>
+
+  <section id="honest">
+    <div class="wrap">
+      <h2>What to expect</h2>
+      <p class="sub">Chord is young and honest about it.</p>
+      <div class="two">
+        <ul class="honest">
+          <li><strong>Unsigned builds</strong> for now: macOS asks you to right-click → Open the first time, Windows shows “More info → Run anyway”. Signing is the next item on the roadmap.</li>
+          <li><strong>Electron, not a fork of Chrome.</strong> Pages render identically; extension toolbar popups do not show, and extensions that lean on Chrome's own services do not work.</li>
+          <li><strong>No phone app.</strong> Your public bookmarks are a web page you can open on any device; that is as mobile as it gets today.</li>
+        </ul>
+        <ul class="honest">
+          <li><strong>A one-person project with a fast cadence.</strong> Something broken? <a href="https://github.com/sirmmo/chord/issues">Open an issue</a>; most fixes ship within days.</li>
+          <li><strong>Nothing leaves your computer</strong> unless you set up sync, and then it goes to repositories you own and can delete.</li>
+          <li><strong>Not affiliated</strong> with The Browser Company, Arc or Atlassian. Chord reimplements the ideas, not the code.</li>
+        </ul>
       </div>
     </div>
   </section>
 
-  <section id="shortcuts">
+  <section id="download">
     <div class="wrap">
-      <h2>Shortcuts</h2>
-      <p class="sub">On Windows and Linux, <kbd>Ctrl</kbd> replaces <kbd>⌘</kbd> and <kbd>Alt</kbd> replaces <kbd>⌥</kbd>.</p>
-      <div class="two">
-        <table>
-          <tr><th>Keys</th><th>Action</th></tr>
-          <tr><td><kbd>⌘T</kbd> / <kbd>⌘L</kbd></td><td>Command bar: new tab / edit current URL</td></tr>
-          <tr><td><kbd>⌘W</kbd> · <kbd>⌘⇧T</kbd></td><td>Close tab · reopen closed tab</td></tr>
-          <tr><td><kbd>⌘S</kbd> · <kbd>⌘,</kbd> · <kbd>⌘⇧L</kbd></td><td>Collapse sidebar · settings · address bar</td></tr>
-          <tr><td><kbd>⌘D</kbd></td><td>Pin / unpin tab</td></tr>
-          <tr><td><kbd>⌘⇧D</kbd> · <kbd>⌘⌥W</kbd></td><td>Add to split view · remove from split view</td></tr>
-          <tr><td><kbd>Ctrl+Tab</kbd> · <kbd>Ctrl+⇧Tab</kbd></td><td>Next / previous tab</td></tr>
-        </table>
-        <table>
-          <tr><th>Keys</th><th>Action</th></tr>
-          <tr><td><kbd>⌘1…8</kbd> · <kbd>⌘9</kbd></td><td>Jump to tab · last tab</td></tr>
-          <tr><td><kbd>⌘⌥←</kbd> / <kbd>⌘⌥→</kbd></td><td>Previous / next Space</td></tr>
-          <tr><td><kbd>Ctrl+1…9</kbd> · <kbd>⌘⇧N</kbd></td><td>Jump to Space (<kbd>Alt+1…9</kbd> on Windows and Linux) · new Space</td></tr>
-          <tr><td><kbd>⌘[</kbd> · <kbd>⌘]</kbd> · <kbd>⌘R</kbd></td><td>Back · forward · reload</td></tr>
-          <tr><td><kbd>⌘F</kbd> · <kbd>⌘⇧C</kbd></td><td>Find in page · copy URL</td></tr>
-          <tr><td><kbd>⌘=</kbd> · <kbd>⌘-</kbd> · <kbd>⌘0</kbd></td><td>Zoom in · out · reset</td></tr>
-        </table>
+      <h2>Download</h2>
+      <p class="sub">Every build comes from the <a href="https://github.com/sirmmo/chord/releases/latest">latest release</a> on GitHub and updates itself afterwards.</p>
+      <div class="dl">
+        <div class="card"><h3>macOS</h3><p>One universal <code>.dmg</code> for Apple Silicon and Intel, macOS 13 or later. A legacy build for Monterey.</p><a class="btn primary" href="https://github.com/sirmmo/chord/releases/latest">Download for macOS</a></div>
+        <div class="card"><h3>Windows</h3><p><code>-setup.exe</code> installer, or <code>-portable.zip</code> that keeps its data next to the app.</p><a class="btn primary" href="https://github.com/sirmmo/chord/releases/latest">Download for Windows</a></div>
+        <div class="card"><h3>Linux</h3><p><code>.AppImage</code> and <code>.deb</code>, x64.</p><a class="btn primary" href="https://github.com/sirmmo/chord/releases/latest">Download for Linux</a></div>
+        <div class="card"><h3>Source</h3><p>MIT licensed. <code>git clone</code>, <code>npm install</code>, <code>npm start</code>.</p><a class="btn" href="https://github.com/sirmmo/chord">github.com/sirmmo/chord</a></div>
       </div>
+      <p class="small" style="margin-top:18px">Install notes, update behaviour and building from source: <a href="docs.html#install">in the docs</a>.</p>
     </div>
   </section>
 
-  <section id="install">
+  <section id="community">
     <div class="wrap">
-      <h2>Install</h2>
-      <p class="sub">Grab an installer from the <a href="https://github.com/sirmmo/chord/releases/latest">latest release</a>, or build from source.</p>
-      <div class="two">
-        <div>
-          <h3>Downloads</h3>
-          <ul>
-            <li><strong>macOS 13 or later</strong>: one universal <code>.dmg</code> that runs natively on Apple Silicon and Intel. If an older per-architecture build warns about Rosetta, replace it with this one.</li>
-            <li><strong>macOS 12 Monterey</strong>: <code>-mac-universal-legacy.dmg</code>, the same app on Electron 43, the last Electron that runs on Monterey. It gets every Chord release but fewer Chromium security updates, so move to the main build when you can.</li>
-            <li><strong>Windows</strong>: <code>-setup.exe</code> installer, or <code>-portable.zip</code> to unpack anywhere; it keeps its data in <code>ChordData</code> next to <code>Chord.exe</code> (x64).</li>
-            <li><strong>Linux</strong>: <code>.AppImage</code> and <code>.deb</code> (x64).</li>
-          </ul>
-          <div class="note">Builds are not signed or notarised yet. On macOS, if the app refuses to open, run <code>xattr -cr /Applications/Chord.app</code> once. On Windows, choose “More info → Run anyway” in SmartScreen.</div>
-          <h3>Staying up to date</h3>
-          <p>Chord looks for new releases a short while after launch and every few hours (Settings → General → Updates, or Help → Check for Updates…). The Windows installer and the Linux AppImage download the new version and install it when Chord restarts. The macOS build is not notarised and cannot replace itself, so Chord offers the new dmg and you drag it over the old copy; the portable zip and the deb work the same way.</p>
-        </div>
-        <div>
-          <h3>From source</h3>
-          <p>Requires Node 22 or newer.</p>
-<pre><code>git clone https://github.com/sirmmo/chord.git
-cd chord
-npm install
-npm start          # build and launch
-npm test           # model unit tests
-npm run dist:mac   # .dmg in release/</code></pre>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="sites">
-    <div class="wrap">
-      <h2>For site owners</h2>
-      <p class="sub">Two ways a site can meet Chord halfway: an installable space, and a page that manages tabs of its own.</p>
-      <div class="two">
-        <div>
-          <h3>Installable spaces</h3>
-          <p>Publish a <code>chord-space</code> manifest over https and declare it with <code>&lt;link rel="chord-space" href="…"&gt;</code> or an <code>&lt;a href="chord://install/?url=…"&gt;Add to Chord&lt;/a&gt;</code> link. Chord shows what it contains and asks before installing. Boosts in a manifest may only target the publishing domain. Add <code>"dynamic": true</code> to grant the page API below on install.</p>
-          <h3>Dynamic pages</h3>
-          <p>Inside Chord, https pages get <code>navigator.chord</code>. A page may open and close tabs <em>of its own</em>, grouped under it as a subspace, and is told when the user closes one. It never sees the user's other tabs. The first call asks once per origin; Settings → General lists and revokes grants. Closing the page closes its subspace. <a href="chord-page-api.d.ts">Type declarations</a>.</p>
-        </div>
-<pre><code>{
-  "format": "chord-space", "version": 1,
-  "name": "Stairway", "icon": "🪜", "dynamic": true,
-  "pinned": [{ "url": "https://stairway.example/", "title": "Experiments" }]
-}
-
-// on the page
-if ('chord' in navigator &amp;&amp; await navigator.chord.requestTabs()) {
-  await navigator.chord.setSubspaceName('Experiments');
-  const tab = await navigator.chord.openTab({
-    url: 'https://stairway.example/exp/42', activate: false });
-  navigator.chord.addEventListener('tabclosed',
-    (e) =&gt; console.log('closed', e.detail.id));
-  await navigator.chord.closeTab(tab.id);
-}</code></pre>
-      </div>
-    </div>
-  </section>
-
-  <section id="mcp">
-    <div class="wrap">
-      <h2>MCP server</h2>
-      <p class="sub">Let Claude Desktop, or any MCP client on your computer, work in your browser.</p>
-      <div class="two">
-        <div>
-          <p>Settings → Add-ins → Local MCP server starts a Streamable HTTP endpoint on <code>127.0.0.1:23120/mcp</code>, protected by a token Chord keeps in its profile folder. One button copies a ready Claude Desktop configuration; paste it into <code>claude_desktop_config.json</code> and restart Claude Desktop.</p>
-          <p>Tools: list spaces and tabs, read a page's text, open, navigate, focus and close tabs, fetch a URL, search history, list downloads, and whatever the focused page exposes through WebMCP. Locked private spaces stay closed. Off by default, loopback only.</p>
-        </div>
-<pre><code>{
-  "mcpServers": {
-    "chord": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote",
-        "http://127.0.0.1:23120/mcp",
-        "--header", "Authorization: Bearer &lt;token&gt;"]
-    }
-  }
-}</code></pre>
-      </div>
-    </div>
-  </section>
-
-  <section id="config">
-    <div class="wrap">
-      <h2>Configuration files</h2>
-      <p class="sub"><em>File → Export Configuration…</em> writes your setup to JSON; <em>Import Configuration…</em> reads one back, merging or replacing. Right-click a Space to export just that one.</p>
-      <div class="two">
-        <div>
-          <p><strong>Merge</strong> adds what is missing: Spaces with the same name receive the tabs they do not have yet, other Spaces are created, favorites are added, settings are left alone.</p>
-          <p><strong>Replace</strong> rebuilds Spaces, favorites and settings from the file. Your current tabs are moved to the archive, so nothing is lost.</p>
-          <p>The format has no internal ids and is meant to be written by hand too. A tab is a URL string or an object with <code>url</code>, <code>title</code>, <code>favicon</code> and an optional <code>group</code> (its subspace). Imported tabs stay asleep until you open them.</p>
-        </div>
-<pre><code>{
-  "format": "chord-config",
-  "version": 1,
-  "favorites": ["https://mail.example.com"],
-  "spaces": [
-    {
-      "name": "Work",
-      "color": "#ff6b6b",
-      "icon": "💼",
-      "pinned": [{ "url": "https://github.com/sirmmo/chord", "title": "Chord" }],
-      "today": ["https://news.ycombinator.com"]
-    }
-  ],
-  "settings": {
-    "searchEngine": "duckduckgo",
-    "archiveAfterHours": 24,
-    "theme": { "mode": "dark", "accent": "#ffb347", "iconStyle": "mono" }
-  }
-}</code></pre>
-      </div>
-    </div>
-  </section>
-
-  <section id="architecture">
-    <div class="wrap">
-      <h2>How it works</h2>
-      <p class="sub">A small Electron app with one strict rule: all state changes go through a pure reducer, and the native views are reconciled from the state.</p>
-      <div class="two">
-        <div>
-          <p>Every click, shortcut or page event becomes an <em>action</em>. <code>reduce(state, action)</code> in <code>src/shared/model.ts</code> returns the next state and has no idea Electron exists, so it is covered by plain <code>node:test</code> unit tests.</p>
-          <p>The main process then <em>reconciles</em>: it creates a <code>WebContentsView</code> for every tab that should be awake, destroys the rest, lays out the visible panes (one or a split), persists the session and broadcasts the state to the sidebar page. UI, views and the saved session stay consistent by construction.</p>
-          <p>The sidebar is the window's own page. Because native views always paint above it, the command bar and the find bar live in a separate transparent view layered on top.</p>
-        </div>
-        <pre class="tree"><code>src/shared/   types, reducer, URL and layout helpers (no Electron)
-src/main/     Electron main process
-  controller  state, actions, commands, broadcasting
-  tabs        one WebContentsView per awake tab, reconciled
-  overlay     transparent view: command bar and find bar
-  menu        app menu and context menus
-  session     partition, UA, permission prompts, Shields
-src/preload/  contextBridge API (window.chord)
-src/renderer/ sidebar page and overlay page
-test/         node:test suite for the model</code></pre>
-      </div>
-    </div>
-  </section>
-
-  <section id="contribute">
-    <div class="wrap">
-      <h2>Contribute</h2>
-      <p class="sub">Chord is young and most of the work is still ahead. Pick something from the roadmap or fix what annoys you.</p>
-      <div class="two">
-        <div>
-          <h3>Roadmap</h3>
-          <ul>
-            <li>Signed and notarised macOS and Windows builds</li>
-          </ul>
-        </div>
-        <div>
-          <h3>Working on it</h3>
-          <ol>
-            <li>Fork and clone, then <code>npm install</code>.</li>
-            <li><code>npm run watch</code> rebuilds on save; run <code>npx electron .</code> in another terminal.</li>
-            <li>Keep logic in the reducer and add a test in <code>test/model.test.ts</code>.</li>
-            <li><code>npm run typecheck &amp;&amp; npm test</code> must pass; CI runs them and packages every platform.</li>
-            <li>Open a pull request. Tagging <code>vX.Y.Z</code> publishes a GitHub release with installers for all three platforms.</li>
-          </ol>
-        </div>
+      <p class="quote">If you are leaving Arc, you are exactly who Chord is built for. <span>Star the repository, open an issue with what you miss, and tell the next person.</span></p>
+      <div class="cta" style="margin-top:22px">
+        <a class="btn primary" href="https://github.com/sirmmo/chord">Star on GitHub</a>
+        <a class="btn" href="https://github.com/sirmmo/chord/issues/new">What do you miss from Arc?</a>
+        <a class="btn" href="docs.html#contribute">Contribute</a>
       </div>
     </div>
   </section>
@@ -410,5 +309,12 @@ test/         node:test suite for the model</code></pre>
   <footer>
     <div class="wrap">Chord is MIT licensed. Not affiliated with The Browser Company or Arc. <a href="https://github.com/sirmmo/chord">github.com/sirmmo/chord</a></div>
   </footer>
+  <script>
+    (function () {
+      var ua = navigator.userAgent, p = navigator.platform || '';
+      var os = /Mac/.test(p) ? 'macOS' : /Win/.test(p) ? 'Windows' : /Linux/.test(p) && !/Android/.test(ua) ? 'Linux' : '';
+      if (os) document.getElementById('dl').textContent = 'Download for ' + os;
+    })();
+  </script>
 </body>
 </html>
