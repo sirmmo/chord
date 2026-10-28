@@ -154,6 +154,15 @@
         <div id="s-passwords" class="pw-list"></div>
         <h3>Never save for</h3>
         <div id="s-pw-never" class="pw-list"></div>
+        <h3>Passkeys</h3>
+        <div class="s-grid">
+          <label>Passkeys</label>
+          <div>
+            <select id="s-passkeys"><option value="chord">Stored in Chord (default)</option><option value="system">System: Windows Hello and security keys</option></select>
+            <p class="s-foot" id="s-pk-note"></p>
+          </div>
+        </div>
+        <div id="s-passkeys-list" class="pw-list"></div>
       </div>
       <div class="s-page" data-page="ai">
         <p class="s-foot" style="margin-top:0">The AI mode of a space talks to the model you configure here. It can list and read the space’s tabs, open and navigate them, fetch URLs, and call tools that pages expose through WebMCP. Nothing is sent anywhere until you write in the panel.</p>

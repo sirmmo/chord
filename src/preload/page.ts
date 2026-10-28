@@ -30,6 +30,91 @@ function identityHook(userAgent: string, firefox: string): void {
   }
 }
 
+/**
+ * Runs in the page's main world when Chord answers passkeys: navigator.credentials
+ * asks Chord first (consent, Touch ID, the authenticator for this one call) and
+ * then runs the real WebAuthn call, which Chromium routes to Chord's authenticator.
+ */
+function passkeyHook(reportKey: string, actionKey: string): void {
+  const w = window as Window & { __chordPasskeys?: boolean };
+  if (w.__chordPasskeys) return;
+  Object.defineProperty(w, '__chordPasskeys', { value: true });
+  const pending = new Map<string, { resolve: (v: { ok: boolean; passthrough?: boolean; error?: string }) => void }>();
+  let seq = 0;
+  const ask = (method: string, args: Record<string, unknown>) =>
+    new Promise<{ ok: boolean; passthrough?: boolean; error?: string }>((resolve) => {
+      const callId = `pk-${Date.now().toString(36)}-${++seq}`;
+      pending.set(callId, { resolve });
+      window.postMessage({ [reportKey]: { kind: 'passkey', callId, method, args } }, '*');
+      setTimeout(() => {
+        if (pending.delete(callId)) resolve({ ok: false, error: 'Chord did not answer.' });
+      }, 180_000);
+    });
+  window.addEventListener('message', (e: MessageEvent) => {
+    if (e.source !== window || !e.data || typeof e.data[actionKey] !== 'string') return;
+    const raw = e.data[actionKey] as string;
+    if (!raw.startsWith('passkey:')) return;
+    try {
+      const r = JSON.parse(raw.slice(8)) as { callId: string; ok: boolean; passthrough?: boolean; error?: string };
+      const p = pending.get(r.callId);
+      pending.delete(r.callId);
+      p?.resolve(r);
+    } catch {
+      /* malformed */
+    }
+  });
+  const b64 = (buf: unknown): string => {
+    const bytes = buf instanceof ArrayBuffer ? new Uint8Array(buf) : ArrayBuffer.isView(buf) ? new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength) : new Uint8Array(0);
+    let s = '';
+    for (const b of bytes) s += String.fromCharCode(b);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  };
+  const fail = (error?: string) => new DOMException(error || 'The operation either timed out or was not allowed.', 'NotAllowedError');
+  const proto = (window as unknown as { CredentialsContainer?: { prototype: CredentialsContainer } }).CredentialsContainer?.prototype;
+  if (proto) {
+    const origCreate = proto.create;
+    const origGet = proto.get;
+    proto.create = async function (this: CredentialsContainer, options?: CredentialCreationOptions) {
+      const pk = options?.publicKey;
+      if (!pk) return origCreate.call(this, options);
+      const sel = pk.authenticatorSelection ?? {};
+      const r = await ask('create', { rpId: pk.rp?.id ?? '', rpName: pk.rp?.name ?? '', userName: pk.user?.name ?? '', userDisplayName: pk.user?.displayName ?? '', residentKey: sel.residentKey ?? '', attachment: sel.authenticatorAttachment ?? '' });
+      if (!r.ok) {
+        if (r.passthrough) return origCreate.call(this, options);
+        throw fail(r.error);
+      }
+      try {
+        return await origCreate.call(this, options);
+      } finally {
+        void ask('done', {});
+      }
+    };
+    proto.get = async function (this: CredentialsContainer, options?: CredentialRequestOptions) {
+      const pk = options?.publicKey;
+      if (!pk) return origGet.call(this, options);
+      const r = await ask('get', { rpId: pk.rpId ?? '', allow: (pk.allowCredentials ?? []).map((c) => b64(c.id)), conditional: options?.mediation === 'conditional' });
+      if (!r.ok) {
+        if (r.passthrough) return origGet.call(this, options);
+        throw fail(r.error);
+      }
+      try {
+        return await origGet.call(this, options);
+      } finally {
+        void ask('done', {});
+      }
+    };
+  }
+  const PKC = (window as unknown as { PublicKeyCredential?: Record<string, unknown> }).PublicKeyCredential;
+  if (PKC) {
+    try {
+      PKC.isUserVerifyingPlatformAuthenticatorAvailable = () => Promise.resolve(true);
+      PKC.isConditionalMediationAvailable = () => Promise.resolve(false);
+    } catch {
+      /* frozen */
+    }
+  }
+}
+
 /** Runs inside the page's main world. Must stay self-contained: no imports, no closures. */
 function smartHook(reportKey: string, actionKey: string): void {
   const w = window as Window & { __chordHooked?: boolean; APP?: { conference?: Record<string, (...a: unknown[]) => unknown> } };
@@ -420,10 +505,26 @@ if (process.isMainFrame) {
   }
   // GitHub and VS Code are read from this world, which sees the DOM but not the page's scripts.
   const dev = installDevAdapter();
+  // Passkeys: when Chord is the authenticator, the page asks it before every WebAuthn call.
+  if (location.protocol === 'https:' || location.hostname === 'localhost') {
+    try {
+      if (ipcRenderer.sendSync('passkey:mode') === 'chord') runInMainWorld(passkeyHook, [REPORT_KEY, ACTION_KEY]);
+    } catch (err) {
+      console.warn('Chord passkey hook not installed', err);
+    }
+  }
 
   window.addEventListener('message', (e: MessageEvent) => {
     if (e.source !== window || !e.data || typeof e.data !== 'object' || !(REPORT_KEY in e.data)) return;
     const payload = e.data[REPORT_KEY] as { kind?: string; callId?: string; method?: string; args?: unknown } | null;
+    if (payload && payload.kind === 'passkey') {
+      const callId = String(payload.callId ?? '');
+      ipcRenderer
+        .invoke('passkey', { method: payload.method, ...(typeof payload.args === 'object' && payload.args !== null ? payload.args : {}) })
+        .then((r: { ok: boolean; passthrough?: boolean; error?: string }) => window.postMessage({ [ACTION_KEY]: `passkey:${JSON.stringify({ callId, ...r })}` }, '*'))
+        .catch((err: Error) => window.postMessage({ [ACTION_KEY]: `passkey:${JSON.stringify({ callId, ok: false, error: err.message })}` }, '*'));
+      return;
+    }
     if (payload && payload.kind === 'pagetabs') {
       const callId = String(payload.callId ?? '');
       ipcRenderer

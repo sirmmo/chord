@@ -112,6 +112,15 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   page lists everything with pause, resume, cancel, retry, open and show-in-folder.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
+- **Passkeys**: Chord is a passkey provider. When a site offers to create a passkey or
+  to sign in with one, Chord asks you (Touch ID on Macs that have it, a dialog elsewhere),
+  then answers the site with a software authenticator it attaches for that one request.
+  Keys are stored in `passkeys.json` encrypted with the OS keychain, listed and deletable
+  in Settings → Passwords, never exported. Sites with no Chord passkey still reach your
+  security keys; Settings → Passwords → Passkeys can hand everything to the system
+  instead (Windows Hello and security keys on Windows). Apple's own Touch ID and iCloud
+  passkeys are not reachable from a browser that is not Safari, so Chord's store is the
+  macOS path.
 - **Keep loaded**: any tab can be marked to always be loaded (tab menu → Keep Loaded, or
   the command bar). It wakes at launch and whenever its space is unlocked, loads in the
   background in spaces you are not looking at, and is never archived. Off by default for

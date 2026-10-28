@@ -1,7 +1,7 @@
 // chord://settings — the settings page.
 
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
-import type { AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
+import type { AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasskeysStatus, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { SEARCH_ENGINES } from '../shared/url.ts';
@@ -549,6 +549,44 @@ function renderPasswords(): void {
   );
   $('#s-pw-never').replaceChildren(
     ...passwords.never.map((host) => h('div', { class: 'pw' }, h('div', { class: 'host' }, host), h('span'), h('div', { class: 'btns' }, h('button', { class: 'btn', onclick: () => dispatch({ type: 'password.allowAgain', host }) }, 'Allow again')))),
+  );
+}
+
+// ---- passkeys ----
+
+let passkeys: PasskeysStatus = { available: false, mode: 'chord', touchId: false, entries: [] };
+const sPasskeys = $<HTMLSelectElement>('#s-passkeys');
+sPasskeys.onchange = () => dispatch({ type: 'settings.update', patch: { passkeys: sPasskeys.value as 'chord' | 'system' } });
+api.onPasskeys((p) => {
+  passkeys = p;
+  renderPasskeys();
+});
+void api.getPasskeys().then((p) => {
+  passkeys = p;
+  renderPasskeys();
+});
+
+function renderPasskeys(): void {
+  if (document.activeElement !== sPasskeys) sPasskeys.value = passkeys.mode;
+  $('#s-pk-note').textContent = !passkeys.available
+    ? 'Passkey storage is unavailable because the operating system keychain cannot be reached; sites fall back to security keys.'
+    : passkeys.mode === 'chord'
+      ? `When a site offers a passkey, Chord asks you${passkeys.touchId ? ' with Touch ID' : ''} and stores it encrypted with your operating system's keychain; signing in later asks again. Passkeys stay on this computer and are not exported. Security keys still work for sites where Chord has no passkey.`
+      : 'Requests go to the system: Windows Hello and security keys on Windows, security keys elsewhere. macOS and Linux have no system passkey provider for Chord.';
+  const fmt = (t: number) => new Date(t).toLocaleDateString();
+  $('#s-passkeys-list').replaceChildren(
+    ...passkeys.entries
+      .slice()
+      .sort((a, b) => a.rpId.localeCompare(b.rpId) || a.userName.localeCompare(b.userName))
+      .map((e) =>
+        h(
+          'div',
+          { class: 'pw' },
+          h('div', {}, h('div', { class: 'host' }, e.rpId), h('div', { class: 'user' }, [e.userName || e.userDisplayName || '(no account name)', e.userDisplayName && e.userDisplayName !== e.userName ? e.userDisplayName : ''].filter(Boolean).join(' · '))),
+          h('span', { class: 'secret' }, `created ${fmt(e.createdAt)} · last used ${fmt(e.lastUsedAt)}`),
+          h('div', { class: 'btns' }, h('button', { class: 'btn danger', onclick: () => dispatch({ type: 'passkey.delete', id: e.id }) }, 'Delete')),
+        ),
+      ),
   );
 }
 

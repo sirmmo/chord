@@ -32,6 +32,7 @@ import { DownloadManager } from './downloads.ts';
 import { HistoryManager } from './history.ts';
 import { BoostManager } from './boosts.ts';
 import { PasswordManager } from './passwords.ts';
+import { PasskeyManager } from './passkeys.ts';
 import { PIP_JS } from './pip.ts';
 import { installSpace } from './installer.ts';
 import { ResearchManager } from './research.ts';
@@ -69,6 +70,7 @@ export class Controller {
   readonly history = new HistoryManager(this);
   readonly boosts = new BoostManager(this);
   readonly passwords = new PasswordManager(this);
+  readonly passkeys = new PasskeyManager(this);
   readonly research = new ResearchManager(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
@@ -168,6 +170,7 @@ export class Controller {
     this.downloads.init(browsingSession());
     this.history.init();
     this.passwords.init();
+    this.passkeys.init();
     this.research.init();
     this.ai.init();
     this.capture.init();
@@ -386,6 +389,7 @@ export class Controller {
     this.downloads.flush();
     this.history.flush();
     this.passwords.flush();
+    this.passkeys.flush();
     this.research.flush();
     this.ai.flush();
     this.store.save(this.state);
@@ -437,6 +441,7 @@ export class Controller {
     this.broadcast();
     if (prev.settings.shields !== next.settings.shields) void setShields(next.settings.shields);
     if (prev.settings.smartPages && !next.settings.smartPages) this.smart.clearAll();
+    if (prev.settings.passkeys !== next.settings.passkeys) this.sendAll('passkeys', this.passkeys.status());
     if (prev.settings.closeToTray !== next.settings.closeToTray) this.tray.sync(next.settings.closeToTray);
     if (prev.settings.boosts !== next.settings.boosts && JSON.stringify(prev.settings.boosts) !== JSON.stringify(next.settings.boosts)) void this.boosts.refresh();
     this.autoPip(prev, next);
@@ -646,6 +651,9 @@ export class Controller {
         return;
       case 'password.allowAgain':
         this.passwords.allowAgain(cmd.host);
+        return;
+      case 'passkey.delete':
+        this.passkeys.remove(cmd.id);
         return;
       case 'call.action':
         this.smart.callAction(cmd.id, cmd.action);

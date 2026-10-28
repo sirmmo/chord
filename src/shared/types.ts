@@ -66,6 +66,23 @@ export interface PasswordsStatus {
   never: string[];
 }
 
+/** 'chord': Chord stores passkeys and answers sites itself; 'system': Chromium's own stack (Windows Hello, security keys). */
+export type PasskeysMode = 'chord' | 'system';
+export interface PasskeyEntry {
+  id: string;
+  rpId: string;
+  userName: string;
+  userDisplayName: string;
+  createdAt: number;
+  lastUsedAt: number;
+}
+export interface PasskeysStatus {
+  available: boolean;
+  mode: PasskeysMode;
+  touchId: boolean;
+  entries: PasskeyEntry[];
+}
+
 export type ModeId = 'research' | 'ai' | 'sources';
 
 export interface ResearchClip {
@@ -240,6 +257,8 @@ export interface Settings {
   searchEngine: SearchEngine;
   /** how Chord presents itself to accounts.google.com, which rejects embedded browsers */
   googleSignIn: GoogleSignIn;
+  /** who answers WebAuthn requests: Chord's built-in passkeys or the system */
+  passkeys: PasskeysMode;
   /** Chromium troubleshooting switches applied at the next launch */
   flags: TroubleFlags;
   /** origins allowed to open and close tabs of their own through navigator.chord */
@@ -457,6 +476,7 @@ export type Command =
   | { type: 'ai.test' }
   | { type: 'downloads.panel' }
   | { type: 'password.delete'; id: string }
+  | { type: 'passkey.delete'; id: string }
   | { type: 'password.allowAgain'; host: string }
   | { type: 'import.browser' }
   | { type: 'download.pause'; id: string }
@@ -500,7 +520,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'import.browser',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus',
 ]);
@@ -692,6 +712,8 @@ export interface ChordApi {
   getMcp(): Promise<McpStatus>;
   onPasswords(cb: (status: PasswordsStatus) => void): () => void;
   getPasswords(): Promise<PasswordsStatus>;
+  onPasskeys(cb: (status: PasskeysStatus) => void): () => void;
+  getPasskeys(): Promise<PasskeysStatus>;
   revealPassword(id: string): Promise<string | null>;
   onResearch(cb: (status: ResearchStatus) => void): () => void;
   getResearch(spaceId: SpaceId): Promise<ResearchStatus>;
