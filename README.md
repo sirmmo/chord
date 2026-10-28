@@ -151,6 +151,10 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   "Open in Chord" button; the link is copied, and the space updates with every push until
   you stop sharing. Right-click a tab → Share copies a link to a page of its own, with an
   optional note. Settings → Sync lists everything shared.
+- **Connected spaces**: a space several people keep together, live, over MQTT.
+  Right-click a space → "Connect Space" and send the join link; everyone who opens it gets
+  the space, and whatever anyone pins, removes, renames, groups or writes in the notes
+  reaches the others within seconds. See "Connected spaces" below.
 - **Live folders**: a subspace Chord keeps filled from a source. Right-click a space →
   New Live Folder: GitHub pull requests waiting for your review, your open pull requests,
   issues assigned to you, unread notifications or any GitHub search (with the token from
@@ -495,6 +499,35 @@ if ('chord' in navigator && (await navigator.chord.requestTabs())) {
 | events `tabclosed` · `tabchanged` | `e.detail` carries `id` (and `url`, `title`). |
 
 Closing the page closes its subspace. Type declarations: [`docs/chord-page-api.d.ts`](docs/chord-page-api.d.ts).
+
+## Connected spaces
+
+A connected space is shared live between people rather than published. Right-click a
+space → "Connect Space (share live over MQTT)…" (or "Connect This Space" in the command
+bar): Chord gives the space a random id and a random key, copies a join link of the form
+`chord://join/?id=…&k=…&b=…` and starts talking to the broker. Anyone who opens that
+link in Chord (paste it in the command bar, in Settings → Connected → Join, or click it on
+a page) gets the space and becomes a member. The link is the key: send it privately.
+
+What travels: the space's name, icon, colour and notes, and its pinned tabs with their
+order, names, icons and subspaces. What stays yours: today tabs, what is open on screen,
+collapsed subspaces, live folders and browsing profiles. If someone removes a tab you have
+open, it stays with you as a today tab. Two people changing the space at the same time
+both keep their changes: the shared document is a small CRDT (adds and removes carry
+timestamps, metadata is last-writer-wins), so it merges rather than overwrites. The
+sidebar shows a LIVE pill in the space header with how many others are online; click it
+to copy the join link again. "Disconnect Space…" keeps your copy and leaves the group.
+
+How it travels: everything goes through the MQTT broker set in Settings → Connected,
+HiveMQ's public broker (`mqtts://broker.hivemq.com:8883`) by default. Only TLS brokers
+are accepted (`mqtts://` or `wss://`), so the wire is always encrypted, and the space
+itself is sealed with AES-256-GCM using the key from the join link before it leaves
+Chord: the broker, whoever runs it and anyone else subscribed see ciphertext. The join
+link carries the broker, so people you invite reach the same one even if their own
+setting differs; a username and password can be given for brokers that need them. Each
+member keeps a retained copy of the sealed document under `chord/v1/<id>/state` and a
+heartbeat under `chord/v1/<id>/p/<client>`; the state file `connected.json` in Chord's
+data folder remembers the last document so removals survive restarts.
 
 ## Google sign-in
 

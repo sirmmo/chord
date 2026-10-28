@@ -10,6 +10,7 @@ import { cellCount, parseTiling, presetsFor } from './tiling.ts';
 import { isBoost } from './boosts.ts';
 import { isRoute } from './routes.ts';
 import { slugify } from './share.ts';
+import { DEFAULT_BROKER, brokerProblem, isConnectedSpace, sanitizeDoc } from './connected.ts';
 import { clampPanel, isModeId } from './modes.ts';
 
 export const SPACE_COLORS = ['#5B6CFF', '#FF6B6B', '#2EC4B6', '#FFB347', '#B388FF', '#4CC9F0', '#F72585', '#8AC926'];
@@ -29,7 +30,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], routes: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', googleSignIn: 'firefox', passkeys: 'chord', sync: { enabled: false, user: '', privateRepo: 'chord-private', publicRepo: 'chord-bookmarks' }, littleWindows: true, peek: true, autofill: true, passwordLock: false, passwordSync: false, flags: {}, pageTabs: [], updates: { check: true, auto: true }, mcp: { enabled: false, port: 23120 }, sourceror: { server: 'http://127.0.0.1:5010', checkLinks: true, useLlm: true, discover: true } };
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], routes: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', googleSignIn: 'firefox', passkeys: 'chord', sync: { enabled: false, user: '', privateRepo: 'chord-private', publicRepo: 'chord-bookmarks' }, mqtt: { broker: DEFAULT_BROKER }, littleWindows: true, peek: true, autofill: true, passwordLock: false, passwordSync: false, flags: {}, pageTabs: [], updates: { check: true, auto: true }, mcp: { enabled: false, port: 23120 }, sourceror: { server: 'http://127.0.0.1:5010', checkLinks: true, useLlm: true, discover: true } };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -63,11 +64,21 @@ export function mergeSettings(raw: unknown): Settings {
   const sync: Settings['sync'] = { enabled: rsync.enabled === true, user: typeof rsync.user === 'string' ? rsync.user.slice(0, 60) : '', privateRepo: repoName(rsync.privateRepo, 'chord-private'), publicRepo: repoName(rsync.publicRepo, 'chord-bookmarks') };
   if (typeof rsync.clientId === 'string' && /^[\w.]{10,80}$/.test(rsync.clientId)) sync.clientId = rsync.clientId;
   if (rsync.theme === 'pragmatic' || rsync.theme === 'digg' || rsync.theme === 'elegant') sync.theme = rsync.theme;
+  const mqtt = cleanMqtt(r.mqtt);
   const rs = (typeof r.sourceror === 'object' && r.sourceror !== null ? r.sourceror : {}) as Partial<Settings['sourceror']>;
   const sourceror = { server: typeof rs.server === 'string' && /^https?:\/\//.test(rs.server) ? rs.server.replace(/\/+$/, '') : 'http://127.0.0.1:5010', checkLinks: rs.checkLinks !== false, useLlm: rs.useLlm !== false, discover: rs.discover !== false };
-  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, routes, ai, flags, pageTabs, updates, mcp, googleSignIn, passkeys, sync, sourceror, littleWindows: r.littleWindows !== false, peek: r.peek !== false, autofill: r.autofill !== false, passwordLock: r.passwordLock === true, passwordSync: r.passwordSync === true };
+  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, routes, ai, flags, pageTabs, updates, mcp, googleSignIn, passkeys, sync, mqtt, sourceror, littleWindows: r.littleWindows !== false, peek: r.peek !== false, autofill: r.autofill !== false, passwordLock: r.passwordLock === true, passwordSync: r.passwordSync === true };
   merged.panelWidth = clampPanel(typeof merged.panelWidth === 'number' ? merged.panelWidth : 360);
   return merged;
+}
+
+/** Broker settings as stored: an unencrypted or malformed broker URL falls back to the default. */
+export function cleanMqtt(raw: unknown): Settings['mqtt'] {
+  const rq = (typeof raw === 'object' && raw !== null ? raw : {}) as Partial<Settings['mqtt']>;
+  const mqtt: Settings['mqtt'] = { broker: typeof rq.broker === 'string' && brokerProblem(rq.broker) === null ? rq.broker.trim() : DEFAULT_BROKER };
+  if (typeof rq.username === 'string' && rq.username) mqtt.username = rq.username.slice(0, 200);
+  if (typeof rq.password === 'string' && rq.password) mqtt.password = rq.password.slice(0, 500);
+  return mqtt;
 }
 
 export function clampTint(v: unknown): number {
@@ -162,6 +173,7 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     if (sp.modes) sp.modes = sp.modes.filter(isModeId);
     if (sp.notes !== undefined && typeof sp.notes !== 'string') delete sp.notes;
     if (sp.shared !== undefined && (typeof sp.shared !== 'object' || sp.shared === null || typeof sp.shared.slug !== 'string' || sp.lock)) delete sp.shared;
+    if (sp.connected !== undefined && (!isConnectedSpace(sp.connected) || sp.lock)) delete sp.connected;
     if (sp.curators) {
       sp.curators = sp.curators.filter((c) => c && typeof c.id === 'string' && typeof c.feed === 'string' && (c.kind === 'feed' || c.kind === 'github'));
       if (sp.curators.length === 0) delete sp.curators;
@@ -548,6 +560,100 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       } else {
         if (!sp.shared) return prev;
         delete sp.shared;
+      }
+      return s;
+    }
+    case 'space.connect': {
+      const sp = spaceById(s, a.id);
+      if (!sp || sp.reader || sp.lock || sp.connected || !isConnectedSpace(a.connected)) return prev;
+      sp.connected = { ...a.connected };
+      return s;
+    }
+    case 'space.disconnect': {
+      const sp = spaceById(s, a.id);
+      if (!sp?.connected) return prev;
+      delete sp.connected;
+      return s;
+    }
+    case 'space.join': {
+      if (!isConnectedSpace(a.connected)) return prev;
+      if (s.spaces.some((sp) => sp.connected?.id === a.connected.id)) {
+        s.activeSpaceId = s.spaces.find((sp) => sp.connected?.id === a.connected.id)!.id;
+        return s;
+      }
+      const sp = makeSpace(s.spaces.length, ctx, a.name || 'Connected space');
+      sp.connected = { ...a.connected };
+      s.spaces.push(sp);
+      s.activeSpaceId = sp.id;
+      return s;
+    }
+    case 'space.connectedSync': {
+      // Make the space look like the shared document: metadata, then the pinned tabs by URL
+      // (live folders stay local). A removed tab that is open on screen becomes a today tab.
+      const sp = spaceById(s, a.id);
+      if (!sp?.connected || isLocked(sp)) return prev;
+      const doc = sanitizeDoc(a.doc);
+      if (doc.name) sp.name = doc.name;
+      if (doc.icon) sp.icon = doc.icon;
+      else if (doc.metaAt) delete sp.icon;
+      if (doc.color) sp.color = doc.color;
+      if (doc.notes) sp.notes = doc.notes;
+      else if (doc.metaAt) delete sp.notes;
+      const wanted = new Map(doc.tabs.map((t) => [t.url, t]));
+      const live = new Set((sp.groups ?? []).filter((g) => g.live).map((g) => g.id));
+      const byHome = new Map<string, TabId>();
+      const keep: TabId[] = [];
+      for (const id of sp.pinned) {
+        const t = s.tabs[id];
+        if (!t) continue;
+        if (t.groupId && live.has(t.groupId)) {
+          keep.push(id);
+          continue;
+        }
+        const key = t.homeUrl ?? t.url;
+        if (wanted.has(key) && !byHome.has(key)) {
+          byHome.set(key, id);
+          continue;
+        }
+        if (sp.panes.includes(id)) {
+          t.kind = 'today';
+          delete t.groupId;
+          sp.today.unshift(id);
+        } else delete s.tabs[id];
+      }
+      const groupFor = (name: string | undefined): string | undefined => {
+        if (!name) return undefined;
+        let g = sp.groups?.find((x) => !x.live && x.name.toLowerCase() === name.toLowerCase());
+        if (!g) {
+          g = { id: ctx.newId(), name };
+          sp.groups = [...(sp.groups ?? []), g];
+        }
+        return g.id;
+      };
+      const ordered: TabId[] = [];
+      for (const st of doc.tabs) {
+        let id = byHome.get(st.url);
+        if (!id) {
+          id = ctx.newId();
+          s.tabs[id] = { id, spaceId: sp.id, kind: 'pinned', url: st.url, homeUrl: st.url, title: st.title || titleFor(st.url), createdAt: ctx.now, lastActiveAt: ctx.now, awake: false };
+        }
+        const t = s.tabs[id];
+        if (st.title && !t.awake && t.title !== st.title) t.title = st.title;
+        if (st.name) t.name = st.name;
+        else delete t.name;
+        if (st.icon) t.icon = st.icon;
+        else delete t.icon;
+        const gid = groupFor(st.group);
+        if (gid) t.groupId = gid;
+        else delete t.groupId;
+        ordered.push(id);
+      }
+      // live-folder members keep their place at the end, in their old order
+      sp.pinned = [...ordered, ...keep];
+      if (sp.groups) {
+        const used = new Set(sp.pinned.map((id) => s.tabs[id]?.groupId).concat(sp.today.map((id) => s.tabs[id]?.groupId)));
+        sp.groups = sp.groups.filter((g) => g.live || g.owner || used.has(g.id));
+        if (sp.groups.length === 0) delete sp.groups;
       }
       return s;
     }
@@ -959,6 +1065,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
     }
     case 'settings.update': {
       Object.assign(s.settings, a.patch);
+      if (a.patch.mqtt) s.settings.mqtt = cleanMqtt(a.patch.mqtt);
       s.settings.sidebarWidth = clampSidebar(s.settings.sidebarWidth);
       return s;
     }

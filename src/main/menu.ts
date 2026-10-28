@@ -293,6 +293,8 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
       { label: 'Easel of This Space', click: d({ type: 'easel.open', spaceId: id }) },
       ...(space.lock ? [] : [{ label: space.shared ? 'Stop Sharing Space' : 'Share Space (publish a link)', click: d({ type: 'space.shareToggle', id }) }]),
       ...(space.shared ? [{ label: 'Copy Share Link', click: d({ type: 'space.copyShareLink', id }) }] : []),
+      ...(space.lock ? [] : [{ label: space.connected ? 'Disconnect Space…' : 'Connect Space (share live over MQTT)…', click: d({ type: 'space.connectToggle', id }) }]),
+      ...(space.connected ? [{ label: 'Copy Join Link', click: d({ type: 'space.copyJoinLink', id }) }] : []),
       { label: 'New Live Folder', submenu: (Object.keys(LIVE_KINDS) as LiveKind[]).map((kind) => ({ label: LIVE_KINDS[kind].label, click: d({ type: 'group.newLive', spaceId: id, kind }) })) },
       { label: 'Bookmarks of This Space', click: d({ type: 'bookmarks.openSpace', spaceId: id }) },
       { label: 'Feeds of This Space', click: d({ type: 'reader.openSpace', spaceId: id }) },

@@ -1,10 +1,11 @@
 // chord://settings — the settings page.
 
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
-import type { Route, AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasskeysStatus, SyncStatus, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
+import type { Route, AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasskeysStatus, SyncStatus, PasswordsStatus, State, TroubleFlags, UpdateStatus, ConnectedStatus, MqttSettings } from '../shared/types.ts';
+import { DEFAULT_BROKER, brokerProblem } from '../shared/connected.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
-import { SEARCH_ENGINES } from '../shared/url.ts';
+import { SEARCH_ENGINES, hostOf } from '../shared/url.ts';
 import { h } from './dom.ts';
 
 const api = window.chord;
@@ -55,7 +56,7 @@ const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = { paths: {}, install: { busy: false, message: '', error: false } };
 
-const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'routes', 'passwords', 'sync', 'ai', 'about'];
+const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'routes', 'passwords', 'sync', 'connected', 'ai', 'about'];
 const showPage = (raw: string) => {
   const [page, arg] = raw.split(':');
   if (page === 'boosts' && arg) prefillBoost(decodeURIComponent(arg));
@@ -289,6 +290,7 @@ function fillSettings(): void {
   const s = state;
   if (!s) return;
   renderLayouts();
+  renderConnected();
   const t = s.settings.theme;
   const space = activeSpace(s);
   const active = document.activeElement;
@@ -690,6 +692,70 @@ function renderPasskeys(): void {
         ),
       ),
   );
+}
+
+// ---- connected spaces page ----
+
+let connectedStatus: ConnectedStatus = { spaces: {} };
+const sMqttBroker = $<HTMLInputElement>('#s-mqtt-broker');
+const sMqttUser = $<HTMLInputElement>('#s-mqtt-user');
+const sMqttPass = $<HTMLInputElement>('#s-mqtt-pass');
+const saveMqtt = () => {
+  if (!state) return;
+  const broker = sMqttBroker.value.trim() || DEFAULT_BROKER;
+  const problem = brokerProblem(broker);
+  $('#s-mqtt-problem').textContent = problem ? `Not saved: ${problem}.` : '';
+  if (problem) return;
+  const mqtt: MqttSettings = { broker };
+  if (sMqttUser.value.trim()) mqtt.username = sMqttUser.value.trim();
+  if (sMqttPass.value) mqtt.password = sMqttPass.value;
+  dispatch({ type: 'settings.update', patch: { mqtt } });
+};
+sMqttBroker.onchange = saveMqtt;
+sMqttUser.onchange = saveMqtt;
+sMqttPass.onchange = saveMqtt;
+$('#s-mqtt-reconnect').onclick = () => dispatch({ type: 'connected.reconnect' });
+const sJoinLink = $<HTMLInputElement>('#s-join-link');
+$('#s-join').onclick = () => {
+  const link = sJoinLink.value.trim();
+  if (!link) {
+    sJoinLink.focus();
+    return;
+  }
+  dispatch({ type: 'space.joinPrompt', link });
+  sJoinLink.value = '';
+};
+api.onConnected((st) => {
+  connectedStatus = st;
+  renderConnected();
+});
+void api.getConnected().then((st) => {
+  if (st) {
+    connectedStatus = st;
+    renderConnected();
+  }
+});
+
+function renderConnected(): void {
+  const s = state;
+  if (!s) return;
+  if (document.activeElement !== sMqttBroker) sMqttBroker.value = s.settings.mqtt.broker;
+  if (document.activeElement !== sMqttUser) sMqttUser.value = s.settings.mqtt.username ?? '';
+  if (document.activeElement !== sMqttPass) sMqttPass.value = s.settings.mqtt.password ?? '';
+  const rows = s.spaces.filter((sp) => sp.connected).map((sp) => {
+    const st = connectedStatus.spaces[sp.id];
+    const peers = st?.peers ?? 0;
+    const when = st?.lastSync ? new Date(st.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'never';
+    return h(
+      'div',
+      { class: 'row', style: 'align-items:center; gap:8px; margin-bottom:6px' },
+      h('b', {}, `${sp.icon ? `${sp.icon} ` : ''}${sp.name}`),
+      h('span', { class: 's-foot' }, `${st?.state ?? 'connecting'}${st?.error ? ` · ${st.error}` : ''} · ${peers} other${peers === 1 ? '' : 's'} online · last update ${when} · ${hostOf(sp.connected!.broker)}`),
+      h('button', { class: 'btn', onclick: () => dispatch({ type: 'space.copyJoinLink', id: sp.id }) }, 'Copy join link'),
+      h('button', { class: 'btn danger', onclick: () => dispatch({ type: 'space.connectToggle', id: sp.id }) }, 'Disconnect'),
+    );
+  });
+  $('#s-connected-list').replaceChildren(...(rows.length ? rows : [h('span', { class: 's-foot' }, 'No connected spaces yet.')]));
 }
 
 // ---- sync page ----

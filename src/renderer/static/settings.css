@@ -127,3 +127,5 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 .s-help summary { cursor: default; font-size: 13px; font-weight: 600; }
 .s-help ul { padding-left: 18px; margin: 6px 0; } .s-help li { margin: 3px 0; }
 .s-help pre { white-space: pre-wrap; background: var(--hover); padding: 8px 10px; border-radius: 8px; font-size: 11.5px; line-height: 1.45; }
+
+.s-err { color: #d9443b; }

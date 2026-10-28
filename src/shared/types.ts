@@ -1,6 +1,7 @@
 // Shared types between the main process, the preload bridge and the UI pages.
 
 import type { ChordConfig, ImportMode } from './config.ts';
+import type { ConnectedSpace, SharedDoc } from './connected.ts';
 
 export type TabId = string;
 export type SpaceId = string;
@@ -345,6 +346,8 @@ export interface Space {
   notes?: string;
   /** published to the public sync repository as an installable space, at spaces/<slug>/ */
   shared?: { slug: string; since: number };
+  /** kept together with other people over MQTT (see shared/connected.ts) */
+  connected?: ConnectedSpace;
   /** runtime: a private space starts locked and locks again when left alone */
   locked?: boolean;
   /** when the user last switched away from this space */
@@ -445,6 +448,8 @@ export interface Settings {
   passkeys: PasskeysMode;
   /** GitHub sync of spaces and bookmarks */
   sync: SyncSettings;
+  /** the MQTT broker connected spaces go through; TLS only (mqtts:// or wss://) */
+  mqtt: MqttSettings;
   /** links from other apps open in a Little window instead of a tab */
   littleWindows: boolean;
   /** Peek: a link that leaves the site of a pinned or favorite tab opens in a preview over the page */
@@ -559,6 +564,15 @@ export interface Bookmark {
 }
 
 export type LinkrollTheme = 'elegant' | 'pragmatic' | 'digg';
+export interface MqttSettings {
+  broker: string;
+  username?: string;
+  password?: string;
+}
+/** Live state of connected spaces, per space id. */
+export interface ConnectedStatus {
+  spaces: Record<SpaceId, { state: 'connecting' | 'online' | 'offline' | 'error'; peers: number; error?: string; lastSync: number; broker: string }>;
+}
 export interface SyncSettings {
   enabled: boolean;
   /** look of the public bookmarks page */
@@ -644,6 +658,10 @@ export type Action =
   | { type: 'bookmark.add'; url: string; title: string; public: boolean; tags?: string[]; note?: string; spaceId?: string | null }
   | { type: 'space.notes'; id: SpaceId; text: string }
   | { type: 'space.share'; id: SpaceId; on: boolean }
+  | { type: 'space.connect'; id: SpaceId; connected: ConnectedSpace }
+  | { type: 'space.disconnect'; id: SpaceId }
+  | { type: 'space.join'; connected: ConnectedSpace; name?: string }
+  | { type: 'space.connectedSync'; id: SpaceId; doc: SharedDoc }
   | { type: 'share.add'; share: SharedTab }
   | { type: 'share.remove'; id: string }
   | { type: 'bookmark.update'; id: string; patch: Partial<Pick<Bookmark, 'title' | 'note' | 'tags' | 'public' | 'url' | 'spaceId'>> }
@@ -733,6 +751,10 @@ export type Command =
   | { type: 'tab.renamePrompt'; id: TabId }
   | { type: 'space.shareToggle'; id: SpaceId }
   | { type: 'space.copyShareLink'; id: SpaceId }
+  | { type: 'space.connectToggle'; id: SpaceId }
+  | { type: 'space.copyJoinLink'; id: SpaceId }
+  | { type: 'space.joinPrompt'; link?: string }
+  | { type: 'connected.reconnect' }
   | { type: 'tab.share'; id?: TabId; withNote?: boolean }
   | { type: 'share.copy'; id: string }
   | { type: 'tab.iconPrompt'; id: TabId }
@@ -862,7 +884,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'tab.renamePrompt', 'tab.iconPrompt', 'space.shareToggle', 'space.copyShareLink', 'tab.share', 'share.copy', 'extension.pickFolder', 'extension.install', 'extension.update', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
+  'tab.renamePrompt', 'tab.iconPrompt', 'space.shareToggle', 'space.copyShareLink', 'space.connectToggle', 'space.copyJoinLink', 'space.joinPrompt', 'connected.reconnect', 'tab.share', 'share.copy', 'extension.pickFolder', 'extension.install', 'extension.update', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'group.newLive', 'group.refresh', 'group.liveEdit', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'peek.nav', 'peek.open', 'peek.close', 'easel.open', 'easel.create', 'easel.rename', 'easel.remove', 'easel.put', 'easel.removeItem', 'easel.addPage', 'easel.snapshot', 'easel.clip', 'easel.image', 'easel.imageUrl', 'easel.export', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
@@ -1084,6 +1106,8 @@ export interface ChordApi {
   getCurated(spaceId: SpaceId): Promise<CuratedStatus>;
   onSync(cb: (status: SyncStatus) => void): () => void;
   getSync(): Promise<SyncStatus>;
+  onConnected(cb: (status: ConnectedStatus) => void): () => void;
+  getConnected(): Promise<ConnectedStatus>;
   onLittle(cb: (status: LittleStatus) => void): () => void;
   onPeek(cb: (status: LittleStatus) => void): () => void;
   onEasels(cb: (status: EaselStatus) => void): () => void;

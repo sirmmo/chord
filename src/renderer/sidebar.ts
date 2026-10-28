@@ -2,7 +2,7 @@
 // around the tab views (native children painted above it). Rendering is
 // keyed: existing elements are updated in place, never rebuilt.
 
-import type { CallAction, CallInfo, CardInfo, DevAction, DevInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabGroup, TimerInfo, Message, Space, SpaceId, State, Tab, TabId, UpdateStatus } from '../shared/types.ts';
+import type { CallAction, CallInfo, CardInfo, DevAction, DevInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabGroup, TimerInfo, Message, Space, SpaceId, State, Tab, TabId, UpdateStatus, ConnectedStatus } from '../shared/types.ts';
 import { activeSpace, isLocked, panelVisible, visiblePanes } from '../shared/model.ts';
 import { clampPanel } from '../shared/modes.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
@@ -151,6 +151,19 @@ api.getState().then((s) => {
     render();
   }
 });
+let connectedStatus: ConnectedStatus = { spaces: {} };
+api.onConnected((st) => {
+  connectedStatus = st;
+  render();
+});
+void api.getConnected().then((st) => {
+  if (st) {
+    connectedStatus = st;
+    render();
+  }
+});
+const connectedPill = $<HTMLButtonElement>('#space-connected');
+connectedPill.onclick = () => state && dispatch({ type: 'space.copyJoinLink', id: state.activeSpaceId });
 api.onSidebar((m) => {
   if (m.kind === 'space.renameStart') startRename(m.id);
   if (m.kind === 'toast') toast(m.text, m.detail);
@@ -748,6 +761,16 @@ function render(): void {
   const pill = $('#space-profile');
   pill.classList.toggle('hidden', !space.profile);
   if (space.profile) setText(pill, space.profile);
+  connectedPill.classList.toggle('hidden', !space.connected);
+  if (space.connected) {
+    const st = connectedStatus.spaces[space.id];
+    const peers = st?.peers ?? 0;
+    setText(connectedPill, st?.state === 'online' ? (peers ? `LIVE · ${peers}` : 'LIVE') : st?.state === 'error' ? 'OFFLINE' : '…');
+    setClass(connectedPill, 'connecting', !st || st.state === 'connecting' || st.state === 'offline');
+    setClass(connectedPill, 'error', st?.state === 'error');
+    const tip = `Connected space via ${hostOf(space.connected.broker)} · ${st?.state ?? 'connecting'}${st?.error ? ` (${st.error})` : ''} · ${peers} other${peers === 1 ? '' : 's'} online · click to copy the join link`;
+    if (connectedPill.title !== tip) connectedPill.title = tip;
+  }
   const tab = focused();
   back.disabled = !tab?.canGoBack;
   forward.disabled = !tab?.canGoForward;

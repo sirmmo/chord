@@ -10,7 +10,7 @@
 <body>
   <main class="page settings">
     <h1>Settings</h1>
-    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="boosts">Boosts</button><button data-v="routes">Routes</button><button data-v="passwords">Passwords</button><button data-v="sync">Sync</button><button data-v="ai">AI</button><button data-v="about">About</button></nav>
+    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="boosts">Boosts</button><button data-v="routes">Routes</button><button data-v="passwords">Passwords</button><button data-v="sync">Sync</button><button data-v="connected">Connected</button><button data-v="ai">AI</button><button data-v="about">About</button></nav>
     <section class="s-body">
 
       <div class="s-page" data-page="general">
@@ -289,6 +289,31 @@ update();</pre>
           <p class="s-foot">Disconnecting forgets the token on this computer; the repositories stay as they are.</p>
         </div>
         <p class="s-foot" id="s-sync-error"></p>
+      </div>
+      <div class="s-page" data-page="connected">
+        <p class="s-foot" style="margin-top:0">A connected space is kept together by several people: everyone with its join link gets the space, and whatever anyone pins, removes, renames or writes in its notes reaches the others within seconds. Chord talks to an MQTT broker over TLS only, and the space itself travels sealed with a key that lives in the join link, so the broker never sees it. Today tabs, live folders and what is open on screen stay personal.</p>
+        <div class="s-grid">
+          <label>Broker</label>
+          <div>
+            <input type="text" id="s-mqtt-broker" class="wide" placeholder="mqtts://broker.hivemq.com:8883" autocomplete="off" spellcheck="false">
+            <p class="s-foot">All connected spaces you create go through this broker; the join link carries it, so people you invite reach the same one. HiveMQ's public broker by default: anyone can use it, which is fine because the content is sealed. Only <code>mqtts://</code> and <code>wss://</code> are accepted. <span id="s-mqtt-problem" class="s-err"></span></p>
+          </div>
+          <label>Login</label>
+          <div>
+            <div class="row"><input type="text" id="s-mqtt-user" placeholder="Username (if the broker needs one)" autocomplete="off" spellcheck="false"><input type="password" id="s-mqtt-pass" placeholder="Password" autocomplete="off"></div>
+          </div>
+          <label>Your spaces</label>
+          <div>
+            <div id="s-connected-list"></div>
+            <p class="s-foot">Right-click a space → Connect Space, or use the command bar. The join link is the key: send it privately.</p>
+          </div>
+          <label>Join</label>
+          <div>
+            <div class="row"><input type="text" id="s-join-link" class="wide" placeholder="chord://join/?id=…&amp;k=…&amp;b=…" autocomplete="off" spellcheck="false"><button class="btn" id="s-join">Join</button></div>
+          </div>
+          <label></label>
+          <div class="row"><button class="btn" id="s-mqtt-reconnect">Reconnect</button></div>
+        </div>
       </div>
       <div class="s-page" data-page="about">
         <div class="about-head">

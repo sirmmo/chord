@@ -42,6 +42,8 @@ import { ReaderManager } from './reader.ts';
 import { LittleWindows } from './little.ts';
 import { EaselManager } from './easels.ts';
 import { LiveManager } from './live.ts';
+import { ConnectedManager } from './connected.ts';
+import { brokerProblem, joinLink, newConnected, parseJoinLink } from '../shared/connected.ts';
 import { PeekManager } from './peek.ts';
 import { spaceForUrl } from '../shared/routes.ts';
 import { shareId } from '../shared/share.ts';
@@ -89,6 +91,7 @@ export class Controller {
   readonly little = new LittleWindows(this);
   readonly easels = new EaselManager(this);
   readonly live = new LiveManager(this);
+  readonly connected = new ConnectedManager(this);
   readonly peek = new PeekManager(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
@@ -204,6 +207,7 @@ export class Controller {
     this.reader.init();
     this.easels.init();
     this.live.init();
+    this.connected.init();
     this.ai.init();
     this.capture.init();
     this.pageTabs.init();
@@ -429,6 +433,12 @@ export class Controller {
   }
 
   openUrl(url: string): void {
+    // chord://join/?id=…&k=…&b=…: an invitation to a connected space
+    if (/^chord:\/\/join\b/i.test(url)) {
+      this.focusWindow();
+      void this.joinConnected(url);
+      return;
+    }
     // chord://open/?url=… from a shared page: open the page itself
     const opened = openUrlFrom(url);
     if (opened) url = opened;
@@ -526,6 +536,7 @@ export class Controller {
     }
     if (soundChanged) this.tray.refresh();
     this.pageTabs.diff(prev, next);
+    this.connected.diff(prev, next);
     if (prev.settings.updates.check !== next.settings.updates.check) this.updates.schedule();
     if (prev.settings.mcp.enabled !== next.settings.mcp.enabled || prev.settings.mcp.port !== next.settings.mcp.port) this.mcp.sync();
     if (prev.settings.googleSignIn !== next.settings.googleSignIn) setGoogleSignIn(next.settings.googleSignIn);
@@ -991,6 +1002,23 @@ export class Controller {
       case 'space.copyShareLink':
         this.copyShareLink(cmd.id);
         return;
+      case 'space.connectToggle':
+        void this.connectToggle(cmd.id);
+        return;
+      case 'space.copyJoinLink': {
+        const sp = spaceById(this.state, cmd.id);
+        if (!sp?.connected) return;
+        const link = joinLink(sp.connected);
+        clipboard.writeText(link);
+        this.sendSidebar({ kind: 'toast', text: 'Join link copied', detail: 'Anyone with it can read and change this space. Send it privately.' });
+        return;
+      }
+      case 'space.joinPrompt':
+        void this.joinConnected(cmd.link);
+        return;
+      case 'connected.reconnect':
+        this.connected.reconnect();
+        return;
       case 'tab.share': {
         const tab = cmd.id ? this.state.tabs[cmd.id] : focusedTab(this.state);
         if (!tab || isInternal(tab.url)) return;
@@ -1317,6 +1345,81 @@ export class Controller {
     const name = await this.prompt('New subspace', 'Subspace name', tab.title.slice(0, 30));
     this.overlay?.hide();
     if (name && name.trim()) this.apply({ type: 'group.create', spaceId: tab.spaceId, name: name.trim(), tabIds: [tabId] });
+  }
+
+  /** Make a space connected (shared over MQTT), or disconnect it after a confirmation. */
+  private async connectToggle(spaceId: SpaceId): Promise<void> {
+    const sp = spaceById(this.state, spaceId);
+    if (!sp || !this.win || sp.reader) return;
+    if (sp.connected) {
+      const { response } = await dialog.showMessageBox(this.win, {
+        type: 'question',
+        buttons: ['Disconnect', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1,
+        message: `Disconnect “${sp.name}”?`,
+        detail: 'The space stays on this computer as it is now, but stops following the others and they stop seeing your changes.',
+      });
+      if (response !== 0) return;
+      this.apply({ type: 'space.disconnect', id: spaceId });
+      this.sendSidebar({ kind: 'toast', text: 'Space disconnected', detail: sp.name });
+      return;
+    }
+    if (sp.lock) {
+      this.sendSidebar({ kind: 'toast', text: 'Private spaces cannot be connected', detail: 'Only their owner should see them' });
+      return;
+    }
+    const broker = this.state.settings.mqtt.broker;
+    const problem = brokerProblem(broker);
+    if (problem) {
+      this.sendSidebar({ kind: 'toast', text: 'Check the broker in Settings → Connected', detail: problem });
+      this.openInternal('chord://settings/', 'connected');
+      return;
+    }
+    const { response } = await dialog.showMessageBox(this.win, {
+      type: 'question',
+      buttons: ['Connect and copy the join link', 'Cancel'],
+      defaultId: 0,
+      cancelId: 1,
+      message: `Connect “${sp.name}”?`,
+      detail: `Everyone you give the join link to gets this space and can add, remove and rename its pinned tabs and notes; changes reach the others within seconds. The space travels through ${hostOf(broker)} over TLS, sealed with a key only the link holders have.`,
+    });
+    if (response !== 0) return;
+    const connected = newConnected(broker, Date.now());
+    this.apply({ type: 'space.connect', id: spaceId, connected });
+    clipboard.writeText(joinLink(connected));
+    this.sendSidebar({ kind: 'toast', text: 'Space connected · join link copied', detail: 'Send the link privately: it is the key to the space' });
+  }
+
+  /** Join a connected space from its link (asked for when none is given). */
+  private async joinConnected(link?: string): Promise<void> {
+    let text = link ?? '';
+    if (!text) {
+      const answer = await this.prompt('Join a connected space', 'chord://join/?id=…');
+      this.overlay?.hide();
+      if (!answer) return;
+      text = answer.trim();
+    }
+    const connected = parseJoinLink(text);
+    if (!connected || !this.win) {
+      this.sendSidebar({ kind: 'toast', text: 'Not a join link', detail: 'A join link looks like chord://join/?id=…&k=…&b=…' });
+      return;
+    }
+    const existing = this.state.spaces.find((sp) => sp.connected?.id === connected.id);
+    if (existing) {
+      this.apply({ type: 'space.activate', id: existing.id });
+      return;
+    }
+    const { response } = await dialog.showMessageBox(this.win, {
+      type: 'question',
+      buttons: ['Join', 'Cancel'],
+      defaultId: 0,
+      cancelId: 1,
+      message: 'Join this connected space?',
+      detail: `A new space appears and fills in from the others through ${hostOf(connected.broker)} over TLS. Whatever you pin, remove or rename there reaches everyone who has the link.`,
+    });
+    if (response !== 0) return;
+    this.apply({ type: 'space.join', connected });
   }
 
   private copyShareLink(spaceId: SpaceId): void {

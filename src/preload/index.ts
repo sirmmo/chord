@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { AiStatus, ChordApi, CuratedStatus, McpStatus, SourcesStatus, UpdateStatus, DownloadsStatus, EaselStatus, ExtensionsStatus, HistoryQuery, PasskeysStatus, PasswordsStatus, ResearchStatus, SmartStatus, Message, OverlayMessage, SidebarMessage, LittleStatus, ReaderQuery, ReaderStatus, State, SyncStatus } from '../shared/types.ts';
+import type { AiStatus, ChordApi, ConnectedStatus, CuratedStatus, McpStatus, SourcesStatus, UpdateStatus, DownloadsStatus, EaselStatus, ExtensionsStatus, HistoryQuery, PasskeysStatus, PasswordsStatus, ResearchStatus, SmartStatus, Message, OverlayMessage, SidebarMessage, LittleStatus, ReaderQuery, ReaderStatus, State, SyncStatus } from '../shared/types.ts';
 
 const listen =
   <T>(channel: string) =>
@@ -46,6 +46,8 @@ const api: ChordApi = {
   getCurated: (spaceId: string) => ipcRenderer.invoke('curated', spaceId),
   onSync: listen<SyncStatus>('sync'),
   getSync: () => ipcRenderer.invoke('sync'),
+  onConnected: listen<ConnectedStatus>('connected'),
+  getConnected: () => ipcRenderer.invoke('connected'),
   onLittle: listen<LittleStatus>('little'),
   onPeek: listen<LittleStatus>('peek'),
   onEasels: listen<EaselStatus>('easels'),
