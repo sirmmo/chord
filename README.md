@@ -140,6 +140,10 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   (headings, lists, task boxes, code, quotes, tables, links), with a split editor and
   preview, autosave, and a button that inserts a link to the current page. Notes travel
   with the space in exports and in sync. "Notes of Every Space" shows them all.
+- **Peek**: a link that leaves the site of a pinned or favorite tab opens in a floating
+  preview over the page instead of taking the tab away. The bar has back, forward, the
+  title, "Little window" and "Open as Tab" (`⌘⇧O`); Esc or a click outside closes it.
+  Settings → General turns it off.
 - **Sharing** (needs GitHub sync): right-click a space → "Share Space" publishes it on
   your public page as an installable space with a landing page listing its tabs and an
   "Open in Chord" button; the link is copied, and the space updates with every push until

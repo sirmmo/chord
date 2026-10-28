@@ -42,6 +42,7 @@ import { ReaderManager } from './reader.ts';
 import { LittleWindows } from './little.ts';
 import { EaselManager } from './easels.ts';
 import { LiveManager } from './live.ts';
+import { PeekManager } from './peek.ts';
 import { spaceForUrl } from '../shared/routes.ts';
 import { shareId } from '../shared/share.ts';
 import { openUrlFrom } from '../shared/installer.ts';
@@ -88,6 +89,7 @@ export class Controller {
   readonly little = new LittleWindows(this);
   readonly easels = new EaselManager(this);
   readonly live = new LiveManager(this);
+  readonly peek = new PeekManager(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
@@ -214,6 +216,7 @@ export class Controller {
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
       if (this.little.owns(event.sender)) return this.little.command(event.sender, message);
+      if (this.peek.owns(event.sender)) return this.peek.command(event.sender, message);
       const w = this.windowOf(event.sender);
       if (w && w !== this.active) this.setActive(w);
       this.dispatch(message);
@@ -238,7 +241,7 @@ export class Controller {
       if (!w.alive()) continue;
       if (event.sender === w.win.webContents || event.sender === w.overlay.webContents || event.sender === w.panel.webContents) return true;
     }
-    if (this.little.owns(event.sender) && isInternal(event.senderFrame?.url ?? '')) return true;
+    if ((this.little.owns(event.sender) || this.peek.owns(event.sender)) && isInternal(event.senderFrame?.url ?? '')) return true;
     // One of Chord's own pages in a tab view: only while it shows a chord:// document.
     return this.tabs.tabIdOf(event.sender) !== undefined && isInternal(event.senderFrame?.url ?? '');
   }
@@ -347,6 +350,7 @@ export class Controller {
   /** Views and panels of every window follow the state. */
   private reconcileViews(): void {
     this.tabs.reconcile(this.state);
+    this.peek.raise();
     for (const w of this.windows.values()) {
       if (!w.alive()) continue;
       w.panel.sync();
@@ -393,6 +397,7 @@ export class Controller {
     if (!w.alive()) return;
     this.tabs.layout();
     w.panel.layout();
+    this.peek.layout();
     w.overlay.layout();
   }
 
@@ -525,6 +530,7 @@ export class Controller {
     if (prev.settings.mcp.enabled !== next.settings.mcp.enabled || prev.settings.mcp.port !== next.settings.mcp.port) this.mcp.sync();
     if (prev.settings.googleSignIn !== next.settings.googleSignIn) setGoogleSignIn(next.settings.googleSignIn);
     if (prev.spaces.length > next.spaces.length) this.easels.keepOnly(new Set(next.spaces.map((sp) => sp.id)));
+    if (prev.activeSpaceId !== next.activeSpaceId || activeSpace(prev).focused !== activeSpace(next).focused) this.peek.close();
     if (prev.shares !== next.shares) for (const old of prev.shares ?? []) if (!(next.shares ?? []).some((x) => x.id === old.id)) void this.sync.unpublish(`t/${old.id}`);
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
@@ -844,6 +850,16 @@ export class Controller {
       }
       case 'little.nav':
         return; // only meaningful from a Little window's own bar
+      case 'peek.nav':
+        return; // only meaningful from the peek bar
+      case 'peek.open': {
+        const from = cmd.fromTab ?? focusedTab(this.state)?.id;
+        if (from && /^https?:/i.test(cmd.url)) this.peek.open(cmd.url, from);
+        return;
+      }
+      case 'peek.close':
+        this.peek.close();
+        return;
       case 'reader.subscribe':
         void this.reader.subscribe(cmd.input, cmd.groupId ?? null, cmd.title);
         return;

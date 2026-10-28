@@ -1,6 +1,7 @@
 import { WebContentsView, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { spaceForUrl } from '../shared/routes.ts';
+import { hostOf, siteOf } from '../shared/url.ts';
 import type { State, Tab, TabId } from '../shared/types.ts';
 import { isLocked, spaceOfTab, visiblePanes } from '../shared/model.ts';
 import type { ChordWindow } from './window.ts';
@@ -326,6 +327,17 @@ export class TabManager {
       if (externalScheme(url)) {
         e.preventDefault();
         void openExternalLink(wc, url);
+        return;
+      }
+      // Peek: a pinned or favorite tab stays on its site; a link elsewhere opens in a preview
+      const tab = this.c.state.tabs[id];
+      if (tab && this.c.state.settings.peek && (tab.kind === 'pinned' || tab.kind === 'favorite') && /^https?:/i.test(url)) {
+        const home = hostOf(tab.homeUrl ?? tab.url);
+        const target = hostOf(url);
+        if (home && target && siteOf(home) !== siteOf(target) && !isInternal(wc.getURL())) {
+          e.preventDefault();
+          this.c.peek.open(url, id);
+        }
       }
     });
     wc.on('context-menu', (_e, params) => pageContextMenu(this.c, id, wc, params));

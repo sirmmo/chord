@@ -47,6 +47,7 @@ const api: ChordApi = {
   onSync: listen<SyncStatus>('sync'),
   getSync: () => ipcRenderer.invoke('sync'),
   onLittle: listen<LittleStatus>('little'),
+  onPeek: listen<LittleStatus>('peek'),
   onEasels: listen<EaselStatus>('easels'),
   getEasels: () => ipcRenderer.invoke('easels'),
   onReader: listen<ReaderStatus>('reader'),

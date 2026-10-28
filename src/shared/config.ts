@@ -64,7 +64,7 @@ export interface ChordConfig {
 
 export type ImportMode = 'merge' | 'replace';
 
-const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'boosts', 'routes', 'autoPip', 'ai', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine', 'googleSignIn', 'passkeys', 'littleWindows', 'autofill', 'sourceror'];
+const SETTING_KEYS: (keyof Settings)[] = ['theme', 'smartPages', 'askDownloadPath', 'downloadDir', 'closeToTray', 'tilings', 'boosts', 'routes', 'autoPip', 'ai', 'addressBar', 'sidebarOpen', 'sidebarWidth', 'archiveAfterHours', 'shields', 'searchEngine', 'googleSignIn', 'passkeys', 'littleWindows', 'peek', 'autofill', 'sourceror'];
 
 function tabToConfig(tab: Tab): ConfigTab {
   const out: ConfigTab = { url: tab.homeUrl ?? tab.url };

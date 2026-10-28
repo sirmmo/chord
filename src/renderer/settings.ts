@@ -73,6 +73,8 @@ sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages:
 sAskDl.onchange = () => dispatch({ type: 'settings.update', patch: { askDownloadPath: sAskDl.checked } });
 sTray.onchange = () => dispatch({ type: 'settings.update', patch: { closeToTray: sTray.checked } });
 const sLittle = $<HTMLInputElement>('#s-little');
+const sPeek = $<HTMLInputElement>('#s-peek');
+sPeek.onchange = () => dispatch({ type: 'settings.update', patch: { peek: sPeek.checked } });
 const sAutofill = $<HTMLInputElement>('#s-autofill');
 sAutofill.onchange = () => dispatch({ type: 'settings.update', patch: { autofill: sAutofill.checked } });
 const sPwLock = $<HTMLInputElement>('#s-pwlock');
@@ -316,6 +318,7 @@ function fillSettings(): void {
   sAskDl.checked = s.settings.askDownloadPath;
   sTray.checked = s.settings.closeToTray;
   sLittle.checked = s.settings.littleWindows;
+  sPeek.checked = s.settings.peek;
   sAutofill.checked = s.settings.autofill;
   sPwLock.checked = s.settings.passwordLock;
   sAutoPip.checked = s.settings.autoPip;

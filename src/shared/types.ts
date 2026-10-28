@@ -447,6 +447,8 @@ export interface Settings {
   sync: SyncSettings;
   /** links from other apps open in a Little window instead of a tab */
   littleWindows: boolean;
+  /** Peek: a link that leaves the site of a pinned or favorite tab opens in a preview over the page */
+  peek: boolean;
   /** fill saved passwords as soon as a sign-in form appears (otherwise on click) */
   autofill: boolean;
   /** Touch ID / Windows Hello before revealing or filling passwords */
@@ -766,6 +768,9 @@ export type Command =
   | { type: 'reader.open' }
   | { type: 'little.open'; url?: string }
   | { type: 'little.nav'; action: 'back' | 'forward' | 'reload' | 'open' | 'close' }
+  | { type: 'peek.nav'; action: 'back' | 'forward' | 'reload' | 'open' | 'little' | 'close' }
+  | { type: 'peek.open'; url: string; fromTab?: TabId }
+  | { type: 'peek.close' }
   | { type: 'reader.subscribe'; input: string; groupId?: string | null; title?: string; spaceId?: string | null }
   | { type: 'reader.subscribeFrom'; id?: TabId }
   | { type: 'reader.unsubscribe'; id: string }
@@ -859,7 +864,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'tab.renamePrompt', 'tab.iconPrompt', 'space.shareToggle', 'space.copyShareLink', 'tab.share', 'share.copy', 'extension.pickFolder', 'extension.install', 'extension.update', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'group.newLive', 'group.refresh', 'group.liveEdit', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'easel.open', 'easel.create', 'easel.rename', 'easel.remove', 'easel.put', 'easel.removeItem', 'easel.addPage', 'easel.snapshot', 'easel.clip', 'easel.image', 'easel.imageUrl', 'easel.export', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'group.newLive', 'group.refresh', 'group.liveEdit', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'peek.nav', 'peek.open', 'peek.close', 'easel.open', 'easel.create', 'easel.rename', 'easel.remove', 'easel.put', 'easel.removeItem', 'easel.addPage', 'easel.snapshot', 'easel.clip', 'easel.image', 'easel.imageUrl', 'easel.export', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
 
 export type Message = Action | Command;
@@ -1080,6 +1085,7 @@ export interface ChordApi {
   onSync(cb: (status: SyncStatus) => void): () => void;
   getSync(): Promise<SyncStatus>;
   onLittle(cb: (status: LittleStatus) => void): () => void;
+  onPeek(cb: (status: LittleStatus) => void): () => void;
   onEasels(cb: (status: EaselStatus) => void): () => void;
   getEasels(): Promise<EaselStatus>;
   onReader(cb: (status: ReaderStatus) => void): () => void;

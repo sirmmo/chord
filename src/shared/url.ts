@@ -64,3 +64,12 @@ export function hostOf(url: string): string {
 export function isSecure(url: string): boolean {
   return url.startsWith('https://');
 }
+
+/** Registrable domain of a host, roughly: the last two labels, three for the usual second-level suffixes. */
+export function siteOf(host: string): string {
+  const parts = host.toLowerCase().replace(/^www\./, '').split('.');
+  if (parts.length <= 2) return parts.join('.');
+  const second = parts[parts.length - 2];
+  const sld = new Set(['co', 'com', 'org', 'net', 'gov', 'edu', 'ac']);
+  return (sld.has(second) && parts[parts.length - 1].length === 2 ? parts.slice(-3) : parts.slice(-2)).join('.');
+}

@@ -20,3 +20,12 @@ test('external schemes are recognised, web schemes are not', () => {
   assert.equal(externalScheme('javascript:void(0)'), null);
   assert.equal(externalScheme('no scheme here'), null);
 });
+
+test('siteOf reduces hosts to their registrable domain', async () => {
+  const { siteOf } = await import('../src/shared/url.ts');
+  assert.equal(siteOf('www.github.com'), 'github.com');
+  assert.equal(siteOf('gist.github.com'), 'github.com');
+  assert.equal(siteOf('news.bbc.co.uk'), 'bbc.co.uk');
+  assert.equal(siteOf('localhost'), 'localhost');
+  assert.notEqual(siteOf('github.com'), siteOf('example.org'));
+});
