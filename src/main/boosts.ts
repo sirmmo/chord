@@ -32,7 +32,10 @@ export class BoostManager {
     if (!host) return;
     const list: Applied[] = [];
     this.applied.set(id, list);
-    for (const b of boostsFor(this.c.state.settings.boosts, host)) {
+    const matching = boostsFor(this.c.state.settings.boosts, host);
+    // the space's colours as CSS variables and the Chord page API, before any boost runs
+    if (matching.length) wc.send('smart:action', `theme:${JSON.stringify(this.c.themeFor(id))}`);
+    for (const b of matching) {
       const entry: Applied = { boostId: b.id, css: b.css, ranJs: false };
       list.push(entry);
       if (b.css.trim()) entry.cssKey = await wc.insertCSS(b.css).catch(() => undefined);
@@ -41,6 +44,11 @@ export class BoostManager {
         await wc.executeJavaScript(`(() => { try { ${b.js}\n } catch (e) { console.error('Chord boost "${b.name.replace(/["\\\\]/g, '')}" failed:', e); } })()`, true).catch(() => {});
       }
     }
+  }
+
+  /** Tabs with at least one boost applied. */
+  boostedTabs(): TabId[] {
+    return [...this.applied.entries()].filter(([, list]) => list.length > 0).map(([id]) => id);
   }
 
   /** Boosts changed in settings: swap the CSS on every live page; JS needs a reload. */

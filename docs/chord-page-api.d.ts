@@ -31,8 +31,39 @@ interface ChordPageApi {
   listTabs(): Promise<ChordTabInfo[]>;
   /** Rename the subspace that holds the page's tabs (defaults to the page title). */
   setSubspaceName(name: string): Promise<void>;
+  // ---- deeper integration: sites the user wrote a boost for, or granted origins ----
+  /** A card in Chord's sidebar, shown from every space, with up to four buttons. */
+  readonly card: {
+    set(card: { title: string; subtitle?: string; state?: '' | 'ok' | 'warn' | 'err' | 'busy'; badge?: number; actions?: { id: string; label: string }[] }): Promise<void>;
+    clear(): Promise<void>;
+    onAction(fn: (actionId: string) => void): void;
+  };
+  /** Badge on the tab and the space dot; null goes back to reading the title. */
+  setUnread(count: number | null): Promise<void>;
+  /** Counted like a web notification: bell in the title bar, badge on the tab. */
+  notify(title: string, body?: string): Promise<void>;
+  /** Bookmark a page (this one by default) into the tab's space. */
+  bookmark(opts?: { url?: string; title?: string; note?: string; tags?: string[]; public?: boolean }): Promise<void>;
+  /** Append Markdown to the space's notes. */
+  addNote(markdown: string): Promise<void>;
+  /** Subscribe the reader to a feed (this page's, discovered, by default), tagged with the space. */
+  subscribe(feedUrl?: string): Promise<{ title: string; url: string }>;
+  /** Open a page in the space (a plain tab, not part of the page's subspace). */
+  open(url: string, opts?: { background?: boolean }): Promise<void>;
+  /** Open a page in a Little window. */
+  openLittle(url: string): Promise<void>;
+  /** The space this tab is in and Chord's look. Also CSS variables --chord-space and --chord-accent and data-chord-theme on <html>, and a "theme" event. */
+  theme(): Promise<ChordTheme>;
   addEventListener<K extends keyof ChordTabEventMap>(type: K, listener: (ev: ChordTabEventMap[K]) => void): void;
+  addEventListener(type: 'theme', listener: (ev: CustomEvent<ChordTheme>) => void): void;
   removeEventListener<K extends keyof ChordTabEventMap>(type: K, listener: (ev: ChordTabEventMap[K]) => void): void;
+}
+
+interface ChordTheme {
+  space: { id: string; name: string; color: string; icon: string };
+  accent: string;
+  dark: boolean;
+  font: string;
 }
 
 interface Navigator {

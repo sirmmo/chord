@@ -95,7 +95,18 @@ export class TrayManager {
         },
       });
     }
-    if (devs.length) items.push({ type: 'separator' });
+    const cards = Object.entries(smart).filter(([id, s]) => s.card && tabs[id]);
+    for (const [id, s] of cards.slice(0, 3)) {
+      const c = s.card!;
+      items.push({
+        label: `${c.title}${c.subtitle ? ` — ${c.subtitle}` : ''}`.slice(0, 70),
+        submenu: [
+          { label: 'Show', click: () => { this.c.dispatch({ type: 'tab.activate', id }); this.c.focusWindow(); } },
+          ...c.actions.map((a) => ({ label: a.label, click: () => this.c.smart.cardAction(id, a.id) })),
+        ],
+      });
+    }
+    if (devs.length || cards.length) items.push({ type: 'separator' });
 
     const active = this.c.downloads.status().active;
     items.push({ label: active ? `Downloads (${active} in progress)` : 'Downloads', click: () => this.c.openInternalFromTray('chord://downloads/') });

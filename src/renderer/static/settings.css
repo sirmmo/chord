@@ -122,3 +122,8 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 .s-code { margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--hover); }
 .s-code p { margin: 0 0 8px; }
 .s-usercode { font: 600 26px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.12em; margin: 0 0 10px; user-select: all; }
+
+.s-help { margin: 0 0 14px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.s-help summary { cursor: default; font-size: 13px; font-weight: 600; }
+.s-help ul { padding-left: 18px; margin: 6px 0; } .s-help li { margin: 3px 0; }
+.s-help pre { white-space: pre-wrap; background: var(--hover); padding: 8px 10px; border-radius: 8px; font-size: 11.5px; line-height: 1.45; }

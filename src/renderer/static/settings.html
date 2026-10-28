@@ -144,6 +144,25 @@
       </div>
       <div class="s-page" data-page="boosts">
         <p class="s-foot" style="margin-top:0">A boost is CSS and JavaScript of yours that runs on the sites you name. Sites: comma separated, <code>example.com</code> covers its subdomains, <code>*.example.com</code> only subdomains, <code>*</code> everything. CSS applies live; JavaScript runs at page load, so a change needs a reload.</p>
+        <details class="s-help">
+          <summary>Make a page Chord-integrated: the API boosts can use</summary>
+          <p class="s-foot">On a site you wrote a boost for, <code>navigator.chord</code> is unlocked without a prompt. It runs in the page, so it can read anything the page shows and turn it into Chord's own things:</p>
+          <ul class="s-foot">
+            <li><code>chord.card.set({ title, subtitle, state, badge, actions })</code> — a card in the sidebar, shown from every space; <code>state</code> is <code>ok</code>, <code>warn</code>, <code>err</code> or <code>busy</code> (busy also shows a chip in the title bar); up to four <code>actions: [{ id, label }]</code> become buttons, answered with <code>chord.card.onAction(id => …)</code>; <code>chord.card.clear()</code> removes it.</li>
+            <li><code>chord.setUnread(n)</code> — the badge on the tab and the space dot (<code>null</code> goes back to reading the title). <code>chord.notify(title, body)</code> — counted like a web notification.</li>
+            <li><code>chord.bookmark({ url, title, note, tags, public })</code>, <code>chord.addNote(markdown)</code> (appended to the space's notes), <code>chord.subscribe(feedUrl?)</code> (the reader, tagged with the space), <code>chord.open(url, { background })</code>, <code>chord.openLittle(url)</code>.</li>
+            <li><code>chord.openTab/closeTab/focusTab/navigateTab/listTabs/setSubspaceName</code> — the page's own subspace of tabs (see the page API docs).</li>
+            <li><code>await chord.theme()</code> → <code>{ space: { id, name, color, icon }, accent, dark, font }</code>; the same arrives as CSS variables <code>--chord-space</code>, <code>--chord-accent</code> and <code>data-chord-theme="dark|light"</code> on <code>&lt;html&gt;</code> for your CSS, and as a <code>theme</code> event when it changes.</li>
+            <li>Players: set <code>navigator.mediaSession.metadata</code> and action handlers and the page gets a now-playing card. Tools for the AI mode and the MCP server: <code>navigator.modelContext.registerTool(…)</code>.</li>
+          </ul>
+          <p class="s-foot">Example — a site's inbox count on the tab and a card with one button:</p>
+<pre class="s-foot">const chord = navigator.chord;
+const count = () =&gt; document.querySelectorAll('.inbox .unread').length;
+const update = () =&gt; { chord.setUnread(count()); chord.card.set({ title: 'Inbox', subtitle: `${count()} unread`, state: count() ? 'warn' : 'ok', actions: [{ id: 'compose', label: 'Compose' }] }); };
+chord.card.onAction(id =&gt; { if (id === 'compose') document.querySelector('.compose-button').click(); });
+new MutationObserver(update).observe(document.body, { childList: true, subtree: true });
+update();</pre>
+        </details>
         <h3>Your boosts</h3>
         <div id="s-boosts" class="boost-list"></div>
         <h3 id="s-boost-form-title">New boost</h3>

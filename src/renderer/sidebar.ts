@@ -2,7 +2,7 @@
 // around the tab views (native children painted above it). Rendering is
 // keyed: existing elements are updated in place, never rebuilt.
 
-import type { CallAction, CallInfo, DevAction, DevInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabGroup, TimerInfo, Message, Space, SpaceId, State, Tab, TabId, UpdateStatus } from '../shared/types.ts';
+import type { CallAction, CallInfo, CardInfo, DevAction, DevInfo, DownloadsStatus, ListName, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabGroup, TimerInfo, Message, Space, SpaceId, State, Tab, TabId, UpdateStatus } from '../shared/types.ts';
 import { activeSpace, isLocked, panelVisible, visiblePanes } from '../shared/model.ts';
 import { clampPanel } from '../shared/modes.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
@@ -434,8 +434,41 @@ function updateDevCard(el: HTMLElement, entry: [TabId, DevInfo]): void {
   }
 }
 
+function currentCards(): [TabId, CardInfo][] {
+  const out: [TabId, CardInfo][] = [];
+  for (const [id, s] of entries()) if (s.card) out.push([id, s.card]);
+  return out.sort((a, b) => Number(b[1].state === 'busy') - Number(a[1].state === 'busy') || b[1].updatedAt - a[1].updatedAt);
+}
+
+function makePageCard(entry: [TabId, CardInfo]): HTMLElement {
+  const id = entry[0];
+  return h(
+    'div',
+    { class: 'dev card', 'data-id': id },
+    h('button', { class: 'dev-main', title: 'Go to this tab', onclick: () => dispatch({ type: 'tab.activate', id }) }, h('span', { class: 'ico' }), h('span', { class: 'text' }, h('span', { class: 'title' }), h('span', { class: 'sub' }))),
+    h('div', { class: 'card-actions' }),
+  );
+}
+
+function updatePageCard(el: HTMLElement, entry: [TabId, CardInfo]): void {
+  const [id, c] = entry;
+  const tab = state?.tabs[id];
+  for (const cls of ['busy', 'err', 'warn', 'ok']) setClass(el, cls, c.state === cls);
+  const ico = el.querySelector('.ico') as HTMLElement;
+  setIconKey(ico, tab?.favicon && faviconsOn() ? `img:${tab.favicon}` : 'glyph', () => (tab?.favicon && faviconsOn() ? h('img', { src: tab.favicon, alt: '', style: 'width:16px;height:16px;border-radius:3px' }) : document.createTextNode(initialOf(tab ? hostOf(tab.url) : c.title))));
+  setText(el.querySelector('.title') as HTMLElement, c.badge ? `${c.title} · ${c.badge > 99 ? '99+' : c.badge}` : c.title);
+  setText(el.querySelector('.sub') as HTMLElement, c.subtitle || (tab ? hostOf(tab.url) : ''));
+  el.title = `${c.title}\n${c.subtitle}`;
+  const box = el.querySelector('.card-actions') as HTMLElement;
+  const key = c.actions.map((a) => `${a.id}=${a.label}`).join('|');
+  if (box.dataset.key !== key) {
+    box.dataset.key = key;
+    box.replaceChildren(...c.actions.map((a) => h('button', { class: 'card-btn', onclick: () => dispatch({ type: 'card.action', id, action: a.id }) }, a.label)));
+  }
+}
+
 function renderDevs(): void {
-  syncChildren(devs, currentDevs(), (e) => e[0], makeDevCard, updateDevCard);
+  syncChildren(devs, [...currentDevs(), ...currentCards()] as [TabId, DevInfo | CardInfo][], (e) => `${e[0]}:${'kind' in e[1] ? 'dev' : 'card'}`, (e) => ('kind' in e[1] ? makeDevCard(e as [TabId, DevInfo]) : makePageCard(e as [TabId, CardInfo])), (el, e) => ('kind' in e[1] ? updateDevCard(el, e as [TabId, DevInfo]) : updatePageCard(el, e as [TabId, CardInfo])));
 }
 
 function makePlayerCard(entry: [TabId, MediaInfo]): HTMLElement {
@@ -548,10 +581,17 @@ function renderCall(): void {
 function renderChip(): void {
   const call = currentCall();
   const dev = call ? null : currentDevs().find(([, d]) => d.state === 'pending') ?? null;
-  const timer = call || dev ? null : currentTimer();
-  const notes = call || timer || dev ? null : notificationsTotal();
+  const busy = call || dev ? null : currentCards().find(([, c]) => c.state === 'busy') ?? null;
+  const timer = call || dev || busy ? null : currentTimer();
+  const notes = call || timer || dev || busy ? null : notificationsTotal();
   chip.className = 'chip';
-  if (dev) {
+  if (busy) {
+    chipTab = busy[0];
+    chip.classList.add('dev');
+    setIconKey(chipIcon, 'spin', () => svg(ICONS.reload));
+    setText(chipText, busy[1].title.split(' · ')[0]);
+    chip.title = `${busy[1].title} — ${busy[1].subtitle || 'working'} — click to go there`;
+  } else if (dev) {
     chipTab = dev[0];
     chip.classList.add('dev');
     setIconKey(chipIcon, 'spin', () => svg(ICONS.reload));

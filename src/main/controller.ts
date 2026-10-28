@@ -506,6 +506,7 @@ export class Controller {
     if (prev.bookmarks !== next.bookmarks || prev.spaces !== next.spaces || prev.favorites !== next.favorites || prev.settings.theme !== next.settings.theme || prev.settings.sync.theme !== next.settings.sync.theme || prev.tabs !== next.tabs) this.sync.schedulePush();
     if (prev.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() !== next.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() || JSON.stringify(prev.settings.sourceror) !== JSON.stringify(next.settings.sourceror)) this.sources.refresh();
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
+    if (prev.settings.theme !== next.settings.theme || prev.spaces.map((sp) => `${sp.id}:${sp.color}:${sp.name}:${sp.icon ?? ''}`).join() !== next.spaces.map((sp) => `${sp.id}:${sp.color}:${sp.name}:${sp.icon ?? ''}`).join()) this.pushTheme();
     if (prev.settings.extensions !== next.settings.extensions && JSON.stringify(prev.settings.extensions) !== JSON.stringify(next.settings.extensions)) {
       void this.extensions.sync(next);
     }
@@ -710,6 +711,9 @@ export class Controller {
         return;
       case 'dev.action':
         this.smart.devAction(cmd.id, cmd.action);
+        return;
+      case 'card.action':
+        this.smart.cardAction(cmd.id, cmd.action);
         return;
       case 'import.browser':
         void importFromBrowser(this);
@@ -1195,6 +1199,23 @@ export class Controller {
     if (tab) {
       if (tab.kind === 'today') this.apply({ type: 'tab.pin', id: tab.id });
       if (!tab.keepLoaded) this.apply({ type: 'tab.keepLoaded', id: tab.id, on: true });
+    }
+  }
+
+  /** What an integrated page may know about its surroundings: the space and the look. */
+  themeFor(tabId: TabId): { space: { id: string; name: string; color: string; icon: string }; accent: string; dark: boolean; font: string } {
+    const tab = this.state.tabs[tabId];
+    const space = (tab?.spaceId && spaceById(this.state, tab.spaceId)) || activeSpace(this.state);
+    const t = this.state.settings.theme;
+    const dark = t.mode === 'dark' || (t.mode === 'system' && nativeTheme.shouldUseDarkColors);
+    return { space: { id: space.id, name: space.name, color: space.color, icon: space.icon ?? '' }, accent: t.accent ?? space.color, dark, font: t.font };
+  }
+
+  /** Tell the pages that integrate with Chord (boosted or granted) that the look changed. */
+  pushTheme(): void {
+    for (const id of this.boosts.boostedTabs()) {
+      const wc = this.tabs.get(id)?.webContents;
+      if (wc && !wc.isDestroyed()) wc.send('smart:action', `theme:${JSON.stringify(this.themeFor(id))}`);
     }
   }
 

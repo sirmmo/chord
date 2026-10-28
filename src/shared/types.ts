@@ -627,6 +627,7 @@ export type Command =
   | { type: 'media.action'; id: TabId; action: MediaAction }
   | { type: 'call.action'; id: TabId; action: CallAction }
   | { type: 'dev.action'; id: TabId; action: DevAction }
+  | { type: 'card.action'; id: TabId; action: string }
   | { type: 'media.pip'; id?: TabId }
   | { type: 'space.install'; url: string }
   | { type: 'space.modesMenu'; id: SpaceId }
@@ -725,7 +726,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
@@ -828,11 +829,24 @@ export interface DevInfo {
   actions: DevAction[];
   updatedAt: number;
 }
+/** A card a page (through a boost or the page API) asks Chord to show in the sidebar. */
+export interface CardInfo {
+  title: string;
+  subtitle: string;
+  /** '' | 'ok' | 'warn' | 'err' | 'busy' (busy also shows a chip in the title bar) */
+  state: '' | 'ok' | 'warn' | 'err' | 'busy';
+  badge: number;
+  actions: { id: string; label: string }[];
+  updatedAt: number;
+}
 /** Everything a tab gives away that is worth showing across spaces. */
 export interface SmartInfo {
   media?: MediaInfo;
   call?: CallInfo;
   dev?: DevInfo;
+  card?: CardInfo;
+  /** the page set the unread count itself: the title is not parsed for one */
+  unreadFixed?: boolean;
   timer?: TimerInfo;
   unread?: number;
   /** notifications the page created since it was last looked at */

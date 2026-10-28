@@ -1,5 +1,5 @@
 import { ipcMain, type IpcMainEvent } from 'electron';
-import type { CallAction, CallInfo, DevAction, DevInfo, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabId, WebMcpTool } from '../shared/types.ts';
+import type { CallAction, CallInfo, CardInfo, DevAction, DevInfo, MediaAction, MediaInfo, SmartInfo, SmartStatus, TabId, WebMcpTool } from '../shared/types.ts';
 import { parseTitleSignals } from '../shared/signals.ts';
 import { hostOf } from '../shared/url.ts';
 import type { Controller } from './controller.ts';
@@ -93,11 +93,62 @@ export class SmartManager {
     return this.status;
   }
 
+  /** A page (through the page API or a boost) shows a card of its own in the sidebar. */
+  setCard(id: TabId, raw: unknown): void {
+    const prev = this.status[id] ?? empty();
+    if (raw === null) {
+      if (!prev.card) return;
+      this.set(id, { ...prev, card: undefined });
+      return;
+    }
+    if (typeof raw !== 'object') return;
+    const r = raw as Record<string, unknown>;
+    const state = str(r.state, 8);
+    const card: CardInfo = {
+      title: str(r.title, 80),
+      subtitle: str(r.subtitle, 160),
+      state: state === 'ok' || state === 'warn' || state === 'err' || state === 'busy' ? state : '',
+      badge: typeof r.badge === 'number' && Number.isFinite(r.badge) && r.badge > 0 ? Math.min(9999, Math.floor(r.badge)) : 0,
+      actions: Array.isArray(r.actions)
+        ? r.actions
+            .filter((a): a is { id?: unknown; label?: unknown } => typeof a === 'object' && a !== null)
+            .map((a) => ({ id: str(a.id, 40), label: str(a.label, 24) }))
+            .filter((a) => a.id && a.label)
+            .slice(0, 4)
+        : [],
+      updatedAt: Date.now(),
+    };
+    if (!card.title) return;
+    this.set(id, { ...prev, card });
+  }
+
+  /** The page sets its unread count itself. */
+  setUnread(id: TabId, n: number | null): void {
+    const prev = this.status[id] ?? empty();
+    if (n === null) {
+      this.set(id, { ...prev, unread: undefined, unreadFixed: undefined });
+      return;
+    }
+    this.set(id, { ...prev, unread: Math.max(0, Math.min(9999, Math.floor(n))), unreadFixed: true });
+  }
+
+  /** A notification counted for the tab, from the page API. */
+  notify(id: TabId, title: string, body: string): void {
+    const prev = this.status[id] ?? empty();
+    this.set(id, { ...prev, notifications: prev.notifications + 1, lastNotification: { title: title.slice(0, 120), body: body.slice(0, 200), at: Date.now() } });
+  }
+
+  cardAction(id: TabId, action: string): void {
+    this.send(id, `card:${action.slice(0, 40)}`);
+  }
+
   /** Page title changed: refresh what we read from it. */
   title(id: TabId, title: string): void {
     if (!this.c.state.settings.smartPages) return;
-    const { unread, timer } = parseTitleSignals(title);
+    const parsed = parseTitleSignals(title);
     const prev = this.status[id] ?? empty();
+    const unread = prev.unreadFixed ? prev.unread : parsed.unread;
+    const timer = parsed.timer;
     if (prev.unread === unread && prev.timer?.text === timer?.text && prev.timer?.progress === timer?.progress) return;
     this.set(id, { ...prev, unread, timer });
   }
@@ -143,7 +194,7 @@ export class SmartManager {
 
   private set(id: TabId, info: SmartInfo): void {
     const next = { ...info, updatedAt: Date.now() };
-    const isEmpty = !next.media && !next.call && !next.dev && !next.feeds && !next.timer && next.unread === undefined && next.notifications === 0 && !next.manifest && !next.tools;
+    const isEmpty = !next.media && !next.call && !next.dev && !next.card && !next.feeds && !next.timer && next.unread === undefined && next.notifications === 0 && !next.manifest && !next.tools;
     if (isEmpty) {
       this.clear(id);
       return;

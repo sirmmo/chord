@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { State, TabGroup, TabId } from '../shared/types.ts';
 import { membersOf, spaceById } from '../shared/model.ts';
 import type { Controller } from './controller.ts';
+import { boostsFor } from '../shared/boosts.ts';
 
 /**
  * The page API: `navigator.chord` lets a page open and close tabs of its own in
@@ -43,6 +44,7 @@ export class PageTabsManager {
     const args = (typeof req.args === 'object' && req.args !== null ? req.args : {}) as Record<string, unknown>;
 
     if (method === 'status') return { ok: true, result: { granted: this.allowed(origin) } };
+    if (method === 'theme') return { ok: true, result: this.c.themeFor(tabId) };
     if (!(await this.permission(origin, tabId))) return { ok: false, error: `${origin} may not manage tabs in Chord` };
     const tab = this.c.state.tabs[tabId];
     if (!tab || !tab.spaceId) return { ok: false, error: 'tab gone' };
@@ -50,6 +52,46 @@ export class PageTabsManager {
 
     try {
       switch (method) {
+        case 'card':
+          this.c.smart.setCard(tabId, args.card ?? null);
+          return { ok: true };
+        case 'unread':
+          this.c.smart.setUnread(tabId, typeof args.count === 'number' ? args.count : null);
+          return { ok: true };
+        case 'notify':
+          this.c.smart.notify(tabId, String(args.title ?? ''), String(args.body ?? ''));
+          return { ok: true };
+        case 'bookmark': {
+          const url = String(args.url ?? tab.url);
+          if (!/^https?:\/\//i.test(url)) throw new Error('url must be http(s)');
+          this.c.apply({ type: 'bookmark.add', url, title: String(args.title ?? tab.title ?? url).slice(0, 300), public: args.public === true, note: typeof args.note === 'string' ? args.note : undefined, tags: Array.isArray(args.tags) ? args.tags.map(String) : undefined, spaceId: tab.spaceId });
+          return { ok: true };
+        }
+        case 'note': {
+          const text = String(args.text ?? '').trim();
+          if (!text) throw new Error('text is empty');
+          const space = spaceById(this.c.state, tab.spaceId);
+          if (!space) throw new Error('space gone');
+          this.c.apply({ type: 'space.notes', id: space.id, text: `${space.notes ? `${space.notes.replace(/\s+$/, '')}\n\n` : ''}${text.slice(0, 20_000)}` });
+          return { ok: true };
+        }
+        case 'subscribe': {
+          const feed = await this.c.reader.subscribe(String(args.url ?? tab.url), null, undefined, tab.spaceId);
+          if (!feed) throw new Error(this.c.reader.status().error || 'no feed found');
+          return { ok: true, result: { title: feed.title, url: feed.url } };
+        }
+        case 'openUrl': {
+          const url = String(args.url ?? '');
+          if (!/^https?:\/\//i.test(url) || url.length > 4000) throw new Error('url must be http(s)');
+          this.c.apply({ type: 'tab.new', url, spaceId: tab.spaceId, activate: args.background !== true });
+          return { ok: true };
+        }
+        case 'little': {
+          const url = String(args.url ?? '');
+          if (!/^https?:\/\//i.test(url) || url.length > 4000) throw new Error('url must be http(s)');
+          this.c.little.open(url);
+          return { ok: true };
+        }
         case 'open': {
           const url = String(args.url ?? '');
           if (!/^https?:\/\//i.test(url) || url.length > 4000) throw new Error('url must be http(s)');
@@ -101,8 +143,11 @@ export class PageTabsManager {
     }
   }
 
+  /** Granted by the user, or a site the user wrote a boost for: boosts are theirs, so their sites are trusted. */
   private allowed(origin: string): boolean {
-    return this.c.state.settings.pageTabs.includes(origin);
+    if (this.c.state.settings.pageTabs.includes(origin)) return true;
+    const host = hostOf(origin);
+    return host !== '' && boostsFor(this.c.state.settings.boosts, host).length > 0;
   }
 
   private permission(origin: string, tabId: TabId): Promise<boolean> {

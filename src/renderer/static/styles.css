@@ -329,6 +329,18 @@ footer { flex: none; display: flex; align-items: center; gap: 4px; padding-top: 
 .chip.dev .chip-icon svg { animation: spin 1.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* cards pages ask for (page API, boosts) */
+.dev.card { flex-wrap: wrap; }
+.dev.card.busy { border-left-color: #ffb020; }
+.dev.card.err { border-left-color: #ff5252; }
+.dev.card.warn { border-left-color: #ffb020; }
+.dev.card.ok { border-left-color: #3ddc84; }
+.dev.card.busy .sub::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ffb020; margin-right: 5px; animation: pulse 1.6s infinite; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; padding: 4px 0 0 2px; }
+.card-actions:empty { display: none; }
+.card-btn { font: inherit; font-size: 11.5px; color: var(--fg); background: var(--active); border: 0; border-radius: 6px; padding: 3px 8px; cursor: default; }
+.card-btn:hover { background: color-mix(in srgb, var(--accent) 25%, var(--active)); }
+
 /* calls */
 .call { flex: none; display: flex; align-items: center; gap: 2px; margin-top: 6px; padding: 6px 6px 6px 10px; border-radius: 10px; background: color-mix(in srgb, #3ddc84 14%, var(--hover)); }
 .call.hidden { display: none; }

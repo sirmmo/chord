@@ -157,6 +157,19 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   a repo (its releases), a subreddit, a YouTube channel or a Hacker News user. Who a
   space follows is exported with the space; what was read stays local. Refreshes every
   30 minutes and when you come back to the space.
+- **Bot checks** (Cloudflare and the like): the functions Chord patches in pages to watch
+  players, calls and passkeys answer `toString()` like the originals, and `window.chrome`
+  exists as in Chrome, so challenge pages see an ordinary Chromium.
+- **Boosts that integrate a page with Chord**: on a site you wrote a boost for,
+  `navigator.chord` is unlocked without a prompt, so a boost can turn what the page shows
+  into Chord's own things: a card in the sidebar with buttons (`chord.card.set`, shown
+  from every space, a chip in the title bar while busy), an unread badge
+  (`chord.setUnread`), notifications (`chord.notify`), bookmarks and notes
+  (`chord.bookmark`, `chord.addNote`), reader subscriptions (`chord.subscribe`), tabs and
+  Little windows (`chord.open`, `chord.openLittle`, the page's own subspace of tabs), and
+  the space's colours for its CSS (`--chord-space`, `--chord-accent`,
+  `data-chord-theme`, `chord.theme()` and a `theme` event). Settings → Boosts documents
+  it with an example; `docs/chord-page-api.d.ts` has the types.
 - **Protected media (DRM)**: Chord is built on castLabs' Electron for Content Security,
   which carries Google's Widevine CDM, so Amazon Music, Spotify's web player, Netflix,
   Prime Video and the like play instead of saying "your browser does not support this

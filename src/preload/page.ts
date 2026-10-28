@@ -11,11 +11,61 @@ import { installDevAdapter } from './dev.ts';
 const REPORT_KEY = '__chordSmart';
 const ACTION_KEY = '__chordSmartAction';
 
+/**
+ * Runs first in every page's main world. Chord patches a few browser functions
+ * (media session, notifications, getUserMedia, WebAuthn) to see what pages do;
+ * bot checks such as Cloudflare's read those functions' source text and expect
+ * "[native code]", and expect window.chrome on anything that calls itself
+ * Chrome. This keeps both true: patched functions answer toString() like the
+ * originals they replace, and window.chrome exists like in Chrome.
+ */
+function stealthHook(): void {
+  const w = window as Window & { __chordNative?: unknown; chrome?: unknown };
+  if (w.__chordNative) return;
+  const reg = new WeakMap<Function, Function>();
+  const origToString = Function.prototype.toString;
+  const patchedToString = function toString(this: Function) {
+    return origToString.call(reg.get(this) ?? this);
+  };
+  reg.set(patchedToString, origToString);
+  try {
+    Object.defineProperty(Function.prototype, 'toString', { value: patchedToString, writable: true, configurable: true });
+  } catch {
+    /* frozen */
+  }
+  const mark = <T extends Function>(patched: T, orig: Function): T => {
+    reg.set(patched, orig);
+    try {
+      Object.defineProperty(patched, 'name', { value: orig.name, configurable: true });
+      Object.defineProperty(patched, 'length', { value: orig.length, configurable: true });
+    } catch {
+      /* not configurable */
+    }
+    return patched;
+  };
+  Object.defineProperty(w, '__chordNative', { value: Object.freeze({ mark }), enumerable: false, configurable: false, writable: false });
+  if (!('chrome' in w)) {
+    const noop = function () {};
+    const chrome = {
+      app: { isInstalled: false, InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' }, RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' }, getDetails: mark(function getDetails() { return null; }, noop), getIsInstalled: mark(function getIsInstalled() { return false; }, noop), runningState: mark(function runningState() { return 'cannot_run'; }, noop) },
+      csi: mark(function csi() { return { startE: Date.now(), onloadT: Date.now(), pageT: performance.now(), tran: 15 }; }, noop),
+      loadTimes: mark(function loadTimes() { const t = performance.timing; return { requestTime: t.requestStart / 1000, startLoadTime: t.requestStart / 1000, commitLoadTime: t.responseStart / 1000, finishDocumentLoadTime: t.domContentLoadedEventEnd / 1000, finishLoadTime: t.loadEventEnd / 1000, firstPaintTime: t.responseEnd / 1000, firstPaintAfterLoadTime: 0, navigationType: 'Other', wasFetchedViaSpdy: true, wasNpnNegotiated: true, npnNegotiatedProtocol: 'h2', wasAlternateProtocolAvailable: false, connectionInfo: 'h2' }; }, noop),
+      runtime: { OnInstalledReason: { CHROME_UPDATE: 'chrome_update', INSTALL: 'install', SHARED_MODULE_UPDATE: 'shared_module_update', UPDATE: 'update' }, PlatformArch: { ARM: 'arm', ARM64: 'arm64', MIPS: 'mips', MIPS64: 'mips64', X86_32: 'x86-32', X86_64: 'x86-64' }, PlatformOs: { ANDROID: 'android', CROS: 'cros', LINUX: 'linux', MAC: 'mac', OPENBSD: 'openbsd', WIN: 'win' }, RequestUpdateCheckStatus: { NO_UPDATE: 'no_update', THROTTLED: 'throttled', UPDATE_AVAILABLE: 'update_available' } },
+    };
+    Object.defineProperty(w, 'chrome', { value: chrome, writable: true, configurable: true, enumerable: true });
+  }
+}
+
 /** Runs in the page's main world on accounts.google.com: make navigator agree with the User-Agent header Chord sends there. */
 function identityHook(userAgent: string, firefox: string): void {
+  const nativeMark = ((window as unknown as { __chordNative?: { mark: <T extends Function>(p: T, o: Function) => T } }).__chordNative?.mark ?? (<T extends Function>(p: T) => p)) as <T extends Function>(p: T, o: Function) => T;
   const define = (obj: object, key: string, value: unknown) => {
     try {
-      Object.defineProperty(obj, key, { get: () => value, configurable: true });
+      const orig = Object.getOwnPropertyDescriptor(obj, key)?.get;
+      const getter = function () {
+        return value;
+      };
+      Object.defineProperty(obj, key, { get: orig ? nativeMark(getter, orig) : getter, configurable: true });
     } catch {
       /* not configurable */
     }
@@ -71,10 +121,11 @@ function passkeyHook(reportKey: string, actionKey: string): void {
   };
   const fail = (error?: string) => new DOMException(error || 'The operation either timed out or was not allowed.', 'NotAllowedError');
   const proto = (window as unknown as { CredentialsContainer?: { prototype: CredentialsContainer } }).CredentialsContainer?.prototype;
+  const nativeMark = ((window as unknown as { __chordNative?: { mark: <T extends Function>(p: T, o: Function) => T } }).__chordNative?.mark ?? (<T extends Function>(p: T) => p)) as <T extends Function>(p: T, o: Function) => T;
   if (proto) {
     const origCreate = proto.create;
     const origGet = proto.get;
-    proto.create = async function (this: CredentialsContainer, options?: CredentialCreationOptions) {
+    proto.create = nativeMark(async function (this: CredentialsContainer, options?: CredentialCreationOptions) {
       const pk = options?.publicKey;
       if (!pk) return origCreate.call(this, options);
       const sel = pk.authenticatorSelection ?? {};
@@ -88,8 +139,8 @@ function passkeyHook(reportKey: string, actionKey: string): void {
       } finally {
         void ask('done', {});
       }
-    };
-    proto.get = async function (this: CredentialsContainer, options?: CredentialRequestOptions) {
+    }, origCreate);
+    proto.get = nativeMark(async function (this: CredentialsContainer, options?: CredentialRequestOptions) {
       const pk = options?.publicKey;
       if (!pk) return origGet.call(this, options);
       const r = await ask('get', { rpId: pk.rpId ?? '', allow: (pk.allowCredentials ?? []).map((c) => b64(c.id)), conditional: options?.mediation === 'conditional' });
@@ -102,13 +153,15 @@ function passkeyHook(reportKey: string, actionKey: string): void {
       } finally {
         void ask('done', {});
       }
-    };
+    }, origGet);
   }
   const PKC = (window as unknown as { PublicKeyCredential?: Record<string, unknown> }).PublicKeyCredential;
   if (PKC) {
     try {
-      PKC.isUserVerifyingPlatformAuthenticatorAvailable = () => Promise.resolve(true);
-      PKC.isConditionalMediationAvailable = () => Promise.resolve(false);
+      const o1 = PKC.isUserVerifyingPlatformAuthenticatorAvailable as Function;
+      const o2 = PKC.isConditionalMediationAvailable as Function;
+      PKC.isUserVerifyingPlatformAuthenticatorAvailable = nativeMark(function isUserVerifyingPlatformAuthenticatorAvailable() { return Promise.resolve(true); }, o1 ?? function () {});
+      PKC.isConditionalMediationAvailable = nativeMark(function isConditionalMediationAvailable() { return Promise.resolve(false); }, o2 ?? function () {});
     } catch {
       /* frozen */
     }
@@ -128,6 +181,7 @@ function smartHook(reportKey: string, actionKey: string): void {
       /* page may have torn down */
     }
   };
+  const nativeMark = ((window as unknown as { __chordNative?: { mark: <T extends Function>(p: T, o: Function) => T } }).__chordNative?.mark ?? (<T extends Function>(p: T) => p)) as <T extends Function>(p: T, o: Function) => T;
 
   // ---- media session ----
   const nav = navigator as Navigator & { mediaSession?: MediaSession };
@@ -136,13 +190,13 @@ function smartHook(reportKey: string, actionKey: string): void {
   if (ms) {
     const proto = Object.getPrototypeOf(ms) as MediaSession;
     const origSet = proto.setActionHandler;
-    proto.setActionHandler = function (this: MediaSession, name: MediaSessionAction, fn: MediaSessionActionHandler | null) {
+    proto.setActionHandler = nativeMark(function setActionHandler(this: MediaSession, name: MediaSessionAction, fn: MediaSessionActionHandler | null) {
       if (fn) handlers.set(name, fn as (details: { action: string }) => void);
       else handlers.delete(name);
       const r = origSet.call(this, name, fn);
       schedule();
       return r;
-    };
+    }, origSet);
     for (const prop of ['metadata', 'playbackState'] as const) {
       const d = Object.getOwnPropertyDescriptor(proto, prop);
       if (!d || !d.set || !d.get) continue;
@@ -151,10 +205,10 @@ function smartHook(reportKey: string, actionKey: string): void {
         configurable: true,
         enumerable: d.enumerable,
         get,
-        set(this: MediaSession, v: unknown) {
+        set: nativeMark(function (this: MediaSession, v: unknown) {
           set.call(this, v);
           schedule();
-        },
+        }, set),
       });
     }
   }
@@ -206,15 +260,16 @@ function smartHook(reportKey: string, actionKey: string): void {
   const md = navigator.mediaDevices;
   const wrap = (name: 'getUserMedia' | 'getDisplayMedia', into: Set<MediaStream>) => {
     if (!md || typeof md[name] !== 'function') return;
-    const orig = md[name].bind(md) as (c?: unknown) => Promise<MediaStream>;
-    (md as unknown as Record<string, unknown>)[name] = async (constraints?: unknown) => {
+    const origFn = md[name] as (c?: unknown) => Promise<MediaStream>;
+    const orig = origFn.bind(md) as (c?: unknown) => Promise<MediaStream>;
+    (md as unknown as Record<string, unknown>)[name] = nativeMark(async function (constraints?: unknown) {
       const stream = await orig(constraints);
       into.add(stream);
       if (!callSince) callSince = Date.now();
       for (const t of stream.getTracks()) t.addEventListener('ended', schedule);
       schedule();
       return stream;
-    };
+    }, origFn);
   };
   wrap('getUserMedia', streams);
   wrap('getDisplayMedia', shares);
@@ -355,10 +410,10 @@ function smartHook(reportKey: string, actionKey: string): void {
   const g = w as unknown as { Notification?: typeof Notification };
   const OrigNotification = g.Notification;
   if (typeof OrigNotification === 'function') {
-    const Wrapped = function (this: unknown, title: string, options?: NotificationOptions) {
+    const Wrapped = nativeMark(function Notification(this: unknown, title: string, options?: NotificationOptions) {
       post({ kind: 'notification', title: String(title ?? ''), body: String(options?.body ?? '') });
       return new OrigNotification(title, options);
-    } as unknown as typeof Notification;
+    }, OrigNotification) as unknown as typeof Notification;
     Wrapped.prototype = OrigNotification.prototype;
     Object.defineProperty(Wrapped, 'permission', { get: () => OrigNotification.permission });
     Object.defineProperty(Wrapped, 'maxActions', { get: () => (OrigNotification as unknown as { maxActions: number }).maxActions });
@@ -403,8 +458,39 @@ function smartHook(reportKey: string, actionKey: string): void {
     navigateTab: (id: string, url: string) => call('navigate', { id, url }).then(() => undefined),
     listTabs: () => call('list'),
     setSubspaceName: (name: string) => call('name', { name }).then(() => undefined),
+    // ---- deeper integration, for boosted sites and granted origins ----
+    /** A card in Chord's sidebar, shown from every space, with up to four actions. */
+    card: {
+      set: (card: { title: string; subtitle?: string; state?: string; badge?: number; actions?: { id: string; label: string }[] }) => call('card', { card }).then(() => undefined),
+      clear: () => call('card', { card: null }).then(() => undefined),
+      /** fn(actionId) when the user presses one of the card's buttons */
+      onAction: (fn: (id: string) => void) => chordEvents.addEventListener('cardaction', (e) => fn((e as CustomEvent<{ id: string }>).detail.id)),
+    },
+    /** Badge on the tab and the space dot; null goes back to reading the title. */
+    setUnread: (count: number | null) => call('unread', { count }).then(() => undefined),
+    /** Counted like a web notification: the bell in the title bar, a badge on the tab. */
+    notify: (title: string, body = '') => call('notify', { title, body }).then(() => undefined),
+    /** Bookmark a page (this one by default) into the tab's space. */
+    bookmark: (opts: { url?: string; title?: string; note?: string; tags?: string[]; public?: boolean } = {}) => call('bookmark', opts).then(() => undefined),
+    /** Append Markdown to the space's notes. */
+    addNote: (text: string) => call('note', { text }).then(() => undefined),
+    /** Subscribe the reader to a feed (this page's, discovered, by default), tagged with the space. */
+    subscribe: (url?: string) => call('subscribe', url ? { url } : {}),
+    /** Open a page in the space (a plain tab, not part of the page's subspace). */
+    open: (url: string, opts: { background?: boolean } = {}) => call('openUrl', { url, background: opts.background === true }).then(() => undefined),
+    /** Open a page in a Little window. */
+    openLittle: (url: string) => call('little', { url }).then(() => undefined),
+    /** The space this tab is in and Chord's look: { space: { id, name, color, icon }, accent, dark, font }. Also CSS variables --chord-space, --chord-accent and data-chord-theme on <html>, and a "theme" event. */
+    theme: () => call('theme'),
     addEventListener: chordEvents.addEventListener.bind(chordEvents),
     removeEventListener: chordEvents.removeEventListener.bind(chordEvents),
+  };
+  const applyTheme = (t: { space: { color: string }; accent: string; dark: boolean }) => {
+    const root = document.documentElement;
+    root.style.setProperty('--chord-space', t.space.color);
+    root.style.setProperty('--chord-accent', t.accent);
+    root.dataset.chordTheme = t.dark ? 'dark' : 'light';
+    chordEvents.dispatchEvent(new CustomEvent('theme', { detail: t }));
   };
   Object.freeze(chordApi);
   try {
@@ -450,6 +536,18 @@ function smartHook(reportKey: string, actionKey: string): void {
       }
       return;
     }
+    if (kind === 'card') {
+      chordEvents.dispatchEvent(new CustomEvent('cardaction', { detail: { id: action } }));
+      return;
+    }
+    if (kind === 'theme') {
+      try {
+        applyTheme(JSON.parse(action));
+      } catch {
+        /* malformed */
+      }
+      return;
+    }
     if (kind === 'volume') {
       tabVolume = Math.max(0, Math.min(1, Number(action)));
       if (tabVolume >= 1) for (const el of mediaEls()) el.volume = 1;
@@ -482,6 +580,13 @@ const runInMainWorld = (func: (...args: string[]) => void, args: string[]) => {
   if (typeof bridge.executeInMainWorld === 'function') bridge.executeInMainWorld({ func, args });
   else void webFrame.executeJavaScript(`(${func.toString()})(${args.map((a) => JSON.stringify(a)).join(', ')})`);
 };
+
+// First: patched functions must look native and window.chrome must exist (bot checks).
+try {
+  runInMainWorld(stealthHook, []);
+} catch (err) {
+  console.warn('Chord stealth hook not installed', err);
+}
 
 // Google's sign-in pages get a different identity (see main/identity.ts); the page must see the same one.
 if (/^(accounts\.google\.com|accounts\.youtube\.com)$/.test(location.host)) {
