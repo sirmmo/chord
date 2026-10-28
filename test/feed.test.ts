@@ -11,7 +11,7 @@ test('parseFeed reads RSS 2.0', () => {
   assert.ok(f);
   assert.equal(f.title, 'Finds & Links');
   assert.equal(f.items.length, 2);
-  assert.deepEqual({ ...f.items[0] }, { id: 'g1', title: 'A great site', url: 'https://example.com/a', summary: 'Nice & short', author: 'Ann', publishedAt: Date.UTC(2026, 9, 27, 10) });
+  assert.deepEqual({ ...f.items[0], content: undefined }, { content: undefined, id: 'g1', title: 'A great site', url: 'https://example.com/a', summary: 'Nice & short', author: 'Ann', publishedAt: Date.UTC(2026, 9, 27, 10) });
   assert.equal(f.items[1].url, 'https://example.com/b');
 });
 

@@ -9,6 +9,8 @@ export interface FeedItem {
   summary: string;
   author: string;
   publishedAt: number;
+  /** the entry's body as the feed gave it (HTML, unsanitised: render it through a sanitiser only) */
+  content?: string;
 }
 export interface ParsedFeed {
   title: string;
@@ -32,6 +34,14 @@ export function cleanText(raw: string): string {
   t = decodeEntities(t);
   t = t.replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ');
   return decodeEntities(t).replace(/\s+/g, ' ').trim();
+}
+
+/** The HTML an element carries: CDATA unwrapped, XML-escaped markup decoded once. */
+function rawHtml(raw: string): string | undefined {
+  if (!raw.trim()) return undefined;
+  let t = raw.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+  if (!/<[a-z][\s\S]*>/i.test(t) && /&lt;[a-z]/i.test(t)) t = decodeEntities(t);
+  return t.slice(0, 200_000);
 }
 
 function tag(block: string, names: string[]): string {
@@ -90,6 +100,7 @@ export function parseFeed(text: string, baseUrl = ''): ParsedFeed | null {
         summary: cleanText(tag(b, ['summary', 'content'])).slice(0, 400),
         author,
         publishedAt: date(tag(b, ['published', 'updated', 'issued'])),
+        content: rawHtml(tag(b, ['content', 'summary'])),
       });
     }
     return { title, items };
@@ -112,6 +123,7 @@ export function parseFeed(text: string, baseUrl = ''): ParsedFeed | null {
       summary: cleanText(tag(b, ['description', 'content:encoded', 'summary'])).slice(0, 400),
       author: cleanText(tag(b, ['dc:creator', 'author'])),
       publishedAt: date(tag(b, ['pubDate', 'dc:date', 'published', 'updated'])),
+      content: rawHtml(tag(b, ['content:encoded', 'description', 'summary'])),
     });
   }
   return { title, items };
@@ -134,6 +146,7 @@ function parseJsonFeed(text: string, baseUrl: string): ParsedFeed | null {
           summary: cleanText(s(it.summary) || s(it.content_text) || s(it.content_html)).slice(0, 400),
           author: s((it.author as { name?: string } | undefined)?.name) || s(authors[0]?.name),
           publishedAt: date(s(it.date_published) || s(it.date_modified)),
+          content: (s(it.content_html) || (s(it.content_text) ? `<p>${s(it.content_text).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string)}</p>` : '')).slice(0, 200_000) || undefined,
         };
       }),
     };

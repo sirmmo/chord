@@ -585,6 +585,11 @@ if (process.isMainFrame) {
   const reportManifest = () => {
     const link = document.querySelector<HTMLLinkElement>('link[rel="chord-space"][href]');
     if (link && /^https:/i.test(link.href)) ipcRenderer.send('smart', { kind: 'manifest', url: link.href });
+    // feeds the page advertises, for the reader's subscribe button
+    const feeds = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel~="alternate"][type][href]'))
+      .filter((l) => /(rss|atom|feed\+json)/i.test(l.type) || (/json/i.test(l.type) && /feed/i.test(l.href)))
+      .map((l) => ({ title: l.title || '', url: l.href }));
+    if (feeds.length) ipcRenderer.send('smart', { kind: 'feeds', feeds });
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', reportManifest);
   else reportManifest();

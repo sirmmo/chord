@@ -80,6 +80,8 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Downloads', accelerator: 'CmdOrCtrl+Shift+J', click: d({ type: 'downloads.open' }) },
         { label: 'History', accelerator: 'CmdOrCtrl+Y', click: d({ type: 'history.open' }) },
         { label: 'Bookmarks', accelerator: 'CmdOrCtrl+Alt+B', click: d({ type: 'bookmarks.open' }) },
+        { label: 'Reader', accelerator: 'CmdOrCtrl+Shift+R', click: d({ type: 'reader.open' }) },
+        { label: 'Subscribe to This Site', click: d({ type: 'reader.subscribeFrom' }) },
         { label: 'Bookmark This Page', accelerator: 'CmdOrCtrl+Shift+B', click: d({ type: 'bookmark.page', public: false }) },
         { label: 'Bookmark This Page Publicly', click: d({ type: 'bookmark.page', public: true }) },
         { label: 'Picture in Picture', accelerator: 'CmdOrCtrl+Alt+P', click: d({ type: 'media.pip' }) },

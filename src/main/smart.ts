@@ -45,6 +45,18 @@ export class SmartManager {
         if (typeof r.callId === 'string') this.c.ai.resolvePageTool(r.callId, r.result, typeof r.error === 'string' ? r.error : undefined);
         return;
       }
+      if (r.kind === 'feeds') {
+        const prev = this.status[id] ?? empty();
+        const feeds = Array.isArray(r.feeds)
+          ? r.feeds
+              .filter((f): f is { title?: unknown; url?: unknown } => typeof f === 'object' && f !== null)
+              .map((f) => ({ title: str(f.title, 120), url: str(f.url, 2000) }))
+              .filter((f) => /^https?:\/\//i.test(f.url))
+              .slice(0, 6)
+          : [];
+        if (JSON.stringify(prev.feeds ?? []) !== JSON.stringify(feeds)) this.set(id, { ...prev, feeds: feeds.length ? feeds : undefined });
+        return;
+      }
       if (r.kind === 'manifest') {
         const target = str(r.url, 2000);
         if (!/^https:\/\//i.test(target)) return;
@@ -131,7 +143,7 @@ export class SmartManager {
 
   private set(id: TabId, info: SmartInfo): void {
     const next = { ...info, updatedAt: Date.now() };
-    const isEmpty = !next.media && !next.call && !next.dev && !next.timer && next.unread === undefined && next.notifications === 0 && !next.manifest && !next.tools;
+    const isEmpty = !next.media && !next.call && !next.dev && !next.feeds && !next.timer && next.unread === undefined && next.notifications === 0 && !next.manifest && !next.tools;
     if (isEmpty) {
       this.clear(id);
       return;

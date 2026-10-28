@@ -38,4 +38,11 @@ test('tags, tombstones and the public site', () => {
   assert.ok(html.includes('data-tag="one"'));
   assert.ok(!html.includes('https://s.test'));
   assert.equal(JSON.parse(renderBookmarksJson(list, opts)).bookmarks.length, 1);
+  for (const theme of ['elegant', 'pragmatic', 'digg'] as const) {
+    const page = renderLinkroll(list, { ...opts, theme });
+    assert.ok(page.includes('https://p.test/x'), `${theme} lists the public link`);
+    assert.ok(!page.includes('https://s.test'), `${theme} hides the private one`);
+    assert.ok(page.includes('href="feed.xml"'), `${theme} advertises the feed`);
+  }
+  assert.ok(renderLinkroll(list, { ...opts, theme: 'digg' }).includes('diggbox'));
 });

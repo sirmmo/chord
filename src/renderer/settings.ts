@@ -71,6 +71,8 @@ sAddressBar.onchange = () => dispatch({ type: 'settings.update', patch: { addres
 sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages: sSmart.checked } });
 sAskDl.onchange = () => dispatch({ type: 'settings.update', patch: { askDownloadPath: sAskDl.checked } });
 sTray.onchange = () => dispatch({ type: 'settings.update', patch: { closeToTray: sTray.checked } });
+const sLittle = $<HTMLInputElement>('#s-little');
+sLittle.onchange = () => dispatch({ type: 'settings.update', patch: { littleWindows: sLittle.checked } });
 sAutoPip.onchange = () => dispatch({ type: 'settings.update', patch: { autoPip: sAutoPip.checked } });
 const FLAGS: { key: keyof TroubleFlags; label: string; help: string }[] = [
   { key: 'noHwVideoDecode', label: 'Disable hardware video decoding', help: 'Videos decode on the CPU. Try this first when a video stays black or never starts.' },
@@ -277,6 +279,7 @@ function fillSettings(): void {
   sSmart.checked = s.settings.smartPages;
   sAskDl.checked = s.settings.askDownloadPath;
   sTray.checked = s.settings.closeToTray;
+  sLittle.checked = s.settings.littleWindows;
   sAutoPip.checked = s.settings.autoPip;
   for (const [k, input] of flagInputs) input.checked = s.settings.flags[k] === true;
   sUpdCheck.checked = s.settings.updates.check;
@@ -619,6 +622,8 @@ $('#s-sync-app-link').onclick = (e) => {
 const sSyncClientId = $<HTMLInputElement>('#s-sync-clientid');
 sSyncClientId.onchange = () => state && dispatch({ type: 'settings.update', patch: { sync: { ...state.settings.sync, clientId: sSyncClientId.value.trim() || undefined } } });
 $('#s-sync-now').onclick = () => dispatch({ type: 'sync.now' });
+const sSyncTheme = $('#s-sync-theme');
+segment(sSyncTheme, (v) => state && dispatch({ type: 'settings.update', patch: { sync: { ...state.settings.sync, theme: v as 'elegant' | 'pragmatic' | 'digg' } } }));
 $('#s-sync-disconnect').onclick = () => dispatch({ type: 'sync.disconnect' });
 api.onSync((st) => {
   syncStatus = st;
@@ -649,6 +654,7 @@ function renderSync(): void {
   $('#s-sync-user').replaceChildren(link(`https://github.com/${st.user}`, st.user));
   $('#s-sync-repos').replaceChildren(link(`https://github.com/${st.user}/${st.privateRepo}`, st.privateRepo), ' (private) · ', link(`https://github.com/${st.user}/${st.publicRepo}`, st.publicRepo), ' (public)');
   $('#s-sync-pages').replaceChildren(link(st.pagesUrl), h('span', { class: 's-foot', style: 'margin-left:8px' }, 'GitHub serves it a minute or two after the first push'));
+  if (state) sSyncTheme.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === (state!.settings.sync.theme ?? 'elegant')));
   const t = (ts: number) => (ts ? new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'never');
   $('#s-sync-state').textContent = `${st.busy ? 'Syncing… · ' : ''}last push ${t(st.lastPush)} · last pull ${t(st.lastPull)}`;
 }

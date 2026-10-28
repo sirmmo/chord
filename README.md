@@ -112,13 +112,26 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   page lists everything with pause, resume, cancel, retry, open and show-in-folder.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
+- **Little windows**: links that arrive from other apps open in a small window of their
+  own, with back, forward, the title and an "Open in Chord" button (`⌘⇧O`) that moves the
+  page into the current space; `Esc` closes it. Any page can be sent to one from the
+  command bar. Settings → General turns it off to get tabs instead.
+- **Peek**: with the sidebar collapsed, hovering the left edge (the gutter, or the first
+  pixel of the page) shows the sidebar until the pointer leaves it.
+- **Reader** (`⌘⇧R`, page at `chord://reader`): an RSS reader with subscriptions grouped
+  into subspaces, an item list with unread marks, search and a reading pane that shows the
+  entry's text (sanitised: no scripts, frames or handlers). Subscribe from a site or feed
+  address, from an `@handle`, or with the feed button that appears in the sidebar's title
+  bar on any page that advertises a feed; the tab menu and command bar offer the same.
+  Import an OPML file and it becomes a subspace of its own (its folders too); export your
+  subscriptions as OPML. Keys: j/k, o, s, m, r, u, shift+a. Refreshes every 20 minutes.
 - **Bookmarks** (`⌘⌥B`, page at `chord://bookmarks`): save any page privately (`⌘⇧B`, the
   tab menu, the command bar) or publicly, with tags and a note, search and filter them.
   Saving an item in a curated space bookmarks it too.
 - **Sync through GitHub** (Settings → Sync): sign in with GitHub (the device flow: a short
   code typed on github.com, no secret in the app), reuse the GitHub CLI's login when `gh`
   is installed, or paste a personal access token with the `repo` scope; Chord then creates
-  two repositories for you. `chord-sync` (private) holds your
+  two repositories for you. `chord-private` (private) holds your
   spaces, favorites, appearance and every bookmark; `chord-bookmarks` (public) holds the
   public bookmarks as `bookmarks.json`, an RSS `feed.xml` and a linkroll site that Chord
   publishes on GitHub Pages (`https://<you>.github.io/chord-bookmarks/`), so anyone can

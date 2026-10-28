@@ -1,8 +1,9 @@
-import { app, ipcMain, net } from 'electron';
+import { app, ipcMain } from 'electron';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { CuratedItem, CuratedStatus, Curator, SpaceId } from '../shared/types.ts';
-import { discoverFeeds, feedGuesses, itemKind, parseFeed, parseGitHubStars, resolveCuratorInput, type FeedItem } from '../shared/feed.ts';
+import { itemKind, resolveCuratorInput, type FeedItem } from '../shared/feed.ts';
+import { discoverFeed, fetchFeed } from './feeds.ts';
 import { spaceById } from '../shared/model.ts';
 import { Store } from './store.ts';
 import type { Controller } from './controller.ts';
@@ -23,8 +24,6 @@ interface SpaceData {
 const MAX_ITEMS = 400;
 const REFRESH_MS = 30 * 60_000;
 const STALE_MS = 15 * 60_000;
-const FETCH_TIMEOUT = 15_000;
-const UA_HEADERS = { Accept: 'application/rss+xml, application/atom+xml, application/feed+json, application/json, text/xml, application/xml;q=0.9, text/html;q=0.8, */*;q=0.5' };
 
 export class CuratedManager {
   private readonly c: Controller;
@@ -89,11 +88,11 @@ export class CuratedManager {
     this.send(spaceId);
     try {
       if (resolved.kind === 'discover') {
-        const found = await this.discover(resolved.url);
+        const found = await discoverFeed(resolved.url);
         if (!found) throw new Error('No feed found on that page. Try the address of its RSS feed.');
         feed = found;
       }
-      const parsed = await this.fetchFeed({ feed, kind } as Curator);
+      const parsed = await fetchFeed(feed, kind);
       if (parsed.title) name = parsed.title.slice(0, 100);
     } catch (err) {
       d.errors.add = err instanceof Error ? err.message : String(err);
@@ -154,7 +153,7 @@ export class CuratedManager {
     await Promise.all(
       curators.map(async (cur) => {
         try {
-          const parsed = await this.fetchFeed(cur);
+          const parsed = await fetchFeed(cur.feed, cur.kind);
           delete d.errors[cur.id];
           this.merge(d, cur, parsed.items, now);
         } catch (err) {
@@ -196,46 +195,6 @@ export class CuratedManager {
       const saved = d.items.filter((it) => it.saved);
       const rest = d.items.filter((it) => !it.saved).slice(0, MAX_ITEMS - saved.length);
       d.items = [...saved, ...rest].sort((a, b) => b.publishedAt - a.publishedAt);
-    }
-  }
-
-  private async fetchFeed(cur: Pick<Curator, 'feed' | 'kind'>): Promise<{ title: string; items: FeedItem[] }> {
-    const headers: Record<string, string> = cur.kind === 'github' ? { Accept: 'application/vnd.github.star+json' } : UA_HEADERS;
-    const res = await net.fetch(cur.feed, { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT) });
-    if (!res.ok) throw new Error(`${new URL(cur.feed).hostname} answered ${res.status}`);
-    const text = await res.text();
-    if (cur.kind === 'github') {
-      const items = parseGitHubStars(text);
-      const user = /users\/([^/]+)\//.exec(cur.feed)?.[1] ?? 'GitHub';
-      return { title: `${user} on GitHub`, items };
-    }
-    const parsed = parseFeed(text, cur.feed);
-    if (!parsed) throw new Error('Not a feed (RSS, Atom or JSON Feed).');
-    return parsed;
-  }
-
-  /** Fetch a page and find its feed: advertised links first, then the usual places. */
-  private async discover(pageUrl: string): Promise<string | null> {
-    try {
-      const res = await net.fetch(pageUrl, { headers: UA_HEADERS, signal: AbortSignal.timeout(FETCH_TIMEOUT) });
-      const text = await res.text();
-      if (parseFeed(text.slice(0, 200_000), pageUrl)) return pageUrl; // it was a feed after all
-      for (const url of discoverFeeds(text, pageUrl)) if (await this.isFeed(url)) return url;
-    } catch {
-      /* page unreachable: still try the guesses */
-    }
-    for (const url of feedGuesses(pageUrl)) if (await this.isFeed(url)) return url;
-    return null;
-  }
-
-  private async isFeed(url: string): Promise<boolean> {
-    try {
-      const res = await net.fetch(url, { headers: UA_HEADERS, signal: AbortSignal.timeout(8000) });
-      if (!res.ok) return false;
-      const text = (await res.text()).slice(0, 200_000);
-      return parseFeed(text, url) !== null;
-    } catch {
-      return false;
     }
   }
 

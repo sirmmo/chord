@@ -280,7 +280,7 @@ export class SyncManager {
       const state = this.c.state;
       const now = Date.now();
       const config = exportConfig(state, now);
-      const site = { user: s.user, siteUrl: this.status().pagesUrl };
+      const site = { user: s.user, siteUrl: this.status().pagesUrl, theme: s.theme ?? 'elegant' };
       const files: [string, string, string][] = [
         [s.privateRepo, 'config.json', JSON.stringify(config, null, 2)],
         [s.privateRepo, 'bookmarks.json', JSON.stringify({ format: 'chord-bookmarks-sync', version: 1, bookmarks: state.bookmarks }, null, 2)],

@@ -19,6 +19,7 @@
           <label class="check"><input type="checkbox" id="s-smart"> Show player controls for pages with media (YouTube Music, Spotify…) in the sidebar, across spaces</label>
 
           <label>Closing the window</label>
+          <label class="check"><input type="checkbox" id="s-little"> Open links from other apps in a Little window (a small window of their own, with “Open in Chord” to move them into a space)</label>
           <label class="check"><input type="checkbox" id="s-tray"> Keep Chord running in the menu bar / tray, with player and call controls</label>
 
           <label>Download folder</label>
@@ -185,7 +186,7 @@
         <p class="s-foot">Local models need no key: run Ollama (<code>ollama run llama3.1</code>) and keep the default base URL. For Anthropic the model defaults to <code>claude-opus-5-5</code>; requests opt into Anthropic’s server-side fallback so a safety decline is retried on another Claude model. Pages can offer tools to the assistant with <code>navigator.modelContext.registerTool(...)</code> (WebMCP); Chord provides that API when Chromium does not.</p>
       </div>
       <div class="s-page" data-page="sync">
-        <p class="s-foot" style="margin-top:0">Chord keeps your spaces and bookmarks in two GitHub repositories it creates for you: a private one (<code>chord-sync</code>: spaces, favorites, appearance, every bookmark) and a public one (<code>chord-bookmarks</code>: your public bookmarks as a page on GitHub Pages, with an RSS feed others can follow in a curated space). Private, password-locked spaces never leave this computer. Changes are pushed about half a minute after you make them and pulled at launch and every 15 minutes; pulls only add, never remove.</p>
+        <p class="s-foot" style="margin-top:0">Chord keeps your spaces and bookmarks in two GitHub repositories it creates for you: a private one (<code>chord-private</code>: spaces, favorites, appearance, every bookmark) and a public one (<code>chord-bookmarks</code>: your public bookmarks as a page on GitHub Pages, with an RSS feed others can follow in a curated space). Private, password-locked spaces never leave this computer. Changes are pushed about half a minute after you make them and pulled at launch and every 15 minutes; pulls only add, never remove.</p>
         <div id="s-sync-off">
           <div class="s-grid">
             <label>Sign in</label>
@@ -215,6 +216,11 @@
             <label>Account</label><div id="s-sync-user"></div>
             <label>Repositories</label><div id="s-sync-repos"></div>
             <label>Public page</label><div id="s-sync-pages"></div>
+            <label>Its look</label>
+            <div>
+              <div class="seg" id="s-sync-theme"><button data-v="elegant">Elegant</button><button data-v="pragmatic">Pragmatic</button><button data-v="digg">digg.com</button></div>
+              <p class="s-foot">Elegant: cards, search and tag chips. Pragmatic: one dense line per link. digg.com: the 2007 front page, yellow boxes and all. Republished on the next push.</p>
+            </div>
             <label>Status</label><div id="s-sync-state"></div>
             <label></label>
             <div class="row"><button class="btn" id="s-sync-now">Sync now</button><button class="btn danger" id="s-sync-disconnect">Disconnect</button></div>

@@ -38,6 +38,8 @@ import { installSpace } from './installer.ts';
 import { ResearchManager } from './research.ts';
 import { CuratedManager } from './curated.ts';
 import { SyncManager } from './sync.ts';
+import { ReaderManager } from './reader.ts';
+import { LittleWindows } from './little.ts';
 import { AiManager } from './ai.ts';
 import { modesMenu } from './menu.ts';
 import { installUrlFrom } from '../shared/installer.ts';
@@ -76,6 +78,8 @@ export class Controller {
   readonly research = new ResearchManager(this);
   readonly curated = new CuratedManager(this);
   readonly sync = new SyncManager(this);
+  readonly reader = new ReaderManager(this);
+  readonly little = new LittleWindows(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
@@ -183,6 +187,7 @@ export class Controller {
     this.research.init();
     this.curated.init();
     this.sync.init();
+    this.reader.init();
     this.ai.init();
     this.capture.init();
     this.pageTabs.init();
@@ -194,6 +199,7 @@ export class Controller {
 
     ipcMain.handle('dispatch', (event, message: unknown) => {
       if (!this.trusted(event) || !isMessage(message)) return;
+      if (this.little.owns(event.sender)) return this.little.command(event.sender, message);
       const w = this.windowOf(event.sender);
       if (w && w !== this.active) this.setActive(w);
       this.dispatch(message);
@@ -218,6 +224,7 @@ export class Controller {
       if (!w.alive()) continue;
       if (event.sender === w.win.webContents || event.sender === w.overlay.webContents || event.sender === w.panel.webContents) return true;
     }
+    if (this.little.owns(event.sender) && isInternal(event.senderFrame?.url ?? '')) return true;
     // One of Chord's own pages in a tab view: only while it shows a chord:// document.
     return this.tabs.tabIdOf(event.sender) !== undefined && isInternal(event.senderFrame?.url ?? '');
   }
@@ -343,14 +350,14 @@ export class Controller {
     return TOP_INSET + (this.state.settings.addressBar ? ADDRESS_BAR_HEIGHT : 0);
   }
 
-  private chromeColor(): string {
+  chromeColor(): string {
     if (this.state.settings.theme.skin === 'lcars') return '#000000';
     const mode = this.state.settings.theme.mode;
     const dark = mode === 'dark' || (mode === 'system' && nativeTheme.shouldUseDarkColors);
     return dark ? CHROME_DARK : CHROME_LIGHT;
   }
 
-  private titleBarOverlay(): { color: string; symbolColor: string; height: number } {
+  titleBarOverlay(): { color: string; symbolColor: string; height: number } {
     const color = this.chromeColor();
     const symbolColor = this.state.settings.theme.skin === 'lcars' ? '#ff9966' : color === CHROME_DARK ? '#dddde3' : '#2a2a33';
     return { color, symbolColor, height: TITLEBAR_HEIGHT };
@@ -403,12 +410,18 @@ export class Controller {
   }
 
   openUrl(url: string): void {
-    this.focusWindow();
     const manifest = installUrlFrom(url);
     if (manifest) {
+      this.focusWindow();
       void installSpace(this, manifest);
       return;
     }
+    // a link from another app: a Little window, unless the user prefers tabs
+    if (this.state.settings.littleWindows && /^https?:/i.test(url) && this.windows.size > 0) {
+      this.little.open(url);
+      return;
+    }
+    this.focusWindow();
     this.apply({ type: 'tab.new', url, activate: true });
   }
 
@@ -419,6 +432,7 @@ export class Controller {
     this.passkeys.flush();
     this.research.flush();
     this.curated.flush();
+    this.reader.flush();
     this.ai.flush();
     this.store.save(this.state);
     this.store.flush();
@@ -489,7 +503,7 @@ export class Controller {
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.activeSpaceId !== next.activeSpaceId || JSON.stringify(activeSpace(prev).modes) !== JSON.stringify(activeSpace(next).modes)) this.curated.touch(next.activeSpaceId);
-    if (prev.bookmarks !== next.bookmarks || prev.spaces !== next.spaces || prev.favorites !== next.favorites || prev.settings.theme !== next.settings.theme || prev.tabs !== next.tabs) this.sync.schedulePush();
+    if (prev.bookmarks !== next.bookmarks || prev.spaces !== next.spaces || prev.favorites !== next.favorites || prev.settings.theme !== next.settings.theme || prev.settings.sync.theme !== next.settings.sync.theme || prev.tabs !== next.tabs) this.sync.schedulePush();
     if (prev.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() !== next.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() || JSON.stringify(prev.settings.sourceror) !== JSON.stringify(next.settings.sourceror)) this.sources.refresh();
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
     if (prev.settings.extensions !== next.settings.extensions && JSON.stringify(prev.settings.extensions) !== JSON.stringify(next.settings.extensions)) {
@@ -732,6 +746,52 @@ export class Controller {
         return;
       case 'bookmarks.open':
         this.openInternal('chord://bookmarks/');
+        return;
+      case 'reader.open':
+        this.openInternal('chord://reader/');
+        return;
+      case 'little.open': {
+        const url = cmd.url ?? focusedTab(this.state)?.url;
+        if (url && /^https?:/i.test(url)) this.little.open(url);
+        return;
+      }
+      case 'little.nav':
+        return; // only meaningful from a Little window's own bar
+      case 'reader.subscribe':
+        void this.reader.subscribe(cmd.input, cmd.groupId ?? null, cmd.title);
+        return;
+      case 'reader.subscribeFrom':
+        this.reader.subscribeFrom(cmd.id);
+        return;
+      case 'reader.unsubscribe':
+        this.reader.unsubscribe(cmd.id);
+        return;
+      case 'reader.refresh':
+        void this.reader.refresh(cmd.id);
+        return;
+      case 'reader.read':
+        this.reader.markRead({ ids: cmd.ids, feedId: cmd.feedId, groupId: cmd.groupId, on: cmd.on });
+        return;
+      case 'reader.star':
+        this.reader.star(cmd.id);
+        return;
+      case 'reader.openItem':
+        this.reader.openItem(cmd.id);
+        return;
+      case 'reader.importOpml':
+        void this.reader.importOpml();
+        return;
+      case 'reader.exportOpml':
+        void this.reader.exportOpml(cmd.groupId);
+        return;
+      case 'reader.group':
+        this.reader.group(cmd.op, cmd.id, cmd.name);
+        return;
+      case 'reader.move':
+        this.reader.move(cmd.id, cmd.groupId);
+        return;
+      case 'reader.feedMenu':
+        this.reader.feedMenu(cmd.id);
         return;
       case 'bookmark.page': {
         const tab = cmd.id ? this.state.tabs[cmd.id] : focusedTab(this.state);

@@ -272,7 +272,15 @@ export class TabManager {
     wc.on('audio-state-changed', (e) => patch({ audible: e.audible }));
     wc.on('focus', () => this.c.apply({ type: 'pane.focus', id }));
     wc.on('input-event', (_e, input) => {
-      if (this.c.peeking && (input.type === 'mouseDown' || input.type === 'mouseMove')) this.c.dispatch({ type: 'sidebar.peek', on: false });
+      if (input.type !== 'mouseDown' && input.type !== 'mouseMove') return;
+      const m = input as Electron.InputEvent & { x?: number };
+      if (this.c.peeking) {
+        // the pointer wandered into the page: the peek is over (unless it is still hugging the edge)
+        if (!(input.type === 'mouseMove' && typeof m.x === 'number' && m.x <= 2)) this.c.dispatch({ type: 'sidebar.peek', on: false });
+      } else if (input.type === 'mouseMove' && typeof m.x === 'number' && m.x <= 1 && !this.c.state.settings.sidebarOpen && this.windowOfView(id)?.win.isFocused()) {
+        // the pointer reached the page's left edge: show the sidebar, like hovering the gutter does
+        this.c.dispatch({ type: 'sidebar.peek', on: true });
+      }
     });
     wc.on('enter-html-full-screen', () => {
       this.fullscreenTab = id;

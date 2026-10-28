@@ -337,8 +337,33 @@ function fmtDuration(ms: number): string {
   return h ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
 }
 
+const rssBtn = $<HTMLButtonElement>('#rss-btn');
+let subscribed = new Set<string>();
+api.onReader((r) => {
+  subscribed = new Set(r.feeds.map((f) => f.url));
+  renderRss();
+});
+void api.getReader().then((r) => {
+  if (r) subscribed = new Set(r.feeds.map((f) => f.url));
+  renderRss();
+});
+rssBtn.onclick = () => {
+  const tab = focused();
+  if (tab) dispatch({ type: 'reader.subscribeFrom', id: tab.id });
+};
+function renderRss(): void {
+  const tab = focused();
+  const feeds = tab ? (smart[tab.id]?.feeds ?? []).filter((f) => !subscribed.has(f.url)) : [];
+  rssBtn.classList.toggle('hidden', feeds.length === 0);
+  if (feeds.length) {
+    setIconKey(rssBtn, 'rss', () => svg(ICONS.rss));
+    rssBtn.title = feeds.length === 1 ? `Subscribe to “${feeds[0].title || hostOf(feeds[0].url)}” in the reader` : `This site offers ${feeds.length} feeds: subscribe in the reader`;
+  }
+}
+
 function renderSmart(): void {
   renderInstall();
+  renderRss();
   renderDevs();
   renderPlayer();
   renderCall();
@@ -640,6 +665,7 @@ function render(): void {
     renderQueued = true;
     return;
   }
+  renderRss();
   const s = state;
   const space = activeSpace(s);
   applyTheme(s.settings.theme, space);
@@ -742,7 +768,7 @@ const faviconsOn = (): boolean => state?.settings.theme.favicons !== 'off';
 
 function makeIcon(tab: Tab, spinner: boolean): Node {
   if (spinner && tab.loading) return h('div', { class: 'spinner' });
-  if (isInternal(tab.url)) return h('div', { class: 'glyph internal' }, svg(hostOf(tab.url) === 'downloads' ? ICONS.download : hostOf(tab.url) === 'settings' ? ICONS.settings : hostOf(tab.url) === 'history' ? ICONS.clock : hostOf(tab.url) === 'bookmarks' ? ICONS.star : ICONS.globe, 12));
+  if (isInternal(tab.url)) return h('div', { class: 'glyph internal' }, svg(hostOf(tab.url) === 'downloads' ? ICONS.download : hostOf(tab.url) === 'settings' ? ICONS.settings : hostOf(tab.url) === 'history' ? ICONS.clock : hostOf(tab.url) === 'bookmarks' ? ICONS.star : hostOf(tab.url) === 'reader' ? ICONS.rss : ICONS.globe, 12));
   const glyph = h('div', { class: 'glyph' }, initialOf(hostOf(tab.url) || tab.title));
   if (!tab.favicon || !faviconsOn()) return glyph;
   const img = h('img', { class: 'favicon', src: tab.favicon, alt: '', draggable: 'false' });

@@ -139,6 +139,54 @@ export interface CuratedStatus {
   errors: Record<string, string>;
 }
 
+/** The reader (chord://reader): subscriptions in subspaces, items, read state. */
+export interface ReaderFeed {
+  id: string;
+  title: string;
+  /** feed URL */
+  url: string;
+  /** the site the feed belongs to */
+  site: string;
+  groupId: string | null;
+  addedAt: number;
+  lastFetch: number;
+  error?: string;
+  unread: number;
+}
+export interface ReaderGroup {
+  id: string;
+  name: string;
+  collapsed?: boolean;
+}
+export interface ReaderItem {
+  id: string;
+  feedId: string;
+  title: string;
+  url: string;
+  summary: string;
+  author: string;
+  publishedAt: number;
+  fetchedAt: number;
+  read: boolean;
+  starred: boolean;
+  /** HTML as the feed gave it; the page sanitises it before showing */
+  content?: string;
+}
+export interface ReaderStatus {
+  feeds: ReaderFeed[];
+  groups: ReaderGroup[];
+  unread: number;
+  refreshing: boolean;
+  /** last error adding a subscription */
+  error: string;
+}
+export interface ReaderQuery {
+  /** 'all' | 'starred' | 'unread' | a feed id | 'group:<id>' */
+  scope: string;
+  limit?: number;
+  text?: string;
+}
+
 export interface ResearchStatus {
   spaceId: SpaceId;
   data: ResearchData;
@@ -297,6 +345,8 @@ export interface Settings {
   passkeys: PasskeysMode;
   /** GitHub sync of spaces and bookmarks */
   sync: SyncSettings;
+  /** links from other apps open in a Little window instead of a tab */
+  littleWindows: boolean;
   /** Chromium troubleshooting switches applied at the next launch */
   flags: TroubleFlags;
   /** origins allowed to open and close tabs of their own through navigator.chord */
@@ -395,8 +445,11 @@ export interface Bookmark {
   deletedAt?: number;
 }
 
+export type LinkrollTheme = 'elegant' | 'pragmatic' | 'digg';
 export interface SyncSettings {
   enabled: boolean;
+  /** look of the public bookmarks page */
+  theme?: LinkrollTheme;
   /** GitHub login */
   user: string;
   privateRepo: string;
@@ -404,6 +457,15 @@ export interface SyncSettings {
   /** OAuth App client ID for "Sign in with GitHub" (device flow); empty uses Chord's own */
   clientId?: string;
 }
+/** What a Little window's bar shows. */
+export interface LittleStatus {
+  url: string;
+  title: string;
+  loading: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
+}
+
 export interface SyncStatus {
   connected: boolean;
   user: string;
@@ -550,6 +612,21 @@ export type Command =
   | { type: 'space.forgetProfile'; id: SpaceId }
   | { type: 'prompt.answer'; token: string; text: string }
   | { type: 'bookmarks.open' }
+  | { type: 'reader.open' }
+  | { type: 'little.open'; url?: string }
+  | { type: 'little.nav'; action: 'back' | 'forward' | 'reload' | 'open' | 'close' }
+  | { type: 'reader.subscribe'; input: string; groupId?: string | null; title?: string }
+  | { type: 'reader.subscribeFrom'; id?: TabId }
+  | { type: 'reader.unsubscribe'; id: string }
+  | { type: 'reader.refresh'; id?: string }
+  | { type: 'reader.read'; ids?: string[]; feedId?: string; groupId?: string; on?: boolean }
+  | { type: 'reader.star'; id: string }
+  | { type: 'reader.openItem'; id: string }
+  | { type: 'reader.importOpml' }
+  | { type: 'reader.exportOpml'; groupId?: string }
+  | { type: 'reader.group'; op: 'create' | 'rename' | 'delete' | 'toggle'; id?: string; name?: string }
+  | { type: 'reader.move'; id: string; groupId: string | null }
+  | { type: 'reader.feedMenu'; id: string }
   | { type: 'bookmark.page'; public: boolean; id?: TabId }
   | { type: 'sync.connect'; token: string }
   | { type: 'sync.login' }
@@ -621,7 +698,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'little.open', 'little.nav', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
 
 export type Message = Action | Command;
@@ -735,6 +812,8 @@ export interface SmartInfo {
   manifest?: string;
   /** tools the page exposes through WebMCP */
   tools?: WebMcpTool[];
+  /** feeds the page advertises (<link rel="alternate">) */
+  feeds?: { title: string; url: string }[];
   lastNotification?: { title: string; body: string; at: number };
   updatedAt: number;
 }
@@ -824,4 +903,8 @@ export interface ChordApi {
   getCurated(spaceId: SpaceId): Promise<CuratedStatus>;
   onSync(cb: (status: SyncStatus) => void): () => void;
   getSync(): Promise<SyncStatus>;
+  onLittle(cb: (status: LittleStatus) => void): () => void;
+  onReader(cb: (status: ReaderStatus) => void): () => void;
+  getReader(): Promise<ReaderStatus>;
+  getReaderItems(query: ReaderQuery): Promise<ReaderItem[]>;
 }

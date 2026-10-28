@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; media-src *; style-src 'self' 'unsafe-inline'">
+  <title>Reader</title>
+  <link rel="stylesheet" href="internal.css">
+  <style>
+    html, body { height: 100%; overflow: hidden; }
+    .reader { display: grid; grid-template-columns: 240px 340px 1fr; height: 100vh; }
+    .col { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+    .col:last-child { border-right: 0; }
+    .col .head { display: flex; align-items: center; gap: 6px; padding: 10px 10px 8px; border-bottom: 1px solid var(--line); min-height: 44px; }
+    .col .head h2 { font-size: 13px; font-weight: 700; margin: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col .body { flex: 1; overflow-y: auto; min-height: 0; }
+    .ib { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px; padding: 3px 7px; border-radius: 6px; cursor: default; white-space: nowrap; }
+    .ib:hover { background: var(--hover); color: var(--fg); }
+    .ib.on { color: var(--accent); }
+    /* subscriptions */
+    .nav .row { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 13px; cursor: default; }
+    .nav .row:hover { background: var(--hover); }
+    .nav .row.on { background: var(--selected, var(--hover)); font-weight: 600; }
+    .nav .row .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav .row .n { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .nav .row.err .t { color: var(--danger); }
+    .nav .group { display: flex; align-items: center; gap: 4px; padding: 10px 10px 2px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .nav .group .chev { width: 16px; text-align: center; cursor: default; transition: transform .15s; display: inline-block; }
+    .nav .group.closed .chev { transform: rotate(-90deg); }
+    .nav .group .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav .group .x { visibility: hidden; border: 0; background: transparent; color: var(--muted); font-size: 12px; }
+    .nav .group:hover .x { visibility: visible; }
+    .nav .group.closed + .feeds { display: none; }
+    .nav .feeds .row { padding-left: 22px; }
+    .add { padding: 8px 10px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+    .add input, .add select { font: inherit; font-size: 12.5px; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; outline: none; width: 100%; }
+    .add input:focus { border-color: var(--accent); }
+    .add .row2 { display: flex; gap: 6px; }
+    .add .err { color: var(--danger); font-size: 12px; margin: 0; }
+    /* items */
+    .items .search { padding: 6px 10px; border-bottom: 1px solid var(--line); }
+    .items .search input { width: 100%; font: inherit; font-size: 13px; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; outline: none; }
+    .it { padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: default; }
+    .it:hover { background: var(--hover); }
+    .it.on { background: var(--selected, var(--hover)); }
+    .it .t { font-size: 13px; font-weight: 600; line-height: 1.3; display: flex; gap: 6px; align-items: baseline; }
+    .it .t::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); position: relative; top: -1px; }
+    .it.read .t { font-weight: 500; color: var(--muted); }
+    .it.read .t::before { visibility: hidden; }
+    .it .s { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
+    .it .m { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; gap: 6px; }
+    .it .m .star { color: var(--accent); }
+    /* reading pane */
+    .art { padding: 24px 32px 60px; max-width: 760px; }
+    .art h1 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
+    .art h1 a { color: var(--fg); text-decoration: none; }
+    .art h1 a:hover { color: var(--accent); }
+    .art .meta { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+    .art .content { font-size: 15px; line-height: 1.6; }
+    .art .content img, .art .content video { max-width: 100%; height: auto; border-radius: 8px; }
+    .art .content pre { overflow: auto; background: var(--card); padding: 10px 12px; border-radius: 8px; font-size: 13px; }
+    .art .content a { color: var(--accent); }
+    .art .content blockquote { border-left: 3px solid var(--line); margin: 0; padding-left: 12px; color: var(--muted); }
+    .art .content iframe, .art .content script, .art .content style { display: none; }
+    .placeholder { color: var(--muted); padding: 40px 32px; font-size: 14px; }
+    .keys { color: var(--muted); font-size: 12px; margin-top: 30px; }
+    kbd { font: inherit; font-size: 11px; padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--card); }
+  </style>
+</head>
+<body>
+  <div class="reader">
+    <section class="col nav">
+      <div class="head"><h2>Reader</h2><button class="ib" id="refresh" title="Refresh all (r)">↻</button><button class="ib" id="more" title="Import or export OPML">⋯</button></div>
+      <div class="body" id="nav"></div>
+      <form class="add" id="add-form">
+        <input id="add-input" type="text" placeholder="Site, feed address or @handle…" spellcheck="false" autocomplete="off">
+        <div class="row2"><select id="add-group"><option value="">No subspace</option></select><button class="btn" type="submit">Subscribe</button></div>
+        <p class="err" id="add-error"></p>
+      </form>
+    </section>
+    <section class="col items">
+      <div class="head"><h2 id="scope-title">All</h2><button class="ib" id="only-unread" title="Show unread only (u)">Unread</button><button class="ib" id="read-all" title="Mark all shown as read (shift+a)">✓ all</button></div>
+      <div class="search"><input id="q" type="search" placeholder="Search items" autocomplete="off" spellcheck="false"></div>
+      <div class="body" id="items"></div>
+    </section>
+    <section class="col read">
+      <div class="head"><h2 id="feed-name"></h2><button class="ib" id="star" title="Star (s)">☆</button><button class="ib" id="toggle-read" title="Mark unread (m)">Mark unread</button><button class="ib" id="open" title="Open in a tab (o)">Open ↗</button></div>
+      <div class="body" id="article"><div class="placeholder">Pick an item. <span class="keys"><kbd>j</kbd>/<kbd>k</kbd> next and previous, <kbd>o</kbd> open, <kbd>s</kbd> star, <kbd>m</kbd> read/unread, <kbd>r</kbd> refresh, <kbd>u</kbd> unread only.</span></div></div>
+    </section>
+  </div>
+  <script src="reader.js"></script>
+</body>
+</html>

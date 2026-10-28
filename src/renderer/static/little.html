@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; style-src 'self' 'unsafe-inline'">
+  <title>Little Chord</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    html, body { height: 100%; overflow: hidden; }
+    body { background: var(--bg); }
+    .bar { position: fixed; inset: 0 0 auto 0; height: 44px; display: flex; align-items: center; gap: 4px; padding: 0 10px 0 82px; -webkit-app-region: drag; box-sizing: border-box; }
+    .platform-win32 .bar, .platform-linux .bar { padding: 0 150px 0 10px; }
+    .bar .icon-btn { -webkit-app-region: no-drag; }
+    .bar .pill { -webkit-app-region: no-drag; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 10px; border-radius: 8px; background: var(--hover); font-size: 12.5px; }
+    .bar .pill .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .bar .pill .h { color: var(--muted); flex: none; font-size: 12px; }
+    .bar .pill .spinner { width: 12px; height: 12px; }
+    .bar .open { -webkit-app-region: no-drag; font: inherit; font-size: 12.5px; font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 8px; padding: 0 10px; height: 28px; cursor: default; white-space: nowrap; }
+    .bar .open:hover { filter: brightness(1.08); }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <button class="icon-btn" id="back" title="Back"></button>
+    <button class="icon-btn" id="forward" title="Forward"></button>
+    <button class="icon-btn" id="reload" title="Reload"></button>
+    <div class="pill" id="pill"><span class="t" id="title">Loading…</span><span class="h" id="host"></span></div>
+    <button class="open" id="open" title="Move this page into the current space (⌘⇧O)">Open in Chord</button>
+    <button class="icon-btn" id="close" title="Close (Esc)"></button>
+  </div>
+  <script src="little.js"></script>
+</body>
+</html>
