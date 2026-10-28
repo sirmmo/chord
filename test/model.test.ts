@@ -501,3 +501,33 @@ test('tabs can carry a name and an emoji of their own, exported and imported wit
   (raw.tabs.id2 as unknown as { name: unknown }).name = 42;
   assert.equal(hydrate(raw, ctx()).tabs.id2.name, undefined);
 });
+
+test('live folders: items become pinned tabs in the group, follow the source, survive hydrate', () => {
+  let s = run(fresh(), [{ type: 'tab.new', url: 'https://plain.test' }]);
+  s = reduce(s, { type: 'group.create', name: 'Reviews', id: 'g1', live: { kind: 'github-review', query: '' } }, ctx());
+  const sp = activeSpace(s);
+  assert.equal(sp.groups?.[0].live?.kind, 'github-review');
+  s = reduce(s, { type: 'group.liveSync', id: 'g1', items: [{ url: 'https://github.com/a/b/pull/1', title: 'One' }, { url: 'https://github.com/a/b/pull/2', title: 'Two' }], at: 10 }, ctx());
+  let members = activeSpace(s).pinned.map((id) => s.tabs[id]).filter((t) => t.groupId === 'g1');
+  assert.deepEqual(members.map((t) => [t.title, t.kind, t.awake]), [['One', 'pinned', false], ['Two', 'pinned', false]]);
+  assert.equal(activeSpace(s).groups?.[0].live?.lastSync, 10);
+  // the source drops one and adds one; order follows the source
+  s = reduce(s, { type: 'group.liveSync', id: 'g1', items: [{ url: 'https://github.com/a/b/pull/3', title: 'Three' }, { url: 'https://github.com/a/b/pull/2', title: 'Two!' }], at: 20 }, ctx());
+  members = activeSpace(s).pinned.map((id) => s.tabs[id]).filter((t) => t.groupId === 'g1');
+  assert.deepEqual(members.map((t) => t.title), ['Three', 'Two!']);
+  assert.equal(Object.values(s.tabs).some((t) => t.url === 'https://github.com/a/b/pull/1'), false);
+  // an error keeps the tabs and records the message
+  s = reduce(s, { type: 'group.liveSync', id: 'g1', items: [], at: 30, error: 'rate limit' }, ctx());
+  assert.equal(activeSpace(s).groups?.[0].live?.error, 'rate limit');
+  assert.equal(activeSpace(s).pinned.filter((id) => s.tabs[id].groupId === 'g1').length, 2);
+  // an empty live group survives hydrate; stopping live updates keeps the tabs
+  const empty = reduce(s, { type: 'group.liveSync', id: 'g1', items: [], at: 40 }, ctx());
+  assert.equal(hydrate(JSON.parse(JSON.stringify(empty)), ctx()).spaces[0].groups?.[0].id, 'g1');
+  const cfg = exportConfig(s, 50);
+  assert.deepEqual(cfg.spaces[0].liveFolders, [{ name: 'Reviews', kind: 'github-review', query: '' }]);
+  const other = reduce(fresh(), { type: 'config.import', config: cfg, mode: 'merge' }, ctx());
+  assert.equal(other.spaces[0].groups?.find((g) => g.name === 'Reviews')?.live?.kind, 'github-review');
+  s = reduce(s, { type: 'group.live', id: 'g1', live: null }, ctx());
+  assert.equal(activeSpace(s).groups?.[0].live, undefined);
+  assert.equal(activeSpace(s).pinned.filter((id) => s.tabs[id].groupId === 'g1').length, 2);
+});

@@ -41,12 +41,14 @@ import { SyncManager } from './sync.ts';
 import { ReaderManager } from './reader.ts';
 import { LittleWindows } from './little.ts';
 import { EaselManager } from './easels.ts';
+import { LiveManager } from './live.ts';
 import { spaceForUrl } from '../shared/routes.ts';
+import { LIVE_KINDS, type LiveKind } from '../shared/types.ts';
 import { AiManager } from './ai.ts';
 import { modesMenu } from './menu.ts';
 import { installUrlFrom } from '../shared/installer.ts';
 import { browsingSession, configureSession, partitionFor } from './session.ts';
-import { isInternal } from '../shared/url.ts';
+import { hostOf, isInternal } from '../shared/url.ts';
 
 const CHROME_DARK = '#1b1b22';
 const CHROME_LIGHT = '#f4f4f7';
@@ -83,6 +85,7 @@ export class Controller {
   readonly reader = new ReaderManager(this);
   readonly little = new LittleWindows(this);
   readonly easels = new EaselManager(this);
+  readonly live = new LiveManager(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
@@ -196,6 +199,7 @@ export class Controller {
     this.sync.init();
     this.reader.init();
     this.easels.init();
+    this.live.init();
     this.ai.init();
     this.capture.init();
     this.pageTabs.init();
@@ -921,6 +925,23 @@ export class Controller {
       case 'group.renamePrompt':
         void this.renameGroup(cmd.id);
         return;
+      case 'group.newLive':
+        void this.newLiveFolder(cmd.spaceId ?? this.state.activeSpaceId, cmd.kind, cmd.query);
+        return;
+      case 'group.refresh':
+        void this.live.refresh(cmd.id);
+        return;
+      case 'group.liveEdit': {
+        const g = this.state.spaces.flatMap((sp) => sp.groups ?? []).find((x) => x.id === cmd.id);
+        if (!g?.live) return;
+        void this.prompt(`Query for “${g.name}”`, LIVE_KINDS[g.live.kind].hint, g.live.query).then((q) => {
+          this.overlay?.hide();
+          if (q === null || !g.live) return;
+          this.apply({ type: 'group.live', id: cmd.id, live: { ...g.live, query: q.trim() } });
+          void this.live.refresh(cmd.id);
+        });
+        return;
+      }
       case 'tab.renamePrompt': {
         const tab = this.state.tabs[cmd.id];
         if (!tab) return;
@@ -1216,6 +1237,21 @@ export class Controller {
     const name = await this.prompt('New subspace', 'Subspace name', tab.title.slice(0, 30));
     this.overlay?.hide();
     if (name && name.trim()) this.apply({ type: 'group.create', spaceId: tab.spaceId, name: name.trim(), tabIds: [tabId] });
+  }
+
+  private async newLiveFolder(spaceId: SpaceId, kind: LiveKind, query?: string): Promise<void> {
+    const meta = LIVE_KINDS[kind];
+    let q = query ?? '';
+    if (meta.needsQuery && !q) {
+      const answer = await this.prompt(meta.label.replace(/…$/, ''), meta.hint);
+      this.overlay?.hide();
+      if (!answer || !answer.trim()) return;
+      q = answer.trim();
+    }
+    const name = meta.needsQuery ? (kind === 'feed' ? hostOf(q) || 'Feed' : kind === 'bookmarks' ? `#${q.replace(/^#/, '')}` : q.slice(0, 40)) : meta.label.replace(/^GitHub: /, '').replace(/^\w/, (ch) => ch.toUpperCase());
+    const id = randomUUID();
+    this.apply({ type: 'group.create', spaceId, id, name, live: { kind, query: q } });
+    void this.live.refresh(id);
   }
 
   private async renameGroup(id: string): Promise<void> {

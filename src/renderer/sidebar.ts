@@ -911,6 +911,7 @@ function makeGroupHeader(group: TabGroup): HTMLElement {
     h('button', { class: 'chev', onclick: () => dispatch({ type: 'group.toggle', id: group.id }) }, svg(ICONS.forward)),
     h('span', { class: 'name' }),
     h('span', { class: 'count' }),
+    h('button', { class: 'live-btn', title: 'Live folder · refresh', onclick: () => dispatch({ type: 'group.refresh', id: group.id }) }, svg(ICONS.refresh)),
     h('button', { class: 'close', title: 'Close subspace', onclick: () => dispatch({ type: 'group.close', id: group.id }) }, svg(ICONS.close)),
   );
   el.addEventListener('click', (e) => {
@@ -948,6 +949,15 @@ function updateGroupHeader(el: HTMLElement, group: TabGroup, count: number): voi
   setText(el.querySelector('.count') as HTMLElement, String(count));
   setClass(el, 'collapsed', Boolean(group.collapsed));
   setClass(el, 'managed', Boolean(group.owner));
+  setClass(el, 'live', Boolean(group.live));
+  setClass(el, 'live-error', Boolean(group.live?.error));
+  const btn = el.querySelector('.live-btn') as HTMLButtonElement;
+  if (btn.hidden === Boolean(group.live)) btn.hidden = !group.live;
+  if (group.live) {
+    const when = group.live.lastSync ? new Date(group.live.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'never';
+    const tip = `Live folder · updated ${when}${group.live.error ? `\n${group.live.error}` : ''} · click to refresh`;
+    if (btn.title !== tip) btn.title = tip;
+  }
 }
 
 // ---- tab rows and favorite tiles ----

@@ -1,6 +1,7 @@
 // The overlay page: command bar (⌘T / ⌘L) and find bar (⌘F).
 
 import { presetsFor } from '../shared/tiling.ts';
+import { LIVE_KINDS, type LiveKind } from '../shared/types.ts';
 import type { CaptureSource, DownloadsStatus, HistoryEntry, LockPurpose, Message, SmartStatus, SpaceId, State, Tab } from '../shared/types.ts';
 import { downloadRow } from './downloads-view.ts';
 import { activeSpace, focusedTab, isLocked } from '../shared/model.ts';
@@ -447,6 +448,7 @@ function compute(raw: string): Item[] {
     { title: 'Bookmarks of This Space', keywords: 'bookmarks space', run: () => dispatch({ type: 'bookmarks.openSpace' }) },
     { title: 'Notes of This Space', keywords: 'notes markdown space write', subtitle: '⌘⇧M', run: () => dispatch({ type: 'notes.open' }) },
     { title: 'Notes of Every Space', keywords: 'notes all spaces', run: () => dispatch({ type: 'notes.open', spaceId: null }) },
+    ...(Object.keys(LIVE_KINDS) as LiveKind[]).map((kind) => ({ title: `New Live Folder: ${LIVE_KINDS[kind].label.replace(/…$/, '')}`, keywords: 'live folder subspace github pull requests issues notifications feed bookmarks', subtitle: 'A subspace Chord keeps filled from a source', run: () => dispatch({ type: 'group.newLive', kind }) })),
     { title: 'Easel of This Space', keywords: 'easel canvas board clips pictures', subtitle: '⌘⇧E', run: () => dispatch({ type: 'easel.open' }) },
     { title: 'Easels of Every Space', keywords: 'easel all spaces', run: () => dispatch({ type: 'easel.open', spaceId: null }) },
     { title: 'Add This Page to the Easel', keywords: 'easel add page link', run: () => dispatch({ type: 'easel.addPage' }) },

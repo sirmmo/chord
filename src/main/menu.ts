@@ -2,6 +2,8 @@ import { presetsFor } from '../shared/tiling.ts';
 import { MODES } from '../shared/modes.ts';
 import { app, clipboard, dialog, Menu, shell, type ContextMenuParams, type MenuItemConstructorOptions, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
+import { LIVE_KINDS, type LiveKind } from '../shared/types.ts';
+import { liveLabel } from './live.ts';
 import type { Message, SpaceId, Tab, TabId } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS, spaceOfTab } from '../shared/model.ts';
 import { hostOf, searchUrl } from '../shared/url.ts';
@@ -257,11 +259,22 @@ export function groupContextMenu(c: Controller, id: string): void {
   if (!space || !group || !c.win) return;
   const d = (m: Message) => () => c.dispatch(m);
   const owner = group.owner ? c.state.tabs[group.owner] : undefined;
+  const live = group.live;
   const items: MenuItemConstructorOptions[] = [
     { label: 'Rename…', click: d({ type: 'group.renamePrompt', id }) },
     { label: group.collapsed ? 'Expand' : 'Collapse', click: d({ type: 'group.toggle', id }) },
     sep,
     ...(owner ? [{ label: `Managed by ${hostOf(owner.url) || owner.title}`, enabled: false }, sep] : []),
+    ...(live
+      ? [
+          { label: `Live: ${liveLabel(live)}`, enabled: false },
+          ...(live.error ? [{ label: live.error, enabled: false }] : []),
+          { label: 'Refresh Now', click: d({ type: 'group.refresh', id }) },
+          ...(LIVE_KINDS[live.kind].needsQuery ? [{ label: 'Edit Query…', click: d({ type: 'group.liveEdit', id }) }] : []),
+          { label: 'Stop Live Updates (keep tabs)', click: d({ type: 'group.live', id, live: null }) },
+          sep,
+        ]
+      : []),
     { label: 'Dissolve Subspace (keep tabs)', click: d({ type: 'group.dissolve', id }) },
     { label: 'Close Subspace', click: d({ type: 'group.close', id }) },
   ];
@@ -277,6 +290,7 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
     ...(space.reader ? [] : [
       { label: 'Notes of This Space', click: d({ type: 'notes.open', spaceId: id }) },
       { label: 'Easel of This Space', click: d({ type: 'easel.open', spaceId: id }) },
+      { label: 'New Live Folder', submenu: (Object.keys(LIVE_KINDS) as LiveKind[]).map((kind) => ({ label: LIVE_KINDS[kind].label, click: d({ type: 'group.newLive', spaceId: id, kind }) })) },
       { label: 'Bookmarks of This Space', click: d({ type: 'bookmarks.openSpace', spaceId: id }) },
       { label: 'Feeds of This Space', click: d({ type: 'reader.openSpace', spaceId: id }) },
     ]),

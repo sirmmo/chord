@@ -2,6 +2,7 @@
 // favorites and settings. No internal ids, so a file can be hand-edited,
 // shared, or imported into another Chord.
 
+import { LIVE_KINDS, type LiveKind } from './types.ts';
 import type { ModeId, Settings, Space, SpaceId, State, Tab, TabId, Theme } from './types.ts';
 import { isModeId } from './modes.ts';
 import { SPACE_COLORS, MAX_ARCHIVED, clampTint, makeSpace, spaceById, type Ctx } from './model.ts';
@@ -35,8 +36,15 @@ export interface ConfigSpace {
   curators?: ConfigCurator[];
   /** the space's notes, Markdown */
   notes?: string;
+  /** live folders: subspaces Chord fills from a source */
+  liveFolders?: ConfigLiveFolder[];
   pinned: ConfigTab[];
   today: ConfigTab[];
+}
+export interface ConfigLiveFolder {
+  name: string;
+  kind: LiveKind;
+  query: string;
 }
 export interface ConfigCurator {
   name: string;
@@ -94,6 +102,7 @@ export function exportConfig(s: State, now: number, spaceId?: SpaceId): ChordCon
       icon: sp.icon,
       modes: sp.modes && sp.modes.length ? sp.modes : undefined,
       notes: sp.notes || undefined,
+      liveFolders: (sp.groups ?? []).some((g) => g.live) ? (sp.groups ?? []).filter((g) => g.live).map((g) => ({ name: g.name, kind: g.live!.kind, query: g.live!.query })) : undefined,
       curators: sp.curators && sp.curators.length ? sp.curators.map((c) => ({ name: c.name, input: c.input, feed: c.feed, kind: c.kind })) : undefined,
       profile: sp.profile,
       pinned: tabsToConfig(s, sp.pinned, sp),
@@ -149,6 +158,7 @@ export function parseConfig(text: string): ParseResult {
         icon: typeof sp.icon === 'string' && sp.icon ? sp.icon.slice(0, 4) : undefined,
         modes: Array.isArray(sp.modes) ? sp.modes.filter(isModeId) : undefined,
         notes: typeof sp.notes === 'string' && sp.notes.trim() ? sp.notes.slice(0, 200_000) : undefined,
+        liveFolders: Array.isArray(sp.liveFolders) ? sp.liveFolders.filter((l): l is ConfigLiveFolder => isRecord(l) && typeof l.name === 'string' && typeof l.kind === 'string' && l.kind in LIVE_KINDS && typeof l.query === 'string').map((l) => ({ name: l.name.slice(0, 60), kind: l.kind, query: l.query.slice(0, 500) })) : undefined,
         curators: Array.isArray(sp.curators) ? sp.curators.filter((c): c is ConfigCurator => isRecord(c) && typeof c.feed === 'string' && /^https?:\/\//i.test(c.feed) && (c.kind === 'feed' || c.kind === 'github')).map((c) => ({ name: typeof c.name === 'string' ? c.name.slice(0, 100) : '', input: typeof c.input === 'string' ? c.input.slice(0, 300) : c.feed, feed: c.feed, kind: c.kind })) : undefined,
         profile: typeof sp.profile === 'string' && sp.profile.trim() ? sp.profile.trim().slice(0, 40) : undefined,
         pinned: parseTabs(sp.pinned, `spaces[${i}].pinned`),
@@ -288,6 +298,10 @@ export function importConfig(s: State, config: ChordConfig, mode: ImportMode, ct
     if (cs.modes && cs.modes.length) {
       space.modes = [...new Set([...(space.modes ?? []), ...cs.modes])];
       if (!space.panelMode) space.panelMode = space.modes[0];
+    }
+    for (const lf of cs.liveFolders ?? []) {
+      if (space.groups?.some((g) => g.live && g.live.kind === lf.kind && g.live.query === lf.query)) continue;
+      space.groups = [...(space.groups ?? []), { id: ctx.newId(), name: lf.name, live: { kind: lf.kind, query: lf.query } }];
     }
     const have = urlsIn(s, [...space.pinned, ...space.today]);
     const groupFor = (name: string | undefined): string | undefined => {

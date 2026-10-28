@@ -46,6 +46,33 @@ export interface TabGroup {
   collapsed?: boolean;
   /** the tab whose page created this group through the page API; it may add and remove members */
   owner?: TabId;
+  /** a live folder: Chord fills the group from a source and keeps it current */
+  live?: LiveSource;
+}
+
+/** What a live folder follows (see main/live.ts). */
+export type LiveKind = 'github-review' | 'github-prs' | 'github-issues' | 'github-notifications' | 'github-search' | 'feed' | 'bookmarks';
+export const LIVE_KINDS: Record<LiveKind, { label: string; needsQuery: boolean; hint: string }> = {
+  'github-review': { label: 'GitHub: pull requests waiting for my review', needsQuery: false, hint: '' },
+  'github-prs': { label: 'GitHub: my open pull requests', needsQuery: false, hint: '' },
+  'github-issues': { label: 'GitHub: issues assigned to me', needsQuery: false, hint: '' },
+  'github-notifications': { label: 'GitHub: unread notifications', needsQuery: false, hint: '' },
+  'github-search': { label: 'GitHub: a search…', needsQuery: true, hint: 'is:pr is:open repo:owner/name label:bug' },
+  feed: { label: 'A feed (RSS, Atom, JSON)…', needsQuery: true, hint: 'https://example.com/feed.xml' },
+  bookmarks: { label: 'Bookmarks with a tag…', needsQuery: true, hint: 'tag' },
+};
+export interface LiveSource {
+  kind: LiveKind;
+  /** search query, feed address or tag, depending on the kind */
+  query: string;
+  /** how many items at most (default 20) */
+  limit?: number;
+  lastSync?: number;
+  error?: string;
+}
+export interface LiveItem {
+  url: string;
+  title: string;
 }
 
 /** Air Traffic Control: links from a site land in a space (see shared/routes.ts). */
@@ -612,8 +639,10 @@ export type Action =
   | { type: 'tab.unfavorite'; id: TabId }
   | { type: 'tab.move'; id: TabId; list: ListName; spaceId?: SpaceId; index: number }
   | { type: 'tab.split'; id: TabId }
-  | { type: 'group.create'; spaceId?: SpaceId; name: string; tabIds?: TabId[]; owner?: TabId; id?: string }
+  | { type: 'group.create'; spaceId?: SpaceId; name: string; tabIds?: TabId[]; owner?: TabId; id?: string; live?: LiveSource }
   | { type: 'group.rename'; id: string; name: string }
+  | { type: 'group.live'; id: string; live: LiveSource | null }
+  | { type: 'group.liveSync'; id: string; items: LiveItem[]; at: number; error?: string }
   | { type: 'group.toggle'; id: string }
   | { type: 'group.dissolve'; id: string }
   | { type: 'group.close'; id: string }
@@ -787,6 +816,9 @@ export type Command =
   | { type: 'group.contextmenu'; id: string }
   | { type: 'group.new'; tabId: TabId }
   | { type: 'group.renamePrompt'; id: string }
+  | { type: 'group.newLive'; spaceId?: SpaceId; kind: LiveKind; query?: string }
+  | { type: 'group.refresh'; id: string }
+  | { type: 'group.liveEdit'; id: string }
   | { type: 'pageTabs.forget'; origin: string }
   | { type: 'update.check' }
   | { type: 'update.download' }
@@ -807,7 +839,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'tab.renamePrompt', 'tab.iconPrompt', 'extension.pickFolder', 'extension.install', 'extension.update', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'easel.open', 'easel.create', 'easel.rename', 'easel.remove', 'easel.put', 'easel.removeItem', 'easel.addPage', 'easel.snapshot', 'easel.clip', 'easel.image', 'easel.imageUrl', 'easel.export', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'group.newLive', 'group.refresh', 'group.liveEdit', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'easel.open', 'easel.create', 'easel.rename', 'easel.remove', 'easel.put', 'easel.removeItem', 'easel.addPage', 'easel.snapshot', 'easel.clip', 'easel.image', 'easel.imageUrl', 'easel.export', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
 
 export type Message = Action | Command;

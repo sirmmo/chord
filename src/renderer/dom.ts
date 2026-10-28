@@ -69,6 +69,7 @@ export const ICONS = {
   collapse: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M15 10l-2 2 2 2"/>',
   note: '<path d="M6 3h9l5 5v13H6z"/><path d="M14 3v6h6M9 13h6M9 17h6"/>',
   puzzle: '<path d="M10 4a2 2 0 0 1 4 0v1h3a1 1 0 0 1 1 1v3h-1a2 2 0 0 0 0 4h1v3a1 1 0 0 1-1 1h-3v-1a2 2 0 0 0-4 0v1H7a1 1 0 0 1-1-1v-3h1a2 2 0 0 0 0-4H6V6a1 1 0 0 1 1-1h3z"/>',
+  refresh: '<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/>',
   easel: '<rect x="3" y="4" width="18" height="13" rx="1.5"/><path d="M12 17v4M8 21l4-4 4 4M7 8h5M7 12h8"/>',
   rss: '<path d="M5 19a1 1 0 1 0 0-.1"/><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',

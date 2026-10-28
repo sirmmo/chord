@@ -448,6 +448,11 @@ export class SyncManager {
     return join(app.getPath('userData'), 'github-token');
   }
 
+  /** The GitHub token on file, for other features that talk to GitHub (live folders). */
+  githubToken(): string {
+    return this.token || this.readToken();
+  }
+
   private readToken(): string {
     try {
       const raw = readFileSync(this.tokenPath());

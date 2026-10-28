@@ -138,6 +138,12 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   (headings, lists, task boxes, code, quotes, tables, links), with a split editor and
   preview, autosave, and a button that inserts a link to the current page. Notes travel
   with the space in exports and in sync. "Notes of Every Space" shows them all.
+- **Live folders**: a subspace Chord keeps filled from a source. Right-click a space →
+  New Live Folder: GitHub pull requests waiting for your review, your open pull requests,
+  issues assigned to you, unread notifications or any GitHub search (with the token from
+  Settings → Sync); the latest items of a feed; bookmarks with a tag. Items appear as
+  pinned tabs that load when you click them, refresh every ten minutes or from the
+  arrow on the folder, and leave when the source drops them. Part of exported configs.
 - **Tab names and icons**: double-click a pinned or favorite tab (or right-click → Rename…)
   to give it a name of your own, and pick an emoji from the Icon submenu to replace its
   favicon. Both travel with the space in exports and in sync; the page title stays in the

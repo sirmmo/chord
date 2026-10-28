@@ -1,6 +1,7 @@
 // Pure state model: no Electron, no side effects. Every transition takes a
 // State and returns a new State, so it can be unit-tested in plain Node.
 
+import { LIVE_KINDS, type LiveSource } from './types.ts';
 import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabGroup, TabId, Theme, WindowState } from './types.ts';
 import { titleFor } from './url.ts';
 import { importConfig } from './config.ts';
@@ -134,12 +135,15 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
   if (!spaceById(s, s.activeSpaceId)) s.activeSpaceId = s.spaces[0].id;
   for (const sp of s.spaces) {
     const groups = (Array.isArray(sp.groups) ? sp.groups : []).filter((g): g is TabGroup => typeof g === 'object' && g !== null && typeof g.id === 'string' && typeof g.name === 'string');
-    for (const g of groups) if (g.owner && !exists(g.owner)) delete g.owner;
+    for (const g of groups) {
+      if (g.owner && !exists(g.owner)) delete g.owner;
+      if (g.live !== undefined && !isLiveSource(g.live)) delete g.live;
+    }
     for (const id of [...sp.pinned, ...sp.today]) {
       const t = s.tabs[id];
       if (t.groupId && !groups.some((g) => g.id === t.groupId)) delete t.groupId;
     }
-    sp.groups = groups.filter((g) => g.owner || membersOf(s, sp, g.id).length > 0);
+    sp.groups = groups.filter((g) => g.owner || g.live || membersOf(s, sp, g.id).length > 0);
     if (sp.groups.length === 0) delete sp.groups;
   }
   for (const t of Object.values(s.tabs)) {
@@ -334,6 +338,11 @@ function setGroup(s: State, id: TabId, groupId: string | null): void {
   const from = arr.indexOf(id);
   if (from >= 0) arr.splice(from, 1);
   arr.splice(arr.indexOf(last) + 1, 0, id);
+}
+
+export function isLiveSource(v: unknown): v is LiveSource {
+  const l = v as LiveSource;
+  return typeof v === 'object' && v !== null && typeof l.kind === 'string' && l.kind in LIVE_KINDS && typeof l.query === 'string';
 }
 
 function dropGroup(s: State, space: Space, groupId: string): void {
@@ -635,6 +644,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       if (target.groups?.some((g) => g.id === id)) return prev;
       const group: TabGroup = { id, name };
       if (a.owner && s.tabs[a.owner]?.spaceId === target.id) group.owner = a.owner;
+      if (a.live && isLiveSource(a.live)) group.live = { kind: a.live.kind, query: a.live.query, limit: a.live.limit };
       target.groups = [...(target.groups ?? []), group];
       for (const t of a.tabIds ?? []) if (s.tabs[t]?.spaceId === target.id) setGroup(s, t, id);
       return s;
@@ -643,6 +653,53 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       const f = findGroup(s, a.id);
       if (!f) return prev;
       f.group.name = a.name.trim().slice(0, 60) || f.group.name;
+      return s;
+    }
+    case 'group.live': {
+      const f = findGroup(s, a.id);
+      if (!f) return prev;
+      if (a.live && isLiveSource(a.live)) f.group.live = { kind: a.live.kind, query: a.live.query.trim().slice(0, 500), limit: a.live.limit };
+      else if (f.group.live) delete f.group.live;
+      else return prev;
+      return s;
+    }
+    case 'group.liveSync': {
+      const f = findGroup(s, a.id);
+      const src = f?.group.live;
+      if (!f || !src) return prev;
+      const { space: sp, group } = f;
+      const live: LiveSource = { kind: src.kind, query: src.query, limit: src.limit, lastSync: a.at, error: a.error || undefined };
+      group.live = live;
+      if (a.error) return s;
+      const wanted = new Map<string, string>();
+      for (const it of a.items.slice(0, live.limit ?? 20)) if (/^https?:/i.test(it.url) && !wanted.has(it.url)) wanted.set(it.url, it.title);
+      // tabs the source no longer lists go away (unless they are open on screen)
+      const members = membersOf(s, sp, group.id);
+      const byHome = new Map<string, TabId>();
+      for (const id of members) {
+        const t = s.tabs[id];
+        const key = t.homeUrl ?? t.url;
+        if (!wanted.has(key)) {
+          if (sp.panes.includes(id)) continue;
+          sp.pinned = sp.pinned.filter((x) => x !== id);
+          sp.today = sp.today.filter((x) => x !== id);
+          delete s.tabs[id];
+        } else byHome.set(key, id);
+      }
+      // new items become pinned tabs in the group, titles refreshed, in the source's order
+      const ordered: TabId[] = [];
+      for (const [url, title] of wanted) {
+        let id = byHome.get(url);
+        if (!id) {
+          id = ctx.newId();
+          s.tabs[id] = { id, spaceId: sp.id, kind: 'pinned', url, homeUrl: url, title: title || titleFor(url), createdAt: ctx.now, lastActiveAt: ctx.now, awake: false, groupId: group.id };
+        } else if (title && !s.tabs[id].awake && s.tabs[id].title !== title) s.tabs[id].title = title;
+        ordered.push(id);
+      }
+      const first = sp.pinned.findIndex((id) => s.tabs[id]?.groupId === group.id);
+      const rest = sp.pinned.filter((id) => s.tabs[id]?.groupId !== group.id);
+      const at = first < 0 ? rest.length : Math.min(first, rest.length);
+      sp.pinned = [...rest.slice(0, at), ...ordered, ...rest.slice(at)];
       return s;
     }
     case 'group.toggle': {
