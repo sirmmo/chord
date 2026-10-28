@@ -1,5 +1,8 @@
-import * as kdbxweb from 'kdbxweb';
+import * as kdbxwebNs from 'kdbxweb';
 import { argon2d, argon2id } from 'hash-wasm';
+
+// kdbxweb ships one UMD bundle: Node's ESM loader may expose it only as `default`.
+const kdbxweb = ((kdbxwebNs as unknown as { default?: typeof kdbxwebNs }).default?.Kdbx ? (kdbxwebNs as unknown as { default: typeof kdbxwebNs }).default : kdbxwebNs) as typeof kdbxwebNs;
 
 /**
  * Passwords as a KeePass file (KDBX 4, Argon2 and ChaCha20/AES): what the
