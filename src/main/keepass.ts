@@ -47,8 +47,8 @@ export async function importKdbx(file: Buffer, masterPassword: string): Promise<
   const ab = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
   const db = await kdbxweb.Kdbx.load(ab, credentials);
   const out: KeePassEntry[] = [];
-  const text = (v: kdbxweb.KdbxEntryField | undefined): string => (v === undefined ? '' : typeof v === 'string' ? v : v.getText());
-  const walk = (g: kdbxweb.KdbxGroup) => {
+  const text = (v: kdbxwebNs.KdbxEntryField | undefined): string => (v === undefined ? '' : typeof v === 'string' ? v : v.getText());
+  const walk = (g: kdbxwebNs.KdbxGroup) => {
     for (const e of g.entries) {
       const url = text(e.fields.get('URL'));
       let host = '';
