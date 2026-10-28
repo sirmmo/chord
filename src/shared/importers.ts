@@ -250,3 +250,95 @@ export function describeImport(config: ChordConfig): string {
   const n = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
   return `${n(config.spaces.length, 'space')}, ${n(tabs, 'tab')}${config.favorites.length ? ` (${config.favorites.length} favorites)` : ''}`;
 }
+
+// ---- Firefox: rows from places.sqlite ----
+
+/** One row of moz_bookmarks joined with moz_places (url is null for folders). */
+export interface FirefoxBookmarkRow {
+  id: number;
+  parent: number;
+  /** 1 bookmark, 2 folder, 3 separator */
+  type: number;
+  title: string | null;
+  url: string | null;
+  guid: string;
+}
+
+/** Firefox bookmarks: toolbar folders become spaces, loose toolbar bookmarks a "Firefox Bookmarks" space, the menu and unfiled roots a space each. */
+export function firefoxBookmarksToConfig(rows: FirefoxBookmarkRow[], now = new Date()): ImportResult {
+  const byParent = new Map<number, FirefoxBookmarkRow[]>();
+  for (const r of rows) {
+    const list = byParent.get(r.parent) ?? [];
+    list.push(r);
+    byParent.set(r.parent, list);
+  }
+  const collect = (id: number, out: ConfigTab[], depth = 0): void => {
+    if (depth > 50) return;
+    for (const r of byParent.get(id) ?? []) {
+      if (r.type === 1 && r.url && IMPORTABLE_URL.test(r.url)) out.push({ url: r.url, title: r.title || undefined });
+      else if (r.type === 2) collect(r.id, out, depth + 1);
+    }
+  };
+  const root = (guid: string) => rows.find((r) => r.guid === guid);
+  const config = emptyConfig(now);
+  const toolbar = root('toolbar_____');
+  if (toolbar) {
+    const loose: ConfigTab[] = [];
+    for (const child of byParent.get(toolbar.id) ?? []) {
+      if (child.type === 2) {
+        const pinned: ConfigTab[] = [];
+        collect(child.id, pinned);
+        if (pinned.length) config.spaces.push({ name: child.title || 'Bookmarks', pinned: dedupe(pinned), today: [] });
+      } else if (child.type === 1 && child.url && IMPORTABLE_URL.test(child.url)) loose.push({ url: child.url, title: child.title || undefined });
+    }
+    if (loose.length) config.spaces.unshift({ name: 'Firefox Bookmarks', pinned: dedupe(loose), today: [] });
+  }
+  for (const [guid, name] of [
+    ['menu________', 'Bookmarks Menu'],
+    ['unfiled_____', 'Other Bookmarks'],
+    ['mobile______', 'Mobile Bookmarks'],
+  ] as const) {
+    const r = root(guid);
+    if (!r) continue;
+    const pinned: ConfigTab[] = [];
+    collect(r.id, pinned);
+    if (pinned.length) config.spaces.push({ name, pinned: dedupe(pinned), today: [] });
+  }
+  if (config.spaces.length === 0) return { ok: false, error: 'no bookmarks found in this Firefox profile' };
+  return { ok: true, config, source: 'Firefox', notes: ['Bookmarks become pinned tabs; each folder in the bookmarks toolbar becomes a space.'] };
+}
+
+// ---- history ----
+
+export interface ImportedVisit {
+  url: string;
+  title: string;
+  /** ms since the epoch */
+  at: number;
+}
+
+/** Chromium stores times as microseconds since 1601-01-01. */
+export function chromeTimeToMs(t: number): number {
+  return Math.round(t / 1000 - 11_644_473_600_000);
+}
+
+/** Firefox stores times as microseconds since the epoch. */
+export function firefoxTimeToMs(t: number): number {
+  return Math.round(t / 1000);
+}
+
+/** Keep visits worth importing: web pages, a sane time, newest first, no exact repeats. */
+export function cleanVisits(raw: { url: unknown; title: unknown; at: unknown }[], now = Date.now()): ImportedVisit[] {
+  const seen = new Set<string>();
+  const out: ImportedVisit[] = [];
+  for (const r of raw) {
+    const url = typeof r.url === 'string' ? r.url : '';
+    const at = typeof r.at === 'number' ? r.at : NaN;
+    if (!IMPORTABLE_URL.test(url) || !Number.isFinite(at) || at <= 0 || at > now + 86_400_000) continue;
+    const key = `${url}@${Math.round(at / 1000)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ url, title: typeof r.title === 'string' && r.title ? r.title : url, at: Math.round(at) });
+  }
+  return out.sort((a, b) => b.at - a.at);
+}

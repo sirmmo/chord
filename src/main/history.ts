@@ -5,7 +5,7 @@ import { isInternal } from '../shared/url.ts';
 import { Store } from './store.ts';
 import type { Controller } from './controller.ts';
 
-const MAX_ENTRIES = 5000;
+const MAX_ENTRIES = 20_000;
 const BROADCAST_MS = 500;
 
 /** Browsing history: one entry per main-frame navigation, newest first, persisted to history.json. */
@@ -52,6 +52,22 @@ export class HistoryManager {
     const limit = Math.min(2000, Math.max(1, q.limit ?? 500));
     const matches = terms.length ? this.items.filter((e) => terms.every((t) => e.url.toLowerCase().includes(t) || e.title.toLowerCase().includes(t))) : this.items;
     return { entries: matches.slice(0, limit), total: matches.length };
+  }
+
+  /** Merge visits from another browser: nothing is duplicated, newest stays first. Returns how many were new. */
+  importVisits(visits: { url: string; title: string; at: number }[]): number {
+    const have = new Set(this.items.map((e) => `${e.url}@${Math.round(e.at / 1000)}`));
+    const fresh: HistoryEntry[] = [];
+    for (const v of visits) {
+      const key = `${v.url}@${Math.round(v.at / 1000)}`;
+      if (have.has(key)) continue;
+      have.add(key);
+      fresh.push({ id: `${v.at}-i${++this.seq}`, url: v.url, title: v.title || v.url, at: v.at });
+    }
+    if (!fresh.length) return 0;
+    this.items = [...this.items, ...fresh].sort((a, b) => b.at - a.at).slice(0, MAX_ENTRIES);
+    this.changed();
+    return fresh.length;
   }
 
   remove(id: string): void {

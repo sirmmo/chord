@@ -452,7 +452,7 @@ function compute(raw: string): Item[] {
     { title: 'Add This Page to the Easel', keywords: 'easel add page link', run: () => dispatch({ type: 'easel.addPage' }) },
     { title: 'Snapshot This Page to the Easel', keywords: 'easel snapshot screenshot picture', run: () => dispatch({ type: 'easel.snapshot' }) },
     { title: 'Downloads', keywords: 'downloads files progress', subtitle: '⌘⇧J', run: () => dispatch({ type: 'downloads.open' }) },
-    { title: 'Import from Arc, Chrome, Brave…', keywords: 'import arc chrome brave edge bookmarks migrate browser', subtitle: 'Spaces and bookmarks from another browser', run: () => dispatch({ type: 'import.browser' }) },
+    { title: 'Import from Arc, Chrome, Brave, Firefox…', keywords: 'import arc chrome brave edge firefox bookmarks history migrate browser', subtitle: 'Spaces, bookmarks and history from another browser', run: () => dispatch({ type: 'import.browser' }) },
     { title: 'Import Configuration', keywords: 'import json restore spaces', subtitle: 'Merge or replace from a JSON file', run: () => dispatch({ type: 'config.importFile' }) },
     { title: 'Settings…', keywords: 'settings preferences appearance theme add-ins extensions address bar', subtitle: 'General, appearance, add-ins', run: () => dispatch({ type: 'settings.open' }) },
     { title: s.settings.addressBar ? 'Hide Address Bar' : 'Show Address Bar', keywords: 'address bar url toggle', subtitle: '⌘⇧L', run: () => dispatch({ type: 'settings.update', patch: { addressBar: !s.settings.addressBar } }) },

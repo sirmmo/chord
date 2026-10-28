@@ -28,6 +28,7 @@ q.addEventListener('input', () => {
 });
 q.focus();
 
+$('#import').onclick = () => dispatch({ type: 'import.browser', only: 'history' });
 clearBtn.onclick = () => {
   if (!armed) {
     armed = true;

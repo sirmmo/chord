@@ -755,7 +755,7 @@ export type Command =
   | { type: 'passwords.setMaster'; password: string }
   | { type: 'passwords.clearMaster' }
   | { type: 'password.allowAgain'; host: string }
-  | { type: 'import.browser' }
+  | { type: 'import.browser'; only?: 'history' }
   | { type: 'download.pause'; id: string }
   | { type: 'download.resume'; id: string }
   | { type: 'download.cancel'; id: string }

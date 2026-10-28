@@ -738,7 +738,7 @@ export class Controller {
         this.smart.cardAction(cmd.id, cmd.action);
         return;
       case 'import.browser':
-        void importFromBrowser(this);
+        void importFromBrowser(this, cmd.only);
         return;
       case 'download.pause':
         this.downloads.pause(cmd.id);

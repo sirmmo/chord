@@ -387,11 +387,12 @@ next depends on the build:
 Both the check and the automatic install can be turned off. Self-updating builds read the
 `latest*.yml` files electron-builder attaches to each GitHub release.
 
-## Coming from Arc, Chrome or Brave
+## Coming from Arc, Chrome, Brave or Firefox
 
 File → Import from Another Browser… (also in the command bar and in Settings → General)
-looks for Arc, Chrome, Brave, Edge and Chromium in their usual folders and imports from
-the one you pick, or from any file you choose:
+looks for Arc, Chrome, Brave, Edge, Chromium and Firefox in their usual folders and
+imports from the one you pick, or from any file you choose. For each browser you choose
+bookmarks, history or both:
 
 - **Arc**: spaces with their names, emoji and colours, pinned and today tabs, and the
   favorites bar, read from `StorableSidebar.json`. Folders are flattened; archived Arc
@@ -400,6 +401,12 @@ the one you pick, or from any file you choose:
   pinned tabs; each folder in the bookmarks bar becomes a space, loose bookmarks go to a
   "Chrome Bookmarks" space, and "Other bookmarks" gets a space of its own. Pick a
   `Bookmarks` file from another profile folder with Choose File….
+- **Firefox**: the most recently used profile's `places.sqlite`. Toolbar folders become
+  spaces, the menu and "Other bookmarks" a space each.
+- **History** from any of them (Arc included): the last 20,000 visits are merged into
+  Chord's history, nothing duplicated. The History page has an Import… button for just
+  that. The profile database is copied before reading, so the other browser can stay open
+  (on Windows, quit it first if the copy fails).
 
 You then choose Merge (add what is missing) or Replace, exactly as for a Chord
 configuration file.
@@ -537,7 +544,6 @@ Most of the original list has shipped: Little windows, sidebar peek, multiple wi
 boosts, picture-in-picture, downloads, history, passwords and passkeys, the app icon
 and auto-update. What is still open:
 
-- History import from Chrome, Brave, Edge and Arc; a Firefox importer.
 - Signed and notarised macOS and Windows builds.
 
 ## License
