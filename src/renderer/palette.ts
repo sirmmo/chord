@@ -399,6 +399,7 @@ function compute(raw: string): Item[] {
     { title: s.settings.sidebarOpen ? 'Hide Sidebar' : 'Show Sidebar', keywords: 'toggle sidebar', subtitle: '⌘S', run: () => dispatch({ type: 'sidebar.toggle' }) },
     { title: current?.kind === 'pinned' ? 'Unpin Tab' : 'Pin Tab', keywords: 'pin', subtitle: '⌘D', when: !!current && current.kind !== 'favorite', run: () => dispatch({ type: 'tab.togglePin' }) },
     { title: 'Add Tab to Favorites', keywords: 'favorite star', when: !!current && current.kind !== 'favorite', run: () => dispatch({ type: 'tab.favorite', id: current!.id }) },
+    { title: current?.keepLoaded ? 'Stop Keeping Tab Loaded' : 'Keep Tab Loaded', keywords: 'keep loaded background always awake sleep', subtitle: current?.keepLoaded ? 'Lets it sleep and be archived again' : 'Loads at launch and in the background, never archived', when: !!current, run: () => dispatch({ type: 'tab.keepLoaded', id: current!.id, on: !current!.keepLoaded }) },
     { title: 'Split View with Next Tab', keywords: 'split', subtitle: '⌘⇧D', when: !!nextForSplit, run: () => dispatch({ type: 'tab.split', id: nextForSplit! }) },
     { title: 'Remove from Split View', keywords: 'unsplit', when: space.panes.length > 1 && !!space.focused, run: () => dispatch({ type: 'tab.unsplit', id: space.focused! }) },
     { title: 'Duplicate Tab', when: !!current, run: () => dispatch({ type: 'tab.duplicate', id: current!.id }) },

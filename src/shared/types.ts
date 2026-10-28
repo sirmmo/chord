@@ -31,6 +31,8 @@ export interface Tab {
   crashed?: boolean;
   /** subspace (tab group) within the tab's space */
   groupId?: string;
+  /** always loaded: wakes at launch and whenever its space is unlocked, even in the background; never archived */
+  keepLoaded?: boolean;
 }
 
 /** A subspace: a named group of tabs inside a space, optionally managed by a page */
@@ -350,6 +352,7 @@ export type Action =
   | { type: 'tab.closeActive' }
   | { type: 'tab.patch'; id: TabId; patch: Partial<Tab> }
   | { type: 'tab.sleep'; id: TabId }
+  | { type: 'tab.keepLoaded'; id: TabId; on: boolean }
   | { type: 'tab.volume'; id: TabId; volume: number }
   | { type: 'tab.pin'; id: TabId }
   | { type: 'tab.unpin'; id: TabId }

@@ -909,8 +909,10 @@ function updateTab(el: HTMLElement, tab: Tab, space: Space): void {
   setClass(el, 'active', space.panes.includes(tab.id));
   setClass(el, 'grouped', Boolean(tab.groupId));
   setClass(el, 'asleep', !tab.awake);
+  setClass(el, 'kept', Boolean(tab.keepLoaded));
   setClass(el, 'crashed', Boolean(tab.crashed));
-  if (el.title !== tab.url) el.title = tab.url;
+  const tip = tab.keepLoaded ? `${tab.url}\nKept loaded` : tab.url;
+  if (el.title !== tip) el.title = tip;
   setIconKey(el.querySelector('.icon-slot') as HTMLElement, iconKey(tab, true), () => makeIcon(tab, true));
   setText(el.querySelector('.title') as HTMLElement, tab.title || hostOf(tab.url));
   const audio = el.querySelector('.audio') as HTMLButtonElement;
@@ -936,7 +938,8 @@ function makeFavorite(tab: Tab): HTMLElement {
 function updateFavorite(el: HTMLElement, tab: Tab, space: Space): void {
   setClass(el, 'active', space.panes.includes(tab.id));
   setClass(el, 'asleep', !tab.awake);
-  const title = `${tab.title}\n${tab.url}`;
+  setClass(el, 'kept', Boolean(tab.keepLoaded));
+  const title = `${tab.title}\n${tab.url}${tab.keepLoaded ? '\nKept loaded' : ''}`;
   if (el.title !== title) el.title = title;
   setIconKey(el.querySelector('.icon-slot') as HTMLElement, iconKey(tab, false), () => makeIcon(tab, false));
 }

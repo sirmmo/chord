@@ -17,6 +17,8 @@ export interface ConfigTab {
   favicon?: string;
   /** subspace the tab belongs to, by name */
   group?: string;
+  /** always loaded, even in the background */
+  keepLoaded?: boolean;
 }
 
 export interface ConfigSpace {
@@ -46,6 +48,7 @@ function tabToConfig(tab: Tab): ConfigTab {
   const out: ConfigTab = { url: tab.homeUrl ?? tab.url };
   if (tab.title) out.title = tab.title;
   if (tab.favicon) out.favicon = tab.favicon;
+  if (tab.keepLoaded) out.keepLoaded = true;
   return out;
 }
 
@@ -104,6 +107,7 @@ function parseTabs(v: unknown, where: string): ConfigTab[] {
     if (typeof raw.title === 'string' && raw.title) tab.title = raw.title;
     if (typeof raw.favicon === 'string' && /^(https?|data):/i.test(raw.favicon)) tab.favicon = raw.favicon;
     if (typeof raw.group === 'string' && raw.group.trim()) tab.group = raw.group.trim().slice(0, 60);
+    if (raw.keepLoaded === true) tab.keepLoaded = true;
     out.push(tab);
   });
   return out;
@@ -193,6 +197,7 @@ function addTab(s: State, ctx: Ctx, c: ConfigTab, spaceId: SpaceId | null, kind:
     createdAt: ctx.now,
     lastActiveAt: ctx.now,
     awake: false,
+    keepLoaded: c.keepLoaded || undefined,
   };
   return id;
 }

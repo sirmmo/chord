@@ -112,6 +112,10 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   page lists everything with pause, resume, cancel, retry, open and show-in-folder.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
+- **Keep loaded**: any tab can be marked to always be loaded (tab menu → Keep Loaded, or
+  the command bar). It wakes at launch and whenever its space is unlocked, loads in the
+  background in spaces you are not looking at, and is never archived. Off by default for
+  every tab; a dot on the tab's icon shows it is on, and it travels with exports.
 - **Find in page** `⌘F`, tab sleep, mute, reopen closed tab `⌘⇧T`, per-site
   permission prompts, OAuth-style popups opened as tabs. Middle-click and ⌘-click open
   links in a new tab regardless of what the page's scripts do; `magnet:`, `zoommtg:` and

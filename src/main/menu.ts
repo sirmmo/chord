@@ -199,6 +199,7 @@ export function tabContextMenu(c: Controller, id: TabId): void {
     });
   }
   items.push(sep);
+  items.push({ label: 'Keep Loaded', type: 'checkbox', checked: Boolean(tab.keepLoaded), click: d({ type: 'tab.keepLoaded', id, on: !tab.keepLoaded }) });
   if (tab.awake) {
     items.push({ label: tab.muted ? 'Unmute' : 'Mute', click: d({ type: 'tab.mute', id }) });
   items.push(volumeMenu(c, tab));

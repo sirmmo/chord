@@ -298,6 +298,10 @@ footer { flex: none; display: flex; align-items: center; gap: 4px; padding-top: 
 .glyph.internal { display: grid; place-items: center; color: var(--muted); }
 .glyph.internal svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
+/* tabs kept loaded: a small accent dot on the icon */
+.tab.kept .icon-slot, .fav.kept .icon-slot { position: relative; }
+.tab.kept .icon-slot::after, .fav.kept .icon-slot::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1.5px var(--bg, #fff); }
+
 /* favicons in colour only on the active tab */
 .favicons-active .tab:not(.active) .favicon, .favicons-active .fav:not(.active) img { filter: grayscale(1); opacity: 0.7; }
 .favicons-active .tab:not(.active):hover .favicon, .favicons-active .fav:not(.active):hover img { filter: none; opacity: 1; }

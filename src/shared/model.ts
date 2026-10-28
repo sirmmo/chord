@@ -144,7 +144,17 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     if (sp.panelMode && !(sp.modes ?? []).includes(sp.panelMode)) delete sp.panelMode;
   }
   if (!isLocked(activeSpace(s))) for (const id of activeSpace(s).panes) s.tabs[id].awake = true;
+  for (const sp of s.spaces) wakeKept(s, sp);
   return s;
+}
+
+/** Tabs marked "keep loaded" are awake whenever their space is unlocked, shown or not. */
+function wakeKept(s: State, sp: Space): void {
+  if (isLocked(sp)) return;
+  for (const id of [...sp.pinned, ...sp.today]) {
+    const t = s.tabs[id];
+    if (t?.keepLoaded && !t.crashed) t.awake = true;
+  }
 }
 
 export function spaceById(s: State, id: SpaceId | null | undefined): Space | undefined {
@@ -361,8 +371,8 @@ function closeTab(s: State, id: TabId, now: number): void {
     removeEverywhere(s, id);
     delete s.tabs[id];
   } else {
-    // Pinned and favorite tabs do not go away: they go to sleep and reset to their home page.
-    tab.awake = false;
+    // Pinned and favorite tabs do not go away: they go to sleep and reset to their home page (kept ones reload it).
+    tab.awake = Boolean(tab.keepLoaded);
     tab.loading = false;
     tab.audible = false;
     tab.url = tab.homeUrl ?? tab.url;
@@ -456,6 +466,18 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       const tab = s.tabs[a.id];
       if (!tab) return prev;
       Object.assign(tab, a.patch);
+      return s;
+    }
+    case 'tab.keepLoaded': {
+      const tab = s.tabs[a.id];
+      if (!tab || Boolean(tab.keepLoaded) === a.on) return prev;
+      if (a.on) tab.keepLoaded = true;
+      else delete tab.keepLoaded;
+      const sp = spaceById(s, tab.spaceId);
+      if (a.on && (!sp || !isLocked(sp))) {
+        tab.awake = true;
+        delete tab.crashed;
+      }
       return s;
     }
     case 'tab.sleep': {
@@ -631,6 +653,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       } else {
         delete sp.lock;
         delete sp.locked;
+        wakeKept(s, sp);
       }
       return s;
     }
@@ -655,6 +678,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       if (!sp || !sp.lock) return prev;
       sp.locked = false;
       if (sp.id === s.activeSpaceId) for (const id of sp.panes) show(s, sp, id, now);
+      wakeKept(s, sp);
       return s;
     }
     case 'space.tilingNext': {
@@ -826,7 +850,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
         if (sp.lock) continue; // private spaces leave no trace in the archive
         for (const id of [...sp.today]) {
           const tab = s.tabs[id];
-          if (!tab || sp.panes.includes(id)) continue;
+          if (!tab || sp.panes.includes(id) || tab.keepLoaded) continue;
           if (now - tab.lastActiveAt > ttl) {
             archiveTab(s, id, now);
             changed = true;

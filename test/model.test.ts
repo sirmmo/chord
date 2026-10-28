@@ -431,3 +431,31 @@ test('sources mode and its settings', () => {
   assert.equal(back.settings.sourceror.server, 'http://127.0.0.1:5010');
   assert.equal(back.settings.sourceror.checkLinks, true);
 });
+
+test('tabs kept loaded wake at launch and after unlocking, and are never archived', () => {
+  let s = run(fresh(), [{ type: 'tab.new', url: 'https://a.test' }, { type: 'tab.new', url: 'https://kept.test' }, { type: 'tab.new', url: 'https://b.test', activate: true }]);
+  s = reduce(s, { type: 'tab.keepLoaded', id: 'id3', on: true }, ctx());
+  assert.equal(s.tabs.id3.keepLoaded, true);
+  assert.equal(s.tabs.id3.awake, true, 'marking a tab wakes it');
+  assert.ok(!activeSpace(s).panes.includes('id3'), 'but does not show it');
+  // a restart: only the shown panes and the kept tabs are awake
+  const restored = hydrate(JSON.parse(JSON.stringify(s)), ctx());
+  assert.equal(restored.tabs.id3.awake, true);
+  assert.equal(restored.tabs.id2.awake, activeSpace(restored).panes.includes('id2'));
+  // an explicit sleep still works; unlocking a space wakes kept tabs again
+  s = reduce(s, { type: 'tab.sleep', id: 'id3' }, ctx());
+  assert.equal(s.tabs.id3.awake, false);
+  s = reduce(s, { type: 'space.setLock', id: s.activeSpaceId, lock: { salt: 'x', hash: 'y' } }, ctx());
+  s = reduce(s, { type: 'space.unlocked', id: s.activeSpaceId }, ctx());
+  assert.equal(s.tabs.id3.awake, true);
+  s = reduce(s, { type: 'space.setLock', id: s.activeSpaceId, lock: null }, ctx());
+  s = reduce(s, { type: 'tab.sleep', id: 'id2' }, ctx());
+  // never archived, however old
+  const later = 1_000 + 48 * 3600_000;
+  s = reduce(s, { type: 'tick' }, ctx(later));
+  assert.ok(s.tabs.id3, 'kept tab survives archiving');
+  assert.equal(s.tabs.id2, undefined, 'the ordinary one is archived');
+  assert.equal(exportConfig(s, later).spaces[0].today.find((t) => t.url === 'https://kept.test')?.keepLoaded, true);
+  s = reduce(s, { type: 'tab.keepLoaded', id: 'id3', on: false }, ctx(later));
+  assert.equal(s.tabs.id3.keepLoaded, undefined);
+});
