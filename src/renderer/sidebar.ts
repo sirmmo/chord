@@ -7,6 +7,7 @@ import { activeSpace, isLocked, panelVisible, visiblePanes } from '../shared/mod
 import { clampPanel } from '../shared/modes.ts';
 import { hostOf, isInternal, isSecure, searchUrl, toUrl } from '../shared/url.ts';
 import { h, svg, ICONS, initialOf } from './dom.ts';
+import { isWebStorePage } from '../shared/crx.ts';
 import { applyTheme } from './theme.ts';
 import { computeLayout, GAP, topInsetFor } from '../shared/layout.ts';
 import { cellCount, defaultTiling, formatTiling, parseTiling, resizeColumn, resizeRow, type Tiling } from '../shared/tiling.ts';
@@ -375,9 +376,22 @@ function renderRss(): void {
   }
 }
 
+const extBtn = $<HTMLButtonElement>('#ext-btn');
+extBtn.onclick = () => {
+  const tab = focused();
+  if (tab) dispatch({ type: 'extension.install', input: tab.url });
+};
+function renderExtBtn(): void {
+  const tab = focused();
+  const show = !!tab && isWebStorePage(tab.url);
+  extBtn.classList.toggle('hidden', !show);
+  if (show) setIconKey(extBtn, 'puzzle', () => svg(ICONS.puzzle));
+}
+
 function renderSmart(): void {
   renderInstall();
   renderRss();
+  renderExtBtn();
   renderDevs();
   renderPlayer();
   renderCall();
@@ -720,6 +734,7 @@ function render(): void {
     return;
   }
   renderRss();
+  renderExtBtn();
   const s = state;
   const space = activeSpace(s);
   applyTheme(s.settings.theme, space);

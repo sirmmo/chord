@@ -350,13 +350,20 @@ export type GoogleSignIn = 'firefox' | 'electron' | 'off';
 export interface ExtensionEntry {
   path: string;
   enabled: boolean;
+  /** Chrome Web Store id when installed from the store (then Chord can update it) */
+  storeId?: string;
   /** cached from the manifest the last time it loaded */
   name?: string;
   version?: string;
 }
 
 /** Runtime status of extensions, sent by main (not persisted). */
-export type ExtensionsStatus = Record<string, { loaded: boolean; error?: string }>;
+export interface ExtensionsStatus {
+  /** by path */
+  paths: Record<string, { loaded: boolean; error?: string }>;
+  /** the store install or update in progress, or how the last one ended */
+  install: { busy: boolean; message: string; error: boolean };
+}
 
 export interface Settings {
   theme: Theme;
@@ -621,7 +628,7 @@ export type Action =
   | { type: 'sidebar.toggle' }
   | { type: 'sidebar.resize'; width: number }
   | { type: 'settings.update'; patch: Partial<Omit<Settings, 'theme' | 'extensions'>> }
-  | { type: 'extension.add'; path: string; name?: string; version?: string }
+  | { type: 'extension.add'; path: string; name?: string; version?: string; storeId?: string }
   | { type: 'extension.remove'; path: string }
   | { type: 'extension.toggle'; path: string; enabled: boolean }
   | { type: 'extension.info'; path: string; name: string; version: string }
@@ -660,6 +667,8 @@ export type Command =
   | { type: 'open.external'; url: string }
   | { type: 'app.setDefaultBrowser' }
   | { type: 'extension.pickFolder' }
+  | { type: 'extension.install'; input: string }
+  | { type: 'extension.update'; path?: string }
   | { type: 'config.export'; spaceId?: SpaceId }
   | { type: 'config.importFile' }
   | { type: 'diagnostics.copy' }
@@ -777,7 +786,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
+  'extension.pickFolder', 'extension.install', 'extension.update', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'easel.open', 'easel.create', 'easel.rename', 'easel.remove', 'easel.put', 'easel.removeItem', 'easel.addPage', 'easel.snapshot', 'easel.clip', 'easel.image', 'easel.imageUrl', 'easel.export', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);

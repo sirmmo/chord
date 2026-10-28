@@ -86,6 +86,7 @@ export class Controller {
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
     onStatus: (status) => this.sendAll('extensions', status),
+    entries: () => this.state.settings.extensions,
   });
 
   private applying = false;
@@ -676,6 +677,12 @@ export class Controller {
         return;
       case 'extension.pickFolder':
         if (this.win) void this.extensions.pickFolder(this.win);
+        return;
+      case 'extension.install':
+        void this.extensions.installFromStore(cmd.input);
+        return;
+      case 'extension.update':
+        void this.extensions.updateFromStore(cmd.path);
         return;
       case 'config.export':
         void this.exportConfig(cmd.spaceId);

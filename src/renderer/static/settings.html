@@ -139,8 +139,16 @@
         </div>
         <h3>Chrome extensions</h3>
         <div id="s-extensions"></div>
-        <div class="row"><button class="btn" id="s-ext-add">Add unpacked extension…</button></div>
-        <p class="s-foot">Chord loads unpacked extensions: a folder with a <code>manifest.json</code>. Download the extension’s source or unzip its <code>.crx</code>, then pick that folder. Content scripts, storage and most page-level APIs work; toolbar popups are not shown.</p>
+        <div class="s-grid" style="margin-top:8px">
+          <label>From the Web Store</label>
+          <div>
+            <div class="row"><input type="text" id="s-ext-store" placeholder="Web Store address or extension id" style="flex:1;min-width:260px"><button class="btn" id="s-ext-install">Install</button><button class="btn" id="s-ext-update">Check for updates</button></div>
+            <p class="s-foot" id="s-ext-msg"></p>
+          </div>
+          <label>Unpacked</label>
+          <div class="row"><button class="btn" id="s-ext-add">Add unpacked extension…</button></div>
+        </div>
+        <p class="s-foot">Paste a <code>chromewebstore.google.com</code> address (or open the store and press the install button in the sidebar) and Chord fetches the package and unpacks it into its profile folder. Unpacked extensions are a folder with a <code>manifest.json</code>. Content scripts, storage and most page-level APIs work; toolbar popups are not shown, and extensions that need Chrome's own services will not.</p>
       </div>
       <div class="s-page" data-page="boosts">
         <p class="s-foot" style="margin-top:0">A boost is CSS and JavaScript of yours that runs on the sites you name. Sites: comma separated, <code>example.com</code> covers its subdomains, <code>*.example.com</code> only subdomains, <code>*</code> everything. CSS applies live; JavaScript runs at page load, so a change needs a reload.</p>

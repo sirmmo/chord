@@ -226,10 +226,13 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
 - **Address bar**: an optional editable URL field across the top of the page,
   toggled with `⌘⇧L`, from Settings, or from the View menu. Type a URL or a search
   and press Enter.
-- **Add-ins**: built-in Shields, plus unpacked Chrome extensions. Pick the folder
-  that contains an extension's `manifest.json`; each one can be switched on and off
-  or removed. Electron runs content scripts, storage and most page-level APIs, but
-  does not show toolbar popups.
+- **Add-ins**: built-in Shields, plus Chrome extensions. Install one from the Chrome
+  Web Store (paste its address or id in Settings → Add-ins, or open its store page and
+  press the puzzle button in the sidebar): Chord fetches the package and unpacks it into
+  its profile folder, and "Check for updates" refreshes them. Unpacked extensions load
+  from a folder with a `manifest.json`. Each one can be switched on and off or removed.
+  Electron runs content scripts, storage and most page-level APIs, but does not show
+  toolbar popups, and extensions that depend on Chrome's own services do not work.
 - **Appearance**: light, dark or system theme, any colour per space (presets
   or a colour picker), tint strength, a separate accent colour, colour or monochrome
   icons with their own colour, and the UI font. Appearance travels with the exported
@@ -529,7 +532,6 @@ Most of the original list has shipped: Little windows, sidebar peek, multiple wi
 boosts, picture-in-picture, downloads, history, passwords and passkeys, the app icon
 and auto-update. What is still open:
 
-- Chrome Web Store extensions (install by store URL, within the subset Electron supports).
 - Air Traffic Control: rules that route links from chosen sites into a chosen space.
 - History import from Chrome, Brave, Edge and Arc; a Firefox importer.
 - Signed and notarised macOS and Windows builds.

@@ -857,7 +857,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
     }
     case 'extension.add': {
       if (s.settings.extensions.some((e) => e.path === a.path)) return prev;
-      s.settings.extensions.push({ path: a.path, enabled: true, name: a.name, version: a.version });
+      s.settings.extensions.push({ path: a.path, enabled: true, name: a.name, version: a.version, ...(a.storeId ? { storeId: a.storeId } : {}) });
       return s;
     }
     case 'extension.remove': {

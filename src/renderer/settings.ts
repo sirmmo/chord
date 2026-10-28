@@ -53,7 +53,7 @@ const sDlDir = $('#s-dldir');
 const sDlDirReset = $<HTMLButtonElement>('#s-dldir-reset');
 const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
-let extStatus: ExtensionsStatus = {};
+let extStatus: ExtensionsStatus = { paths: {}, install: { busy: false, message: '', error: false } };
 
 const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'passwords', 'sync', 'ai', 'about'];
 const showPage = (raw: string) => {
@@ -195,6 +195,17 @@ $('#s-default').onclick = () => dispatch({ type: 'app.setDefaultBrowser' });
 $('#s-export').onclick = () => dispatch({ type: 'config.export' });
 $('#s-import').onclick = () => dispatch({ type: 'config.importFile' });
 $('#s-ext-add').onclick = () => dispatch({ type: 'extension.pickFolder' });
+const sExtStore = $<HTMLInputElement>('#s-ext-store');
+const installExt = () => {
+  const input = sExtStore.value.trim();
+  if (!input) return;
+  dispatch({ type: 'extension.install', input });
+};
+$('#s-ext-install').onclick = installExt;
+sExtStore.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') installExt();
+});
+$('#s-ext-update').onclick = () => dispatch({ type: 'extension.update' });
 $('#s-browser').onclick = () => dispatch({ type: 'import.browser' });
 api.onExtensions((st) => {
   extStatus = st;
@@ -208,9 +219,15 @@ api.getExtensions().then((st) => {
 function renderExtensions(): void {
   const s = state;
   if (!s) return;
+  const msg = $('#s-ext-msg');
+  msg.textContent = extStatus.install.message;
+  msg.classList.toggle('err', extStatus.install.error);
+  ($('#s-ext-install') as HTMLButtonElement).disabled = extStatus.install.busy;
+  ($('#s-ext-update') as HTMLButtonElement).disabled = extStatus.install.busy || !s.settings.extensions.some((e) => e.storeId);
+  if (!extStatus.install.busy && !extStatus.install.error && extStatus.install.message.startsWith('Installed')) sExtStore.value = '';
   sExtensions.replaceChildren(
     ...s.settings.extensions.map((e) => {
-      const st = extStatus[e.path];
+      const st = extStatus.paths[e.path];
       const status = !e.enabled ? 'Off' : st?.loaded ? 'Loaded' : st?.error ? '' : 'Loading…';
       const toggle = h('input', { type: 'checkbox' }) as HTMLInputElement;
       toggle.checked = e.enabled;
@@ -222,10 +239,11 @@ function renderExtensions(): void {
           'div',
           { class: 'addin-text' },
           h('strong', {}, (e.name ?? e.path.split(/[\\/]/).filter(Boolean).pop() ?? e.path) + (e.version ? ` ${e.version}` : '')),
-          h('span', { title: e.path }, `${status}${status ? ' · ' : ''}${e.path}`),
+          h('span', { title: e.path }, `${status}${status ? ' · ' : ''}${e.storeId ? 'Chrome Web Store' : e.path}`),
           st?.error && e.enabled ? h('span', { class: 'err' }, st.error) : null,
         ),
         h('label', { class: 'switch' }, toggle, h('i')),
+        e.storeId ? h('button', { class: 'btn', title: 'Open its page in the Chrome Web Store', onclick: () => dispatch({ type: 'tab.new', url: `https://chromewebstore.google.com/detail/${e.storeId}`, activate: true }) }, 'Store') : null,
         h('button', { class: 'btn danger', onclick: () => dispatch({ type: 'extension.remove', path: e.path }) }, 'Remove'),
       );
     }),
