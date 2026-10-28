@@ -225,7 +225,18 @@ function smartHook(reportKey: string, actionKey: string): void {
   };
   document.addEventListener('play', applyVolume, true);
   document.addEventListener('loadedmetadata', applyVolume, true);
-  const elementPlaying = () => mediaEls().some((el) => !el.paused && !el.ended && el.readyState > 2);
+  // Only media the user can hear counts as a player: muted autoplay previews, ads and decorative
+  // background videos would otherwise put a player card in the sidebar for every page that has one.
+  const substantial = (el: HTMLMediaElement) => {
+    if (el.muted || el.volume <= 0) return false;
+    if (Number.isFinite(el.duration) && el.duration < 8) return false;
+    if (el instanceof HTMLVideoElement) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && (r.width < 160 || r.height < 90)) return false;
+    }
+    return true;
+  };
+  const elementPlaying = () => mediaEls().some((el) => !el.paused && !el.ended && el.readyState > 2 && substantial(el));
   function pickArtwork(list: ReadonlyArray<MediaImage> | undefined): string {
     if (!list || list.length === 0) return '';
     let best = list[0];
@@ -253,7 +264,7 @@ function smartHook(reportKey: string, actionKey: string): void {
       artwork: pickArtwork(m?.artwork),
       playing,
       actions: Array.from(handlers.keys()),
-      video: Array.from(document.querySelectorAll('video')).some((v) => v.readyState >= 2 && v.videoWidth > 0),
+      video: Array.from(document.querySelectorAll('video')).some((v) => v.readyState >= 2 && v.videoWidth > 0 && (m ? true : substantial(v))),
     };
   }
 

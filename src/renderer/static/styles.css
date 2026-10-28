@@ -119,8 +119,8 @@ kbd { font: inherit; font-size: 12px; padding: 1px 6px; border-radius: 5px; back
   display: grid; place-items: center; padding: 0;
   cursor: default;
 }
-.icon-btn.small { width: 22px; height: 22px; opacity: 0; }
-.space-header:hover .icon-btn.small { opacity: 1; }
+.icon-btn.small { width: 22px; height: 22px; opacity: 0; transition: opacity 0.12s; }
+.space-header:hover .icon-btn.small, .icon-btn.small.on { opacity: 1; }
 .icon-btn:hover:not(:disabled) { background: var(--hover); color: var(--fg); }
 .icon-btn:disabled { opacity: 0.35; }
 .icon-btn svg, .plus svg, .lock svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -189,6 +189,7 @@ kbd { font: inherit; font-size: 12px; padding: 1px 6px; border-radius: 5px; back
   background: transparent; color: var(--muted);
   border-radius: 5px; display: grid; place-items: center;
 }
+.tab .audio[hidden], .now-controls .icon-btn[hidden] { display: none; }
 .tab .close { opacity: 0; }
 .tab:hover .close { opacity: 1; }
 .tab .close:hover, .tab .audio:hover { background: var(--active); color: var(--fg); }
@@ -406,7 +407,6 @@ body.space-locked .lists { display: none; }
 .now .pip[hidden] { display: none; }
 
 /* modes */
-.space-header .modes-btn { opacity: 1; }
 .space-header .modes-btn.on { color: var(--accent); }
 
 .profile-pill { flex: none; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 5px; padding: 1px 5px; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

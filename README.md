@@ -20,8 +20,9 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   `Ctrl+1…9` switch, `⌘⇧N` creates one. Right-click a space for icon, colour, rename
   or delete.
 - **Favorites**: a grid at the top shared by all spaces.
-- **Pinned tabs** never close: closing one puts it to sleep and resets it to the page
-  it was pinned at. `⌘D` pins or unpins.
+- **Pinned tabs** survive closing: closing one puts it to sleep and resets it to the page
+  it was pinned at. Closing a sleeping pinned tab removes it (undo with "Reopen closed
+  tab"). `⌘D` pins or unpins.
 - **Today tabs** are ephemeral and get archived after 12 hours of inactivity
   (configurable from the command bar). Archived tabs are searchable from the
   command bar.
@@ -416,8 +417,8 @@ imports from the one you pick, or from any file you choose. For each browser you
 bookmarks, history or both:
 
 - **Arc**: spaces with their names, emoji and colours, pinned and today tabs, and the
-  favorites bar, read from `StorableSidebar.json`. Folders are flattened; archived Arc
-  tabs are not imported.
+  favorites bar, read from `StorableSidebar.json`. Arc folders become subspaces (nested
+  ones as "Parent / Child"); archived Arc tabs are not imported.
 - **Chrome, Brave, Edge, Chromium**: the profile's `Bookmarks` file. Bookmarks become
   pinned tabs; each folder in the bookmarks bar becomes a space, loose bookmarks go to a
   "Chrome Bookmarks" space, and "Other bookmarks" gets a space of its own. Pick a

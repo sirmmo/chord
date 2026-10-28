@@ -65,6 +65,19 @@ test('closing a pinned tab puts it to sleep at its home url', () => {
   assert.equal(t.url, 'https://a.test');
   assert.deepEqual(activeSpace(s).pinned, ['id2']);
   assert.equal(activeSpace(s).focused, null);
+  // A second close on the sleeping pinned tab removes it (as Arc does), and it can be reopened.
+  s = reduce(s, { type: 'tab.close', id: 'id2' }, ctx(3_000));
+  assert.equal(s.tabs.id2, undefined);
+  assert.deepEqual(activeSpace(s).pinned, []);
+  assert.equal(s.recentlyClosed[0].url, 'https://a.test');
+});
+
+test('closing a sleeping pinned tab that is kept loaded only resets it', () => {
+  let s = run(fresh(), [{ type: 'tab.new', url: 'https://a.test' }, { type: 'tab.pin', id: 'id2' }]);
+  s = reduce(s, { type: 'tab.patch', id: 'id2', patch: { keepLoaded: true } }, ctx());
+  s = run(s, [{ type: 'tab.close', id: 'id2' }, { type: 'tab.close', id: 'id2' }]);
+  assert.ok(s.tabs.id2, 'kept tabs are never removed by the close button');
+  assert.deepEqual(activeSpace(s).pinned, ['id2']);
 });
 
 test('pin / unpin moves between lists', () => {

@@ -48,7 +48,9 @@ test('Arc sidebar: spaces, pinned and today tabs, favorites, icons and colours',
   assert.equal(work.name, 'Work');
   assert.equal(work.icon, '💼');
   assert.equal(work.color, '#3366ff');
-  assert.deepEqual(work.pinned.map((t) => t.url), ['https://github.com/', 'https://docs.example.com/'], 'folders are flattened in order');
+  assert.deepEqual(work.pinned.map((t) => t.url), ['https://github.com/', 'https://docs.example.com/'], 'folder members follow in order');
+  assert.deepEqual(work.pinned.map((t) => t.group), [undefined, 'Docs'], 'an Arc folder becomes the tab’s group (a subspace)');
+  assert.ok(r.notes.some((n) => /1 folder became subspaces/.test(n)));
   assert.deepEqual(work.today.map((t) => t.url), ['https://news.ycombinator.com/'], 'arc:// pages are skipped');
   assert.equal(play.name, 'Play');
   assert.equal(play.icon, '🎮');

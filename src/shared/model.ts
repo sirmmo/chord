@@ -393,7 +393,8 @@ function closeTab(s: State, id: TabId, now: number): void {
   }
   const affected = s.spaces.filter((sp) => sp.panes.includes(id));
   const formerIndexes = new Map(affected.map((sp) => [sp.id, sp.today.indexOf(id)]));
-  if (tab.kind === 'today') {
+  // Closing a pinned or favorite tab that is already asleep removes it, as in Arc: the first X resets, the second one takes it away.
+  if (tab.kind === 'today' || (!tab.awake && !tab.keepLoaded)) {
     if (!spaceOfTab(s, tab).lock) {
       s.recentlyClosed.unshift(toArchive(tab, now));
       if (s.recentlyClosed.length > MAX_RECENTLY_CLOSED) s.recentlyClosed.length = MAX_RECENTLY_CLOSED;
@@ -401,7 +402,7 @@ function closeTab(s: State, id: TabId, now: number): void {
     removeEverywhere(s, id);
     delete s.tabs[id];
   } else {
-    // Pinned and favorite tabs do not go away: they go to sleep and reset to their home page (kept ones reload it).
+    // Awake pinned and favorite tabs do not go away: they go to sleep and reset to their home page (kept ones reload it).
     tab.awake = Boolean(tab.keepLoaded);
     tab.loading = false;
     tab.audible = false;

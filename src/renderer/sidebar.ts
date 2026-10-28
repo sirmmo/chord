@@ -540,8 +540,9 @@ function updatePlayerCard(el: HTMLElement, entry: [TabId, MediaInfo]): void {
   const prev = el.querySelector('.prev') as HTMLButtonElement;
   const pp = el.querySelector('.pp') as HTMLButtonElement;
   const next = el.querySelector('.next') as HTMLButtonElement;
-  prev.disabled = !info.actions.includes('previoustrack');
-  next.disabled = !info.actions.includes('nexttrack');
+  // Plain <video>/<audio> pages have no previous/next: hide the buttons rather than showing two dead slots.
+  prev.hidden = !info.actions.includes('previoustrack');
+  next.hidden = !info.actions.includes('nexttrack');
   pp.disabled = !(can('play') || can('pause'));
   setIconKey(pp, info.playing ? 'pause' : 'play', () => svg(info.playing ? ICONS.pause : ICONS.play));
   setIconKey(prev, 'prev', () => svg(ICONS.prev));
@@ -1037,7 +1038,7 @@ function updateTab(el: HTMLElement, tab: Tab, space: Space): void {
     audio.title = `${tab.muted ? 'Muted' : `Volume ${Math.round(level * 100)}%`} · click to ${tab.muted ? 'unmute' : 'mute'} · scroll to change volume`;
   }
   const close = el.querySelector('.close') as HTMLButtonElement;
-  const closeTitle = tab.kind === 'today' ? 'Close' : 'Close and reset';
+  const closeTitle = tab.kind === 'today' ? 'Close' : tab.awake || tab.keepLoaded ? 'Close and reset (a second click removes it)' : tab.kind === 'favorite' ? 'Remove from favorites' : 'Remove from pinned';
   if (close.title !== closeTitle) close.title = closeTitle;
 }
 

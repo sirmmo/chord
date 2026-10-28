@@ -154,7 +154,10 @@ export function arcToConfig(raw: Obj, now = new Date()): ImportResult {
   }
 
   let skipped = 0;
-  const collect = (id: string, out: ConfigTab[], seen: Set<string>, depth = 0): void => {
+  let folders = 0;
+  // Arc folders (items whose data is a `list`) become Chord subspaces: the tab carries the folder's
+  // name as its group, nested folders join with " / ". Unnamed folders keep their parent's group.
+  const collect = (id: string, out: ConfigTab[], seen: Set<string>, depth = 0, group?: string): void => {
     if (depth > 30 || seen.has(id)) return;
     seen.add(id);
     const item = items.get(id);
@@ -163,10 +166,18 @@ export function arcToConfig(raw: Obj, now = new Date()): ImportResult {
     const tab = isObj(data.tab) ? data.tab : null;
     if (tab) {
       const url = str(tab.savedURL);
-      if (IMPORTABLE_URL.test(url)) out.push({ url, title: str(item.title) || str(tab.savedTitle) || undefined });
+      if (IMPORTABLE_URL.test(url)) out.push({ url, title: str(item.title) || str(tab.savedTitle) || undefined, ...(group ? { group } : {}) });
       else skipped++;
     }
-    for (const child of childrenOf.get(id) ?? []) collect(child, out, seen, depth + 1);
+    let childGroup = group;
+    if (depth > 0 && isObj(data.list)) {
+      const name = str(item.title).trim();
+      if (name) {
+        childGroup = group ? `${group} / ${name}` : name;
+        folders++;
+      }
+    }
+    for (const child of childrenOf.get(id) ?? []) collect(child, out, seen, depth + 1, childGroup);
   };
   const tabsUnder = (id: string | undefined): ConfigTab[] => {
     const out: ConfigTab[] = [];
@@ -177,7 +188,7 @@ export function arcToConfig(raw: Obj, now = new Date()): ImportResult {
   const config = emptyConfig(now);
   const favoriteTabs: ConfigTab[] = [];
   for (const id of topAppIds) favoriteTabs.push(...tabsUnder(id));
-  config.favorites = dedupe(favoriteTabs);
+  config.favorites = dedupe(favoriteTabs).map(({ group: _group, ...t }) => t);
 
   spaces.forEach((space, i) => {
     const ids = arcContainerIds(space);
@@ -196,7 +207,8 @@ export function arcToConfig(raw: Obj, now = new Date()): ImportResult {
   if (config.spaces.length === 0 && config.favorites.length === 0) return { ok: false, error: 'no spaces or favorites found in this Arc file' };
   const notes: string[] = [];
   if (skipped) notes.push(`${skipped} internal page${skipped === 1 ? '' : 's'} (arc:// and the like) skipped`);
-  notes.push('Folders are flattened: Chord has no folders yet. Archived Arc tabs are not imported.');
+  if (folders) notes.push(`${folders} folder${folders === 1 ? '' : 's'} became subspaces`);
+  notes.push('Archived Arc tabs are not imported.');
   return { ok: true, config, source: 'Arc', notes };
 }
 
