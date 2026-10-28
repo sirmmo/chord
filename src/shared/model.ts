@@ -57,6 +57,7 @@ export function mergeSettings(raw: unknown): Settings {
   const rsync = (typeof r.sync === 'object' && r.sync !== null ? r.sync : {}) as Partial<Settings['sync']>;
   const repoName = (v: unknown, d: string) => (typeof v === 'string' && /^[\w.-]{1,100}$/.test(v) ? v : d);
   const sync: Settings['sync'] = { enabled: rsync.enabled === true, user: typeof rsync.user === 'string' ? rsync.user.slice(0, 60) : '', privateRepo: repoName(rsync.privateRepo, 'chord-sync'), publicRepo: repoName(rsync.publicRepo, 'chord-bookmarks') };
+  if (typeof rsync.clientId === 'string' && /^[\w.]{10,80}$/.test(rsync.clientId)) sync.clientId = rsync.clientId;
   const rs = (typeof r.sourceror === 'object' && r.sourceror !== null ? r.sourceror : {}) as Partial<Settings['sourceror']>;
   const sourceror = { server: typeof rs.server === 'string' && /^https?:\/\//.test(rs.server) ? rs.server.replace(/\/+$/, '') : 'http://127.0.0.1:5010', checkLinks: rs.checkLinks !== false, useLlm: rs.useLlm !== false, discover: rs.discover !== false };
   const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags, pageTabs, updates, mcp, googleSignIn, passkeys, sync, sourceror };

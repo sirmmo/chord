@@ -188,13 +188,26 @@
         <p class="s-foot" style="margin-top:0">Chord keeps your spaces and bookmarks in two GitHub repositories it creates for you: a private one (<code>chord-sync</code>: spaces, favorites, appearance, every bookmark) and a public one (<code>chord-bookmarks</code>: your public bookmarks as a page on GitHub Pages, with an RSS feed others can follow in a curated space). Private, password-locked spaces never leave this computer. Changes are pushed about half a minute after you make them and pulled at launch and every 15 minutes; pulls only add, never remove.</p>
         <div id="s-sync-off">
           <div class="s-grid">
-            <label>Token</label>
+            <label>Sign in</label>
             <div>
-              <input type="password" id="s-sync-token" class="wide" placeholder="ghp_… or github_pat_…" autocomplete="off" spellcheck="false">
-              <p class="s-foot">A GitHub personal access token with the <code>repo</code> scope (classic) or, fine-grained, with Administration, Contents and Pages write access on all repositories, so Chord can create the two repositories and write to them. <a href="https://github.com/settings/tokens/new?scopes=repo&description=Chord%20sync" id="s-sync-token-link">Create one on GitHub</a>. It is stored encrypted with your operating system's keychain.</p>
+              <div class="row"><button class="btn primary" id="s-sync-login">Sign in with GitHub</button><button class="btn" id="s-sync-gh" hidden>Use the GitHub CLI's login</button></div>
+              <div id="s-sync-code" class="s-code" hidden>
+                <p>Enter this code on GitHub (a tab with the page just opened):</p>
+                <div class="s-usercode" id="s-sync-usercode"></div>
+                <div class="row"><button class="btn" id="s-sync-copycode">Copy code</button><button class="btn" id="s-sync-opencode">Open GitHub</button><button class="btn" id="s-sync-cancel">Cancel</button></div>
+              </div>
+              <p class="s-foot" id="s-sync-login-note"></p>
             </div>
-            <label></label>
-            <div><button class="btn primary" id="s-sync-connect">Connect and create the repositories</button></div>
+            <label>Or a token</label>
+            <div>
+              <div class="row"><input type="password" id="s-sync-token" class="wide" placeholder="ghp_… or github_pat_…" autocomplete="off" spellcheck="false"><button class="btn" id="s-sync-connect">Connect</button></div>
+              <p class="s-foot">A personal access token with the <code>repo</code> scope (classic) or, fine-grained, with Administration, Contents and Pages write access on all repositories. <a href="https://github.com/settings/tokens/new?scopes=repo&description=Chord%20sync" id="s-sync-token-link">Create one on GitHub</a>. Stored encrypted with your operating system's keychain, like the sign-in above.</p>
+            </div>
+            <label>OAuth App</label>
+            <div>
+              <input type="text" id="s-sync-clientid" class="wide" placeholder="Client ID of your own GitHub OAuth App (optional)" autocomplete="off" spellcheck="false">
+              <p class="s-foot">"Sign in with GitHub" uses GitHub's device flow through an OAuth App with Device Flow enabled; no secret is involved. Chord ships with its own; put yours here to use it instead (<a href="https://github.com/settings/applications/new" id="s-sync-app-link">register one</a>).</p>
+            </div>
           </div>
         </div>
         <div id="s-sync-on" hidden>

@@ -401,6 +401,8 @@ export interface SyncSettings {
   user: string;
   privateRepo: string;
   publicRepo: string;
+  /** OAuth App client ID for "Sign in with GitHub" (device flow); empty uses Chord's own */
+  clientId?: string;
 }
 export interface SyncStatus {
   connected: boolean;
@@ -412,6 +414,12 @@ export interface SyncStatus {
   lastPull: number;
   busy: boolean;
   error: string;
+  /** a device-flow sign-in in progress: the code to type on GitHub */
+  login?: { userCode: string; url: string; expiresAt: number };
+  /** "Sign in with GitHub" is possible (a client ID is known) */
+  canLogin: boolean;
+  /** the GitHub CLI is installed and logged in */
+  ghCli: boolean;
 }
 
 export interface State {
@@ -544,6 +552,9 @@ export type Command =
   | { type: 'bookmarks.open' }
   | { type: 'bookmark.page'; public: boolean; id?: TabId }
   | { type: 'sync.connect'; token: string }
+  | { type: 'sync.login' }
+  | { type: 'sync.loginCancel' }
+  | { type: 'sync.loginGh' }
   | { type: 'sync.disconnect' }
   | { type: 'sync.now' }
   | { type: 'curated.add'; spaceId: SpaceId; input: string }
@@ -610,7 +621,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmark.page', 'sync.connect', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
 
 export type Message = Action | Command;

@@ -742,6 +742,15 @@ export class Controller {
       case 'sync.connect':
         void this.sync.connect(cmd.token);
         return;
+      case 'sync.login':
+        void this.sync.startLogin();
+        return;
+      case 'sync.loginCancel':
+        this.sync.cancelLogin();
+        return;
+      case 'sync.loginGh':
+        void this.sync.connectWithGh();
+        return;
       case 'sync.disconnect':
         this.sync.disconnect();
         return;

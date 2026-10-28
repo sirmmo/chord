@@ -118,3 +118,7 @@ select { font: inherit; font-size: 13px; color: var(--fg); background: var(--hov
 .s-list .muted { color: var(--muted); font-size: 12px; }
 
 .s-pre { font-size: 12px; background: var(--hover); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; word-break: break-all; user-select: text; margin: 6px 0 0; }
+
+.s-code { margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--hover); }
+.s-code p { margin: 0 0 8px; }
+.s-usercode { font: 600 26px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.12em; margin: 0 0 10px; user-select: all; }

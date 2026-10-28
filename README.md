@@ -115,8 +115,10 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
 - **Bookmarks** (`⌘⌥B`, page at `chord://bookmarks`): save any page privately (`⌘⇧B`, the
   tab menu, the command bar) or publicly, with tags and a note, search and filter them.
   Saving an item in a curated space bookmarks it too.
-- **Sync through GitHub** (Settings → Sync): paste a personal access token with the `repo`
-  scope and Chord creates two repositories for you. `chord-sync` (private) holds your
+- **Sync through GitHub** (Settings → Sync): sign in with GitHub (the device flow: a short
+  code typed on github.com, no secret in the app), reuse the GitHub CLI's login when `gh`
+  is installed, or paste a personal access token with the `repo` scope; Chord then creates
+  two repositories for you. `chord-sync` (private) holds your
   spaces, favorites, appearance and every bookmark; `chord-bookmarks` (public) holds the
   public bookmarks as `bookmarks.json`, an RSS `feed.xml` and a linkroll site that Chord
   publishes on GitHub Pages (`https://<you>.github.io/chord-bookmarks/`), so anyone can

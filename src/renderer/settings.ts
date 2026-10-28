@@ -607,6 +607,17 @@ $('#s-sync-token-link').onclick = (e) => {
   e.preventDefault();
   dispatch({ type: 'tab.new', url: 'https://github.com/settings/tokens/new?scopes=repo&description=Chord%20sync', activate: true });
 };
+$('#s-sync-login').onclick = () => dispatch({ type: 'sync.login' });
+$('#s-sync-gh').onclick = () => dispatch({ type: 'sync.loginGh' });
+$('#s-sync-cancel').onclick = () => dispatch({ type: 'sync.loginCancel' });
+$('#s-sync-copycode').onclick = () => void navigator.clipboard.writeText(syncStatus?.login?.userCode ?? '').catch(() => {});
+$('#s-sync-opencode').onclick = () => syncStatus?.login && dispatch({ type: 'tab.new', url: syncStatus.login.url, activate: true });
+$('#s-sync-app-link').onclick = (e) => {
+  e.preventDefault();
+  dispatch({ type: 'tab.new', url: 'https://github.com/settings/applications/new', activate: true });
+};
+const sSyncClientId = $<HTMLInputElement>('#s-sync-clientid');
+sSyncClientId.onchange = () => state && dispatch({ type: 'settings.update', patch: { sync: { ...state.settings.sync, clientId: sSyncClientId.value.trim() || undefined } } });
 $('#s-sync-now').onclick = () => dispatch({ type: 'sync.now' });
 $('#s-sync-disconnect').onclick = () => dispatch({ type: 'sync.disconnect' });
 api.onSync((st) => {
@@ -626,6 +637,13 @@ function renderSync(): void {
   ($('#s-sync-connect') as HTMLButtonElement).disabled = st.busy;
   $('#s-sync-connect').textContent = st.busy ? 'Connecting…' : 'Connect and create the repositories';
   $('#s-sync-error').textContent = st.error;
+  if (state && document.activeElement !== sSyncClientId) sSyncClientId.value = state.settings.sync.clientId ?? '';
+  const loginBtn = $('#s-sync-login') as HTMLButtonElement;
+  loginBtn.disabled = !st.canLogin || Boolean(st.login) || st.busy;
+  $('#s-sync-gh').hidden = !st.ghCli;
+  $('#s-sync-code').hidden = !st.login;
+  if (st.login) $('#s-sync-usercode').textContent = st.login.userCode;
+  $('#s-sync-login-note').textContent = st.canLogin ? (st.login ? 'Waiting for GitHub… the code expires in a few minutes.' : 'Opens github.com/login/device in a tab; you type a short code there and Chord gets a token with the repo scope.') : 'Sign-in needs an OAuth App client ID: this build has none yet, so paste a token or your own client ID below.';
   if (!st.connected) return;
   const link = (url: string, text = url) => h('a', { href: url, onclick: (e: MouseEvent) => { e.preventDefault(); dispatch({ type: 'tab.new', url, activate: true }); } }, text);
   $('#s-sync-user').replaceChildren(link(`https://github.com/${st.user}`, st.user));

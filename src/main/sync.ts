@@ -2,6 +2,8 @@ import { app, ipcMain, net, safeStorage } from 'electron';
 import { join } from 'node:path';
 import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import type { Bookmark, SyncStatus } from '../shared/types.ts';
 import { exportConfig, parseConfig } from '../shared/config.ts';
 import { renderBookmarksJson, renderFeed, renderLinkroll } from '../shared/bookmarks.ts';
@@ -18,6 +20,9 @@ import type { Controller } from './controller.ts';
  */
 
 const API = 'https://api.github.com';
+/** Chord's OAuth App (device flow, no secret). Settings → Sync can override it with your own. */
+export const CHORD_GITHUB_CLIENT_ID = '';
+const GH_PATHS = ['/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh', '/home/linuxbrew/.linuxbrew/bin/gh', 'C:\\Program Files\\GitHub CLI\\gh.exe'];
 const PUSH_DELAY = 30_000;
 const PULL_EVERY = 15 * 60_000;
 
@@ -39,6 +44,9 @@ export class SyncManager {
   /** content hashes of what we last pushed, per "repo/path" */
   private pushed: Record<string, string> = {};
   private pendingPush = false;
+  private login: { userCode: string; url: string; expiresAt: number; deviceCode: string; interval: number; timer: NodeJS.Timeout | null } | null = null;
+  private ghPath: string | null = null;
+  private ghLoggedIn = false;
 
   constructor(c: Controller) {
     this.c = c;
@@ -46,6 +54,7 @@ export class SyncManager {
 
   init(): void {
     this.token = this.readToken();
+    void this.detectGh();
     ipcMain.handle('sync', (event) => (this.c.trustedEvent(event) ? this.status() : null));
     if (this.connected()) {
       setTimeout(() => void this.pull(), 15_000).unref();
@@ -74,7 +83,122 @@ export class SyncManager {
       lastPull: this.lastPull,
       busy: this.busy,
       error: this.error,
+      login: this.login ? { userCode: this.login.userCode, url: this.login.url, expiresAt: this.login.expiresAt } : undefined,
+      canLogin: Boolean(this.clientId()),
+      ghCli: this.ghLoggedIn,
     };
+  }
+
+  private clientId(): string {
+    return this.settings.clientId || CHORD_GITHUB_CLIENT_ID;
+  }
+
+  // ---- "Sign in with GitHub": the OAuth device flow, nothing secret on this side ----
+
+  async startLogin(): Promise<void> {
+    const clientId = this.clientId();
+    if (!clientId || this.login) return;
+    this.error = '';
+    try {
+      const r = (await this.form('https://github.com/login/device/code', { client_id: clientId, scope: 'repo' })) as Record<string, unknown>;
+      if (typeof r.device_code !== 'string' || typeof r.user_code !== 'string') throw new Error(typeof r.error_description === 'string' ? r.error_description : 'GitHub did not start the sign-in.');
+      const interval = Math.max(5, Number(r.interval) || 5);
+      const url = typeof r.verification_uri === 'string' ? r.verification_uri : 'https://github.com/login/device';
+      this.login = { userCode: r.user_code, url, expiresAt: Date.now() + (Number(r.expires_in) || 900) * 1000, deviceCode: r.device_code, interval, timer: null };
+      this.c.apply({ type: 'tab.new', url, activate: true });
+      this.poll();
+    } catch (err) {
+      this.error = `Sign-in failed: ${err instanceof Error ? err.message : String(err)}`;
+    }
+    this.send();
+  }
+
+  cancelLogin(): void {
+    if (this.login?.timer) clearTimeout(this.login.timer);
+    this.login = null;
+    this.send();
+  }
+
+  private poll(): void {
+    const l = this.login;
+    if (!l) return;
+    l.timer = setTimeout(async () => {
+      if (this.login !== l) return;
+      if (Date.now() > l.expiresAt) {
+        this.login = null;
+        this.error = 'The sign-in code expired. Try again.';
+        this.send();
+        return;
+      }
+      try {
+        const r = (await this.form('https://github.com/login/oauth/access_token', { client_id: this.clientId(), device_code: l.deviceCode, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' })) as Record<string, unknown>;
+        if (typeof r.access_token === 'string') {
+          this.login = null;
+          this.send();
+          await this.connect(r.access_token);
+          return;
+        }
+        if (r.error === 'slow_down') l.interval += 5;
+        else if (r.error === 'expired_token' || r.error === 'access_denied') {
+          this.login = null;
+          this.error = r.error === 'access_denied' ? 'GitHub sign-in was declined.' : 'The sign-in code expired. Try again.';
+          this.send();
+          return;
+        }
+      } catch {
+        /* network blip: keep polling */
+      }
+      this.poll();
+    }, l.interval * 1000);
+    l.timer.unref();
+  }
+
+  private async form(url: string, fields: Record<string, string>): Promise<unknown> {
+    const res = await net.fetch(url, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Chord' }, body: new URLSearchParams(fields).toString(), signal: AbortSignal.timeout(20_000) });
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`GitHub answered ${res.status}`);
+    }
+  }
+
+  // ---- the GitHub CLI's own login, when gh is installed ----
+
+  private async detectGh(): Promise<void> {
+    const candidates = [...GH_PATHS, 'gh'];
+    for (const p of candidates) {
+      if (p !== 'gh' && !existsSync(p)) continue;
+      const token = await this.ghToken(p);
+      if (token !== null) {
+        this.ghPath = p;
+        this.ghLoggedIn = token !== '';
+        if (this.ghLoggedIn) this.send();
+        return;
+      }
+    }
+  }
+
+  /** '' when gh runs but is not logged in; null when gh is not there. */
+  private ghToken(path: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      execFile(path, ['auth', 'token', '-h', 'github.com'], { timeout: 8000, windowsHide: true }, (err, stdout) => {
+        if (err && (err as NodeJS.ErrnoException).code === 'ENOENT') return resolve(null);
+        if (err) return resolve('');
+        resolve(stdout.trim());
+      });
+    });
+  }
+
+  async connectWithGh(): Promise<void> {
+    const path = this.ghPath ?? 'gh';
+    const token = await this.ghToken(path);
+    if (!token) {
+      this.error = token === null ? 'The GitHub CLI (gh) is not installed.' : 'The GitHub CLI is not logged in: run "gh auth login" in a terminal first.';
+      this.send();
+      return;
+    }
+    await this.connect(token);
   }
 
   /** A token with the `repo` scope: find out who it is, make the two repositories, pull, push. */
