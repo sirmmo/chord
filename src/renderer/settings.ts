@@ -72,6 +72,8 @@ sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages:
 sAskDl.onchange = () => dispatch({ type: 'settings.update', patch: { askDownloadPath: sAskDl.checked } });
 sTray.onchange = () => dispatch({ type: 'settings.update', patch: { closeToTray: sTray.checked } });
 const sLittle = $<HTMLInputElement>('#s-little');
+const sAutofill = $<HTMLInputElement>('#s-autofill');
+sAutofill.onchange = () => dispatch({ type: 'settings.update', patch: { autofill: sAutofill.checked } });
 sLittle.onchange = () => dispatch({ type: 'settings.update', patch: { littleWindows: sLittle.checked } });
 sAutoPip.onchange = () => dispatch({ type: 'settings.update', patch: { autoPip: sAutoPip.checked } });
 const FLAGS: { key: keyof TroubleFlags; label: string; help: string }[] = [
@@ -280,6 +282,7 @@ function fillSettings(): void {
   sAskDl.checked = s.settings.askDownloadPath;
   sTray.checked = s.settings.closeToTray;
   sLittle.checked = s.settings.littleWindows;
+  sAutofill.checked = s.settings.autofill;
   sAutoPip.checked = s.settings.autoPip;
   for (const [k, input] of flagInputs) input.checked = s.settings.flags[k] === true;
   sUpdCheck.checked = s.settings.updates.check;

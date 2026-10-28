@@ -56,9 +56,9 @@ export class PasswordManager {
       this.queuePrompt(id, host, username, password);
     });
     ipcMain.handle('passwords:lookup', (event, rawHost: unknown) => {
-      if (!this.c.tabs.tabIdOf(event.sender) || !this.available()) return [];
+      if (!this.c.tabs.tabIdOf(event.sender) || !this.available()) return { auto: false, entries: [] };
       const host = str(rawHost, 253);
-      return this.forHost(host).map((e) => ({ username: e.username, password: this.decrypt(e) }));
+      return { auto: this.c.state.settings.autofill, entries: this.forHost(host).map((e) => ({ username: e.username, password: this.decrypt(e) })) };
     });
     ipcMain.handle('passwords', (event) => (this.c.trustedEvent(event) ? this.status() : { entries: [], never: [], available: false }));
     ipcMain.handle('passwords:reveal', (event, id: unknown) => {

@@ -626,29 +626,64 @@ if (process.isMainFrame) {
       if (pw && pw.value) capture(pw);
     }, true);
 
-    let filled = false;
-    const fill = async () => {
-      if (filled) return;
-      const pw = passwordFields()[0];
-      if (!pw || pw.value) return;
-      const creds = (await ipcRenderer.invoke('passwords:lookup', location.host)) as { username: string; password: string }[];
-      if (!creds.length) return;
-      filled = true;
-      const user = usernameFor(pw);
-      const set = (el: HTMLInputElement | null, value: string) => {
-        if (!el || el.value) return;
-        el.value = value;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-      };
-      set(user, creds[0].username);
-      set(pw, creds[0].password);
+    // Filling: as soon as a sign-in form shows up when the user allows it (Settings →
+    // Passwords), otherwise when they click into one. Username-first flows get the
+    // username; the password follows on the next screen.
+    type Lookup = { auto: boolean; entries: { username: string; password: string }[] };
+    let lookup: Promise<Lookup> | null = null;
+    const creds = (): Promise<Lookup> => (lookup ??= (ipcRenderer.invoke('passwords:lookup', location.host) as Promise<Lookup>).catch(() => ({ auto: false, entries: [] })));
+    let filledPw: HTMLInputElement | null = null;
+    let filledUser: HTMLInputElement | null = null;
+    const set = (el: HTMLInputElement | null, value: string) => {
+      if (!el || el.value || !value) return;
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const looksLikeUsername = (i: HTMLInputElement): boolean => {
+      if (i.disabled || i.readOnly || i.offsetParent === null) return false;
+      const ac = (i.getAttribute('autocomplete') ?? '').toLowerCase();
+      if (ac === 'username' || ac === 'email') return true;
+      if (ac === 'off' && i.type !== 'email') return false;
+      if (!['text', 'email', 'tel', ''].includes(i.type)) return false;
+      if (i.form?.getAttribute('role') === 'search' || i.form?.querySelector('input[type="search"]')) return false;
+      return i.type === 'email' || /user|email|e-mail|login|account|identifier/i.test(`${i.name} ${i.id} ${i.placeholder} ${i.getAttribute('aria-label') ?? ''}`);
+    };
+    const fill = async (trigger: 'auto' | 'focus', target?: HTMLInputElement) => {
+      const { auto, entries } = await creds();
+      if (!entries.length || (trigger === 'auto' && !auto)) return;
+      const pw = passwordFields().find((p) => !p.value) ?? passwordFields()[0];
+      if (pw) {
+        if (pw.value || filledPw === pw) return;
+        filledPw = pw;
+        set(usernameFor(pw), entries[0].username);
+        set(pw, entries[0].password);
+        return;
+      }
+      // no password field: a username-first page
+      const user = target && looksLikeUsername(target) ? target : Array.from(document.querySelectorAll<HTMLInputElement>('input')).find(looksLikeUsername) ?? null;
+      if (!user || user.value || filledUser === user) return;
+      filledUser = user;
+      set(user, entries[0].username);
     };
     document.addEventListener('focusin', (e) => {
-      if (e.target instanceof HTMLInputElement && (e.target.type === 'password' || passwordFields().some((p) => (p.form ?? document) === ((e.target as HTMLInputElement).form ?? document)))) void fill();
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      if (t.type === 'password' || passwordFields().some((p) => (p.form ?? document) === (t.form ?? document)) || looksLikeUsername(t)) void fill('focus', t);
     }, true);
-    window.addEventListener('load', () => {
-      if (passwordFields().length) void fill();
-    });
+    let mutationTimer = 0;
+    const onChange = () => {
+      window.clearTimeout(mutationTimer);
+      mutationTimer = window.setTimeout(() => {
+        if (filledPw && !filledPw.isConnected) filledPw = null;
+        if (filledUser && !filledUser.isConnected) filledUser = null;
+        void fill('auto');
+      }, 250);
+    };
+    const observe = () => new MutationObserver(onChange).observe(document.documentElement, { childList: true, subtree: true });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', observe);
+    else observe();
+    window.addEventListener('load', () => void fill('auto'));
+    window.addEventListener('popstate', onChange);
   }
 }

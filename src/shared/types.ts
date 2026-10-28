@@ -347,6 +347,8 @@ export interface Settings {
   sync: SyncSettings;
   /** links from other apps open in a Little window instead of a tab */
   littleWindows: boolean;
+  /** fill saved passwords as soon as a sign-in form appears (otherwise on click) */
+  autofill: boolean;
   /** Chromium troubleshooting switches applied at the next launch */
   flags: TroubleFlags;
   /** origins allowed to open and close tabs of their own through navigator.chord */

@@ -26,7 +26,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', googleSignIn: 'firefox', passkeys: 'chord', sync: { enabled: false, user: '', privateRepo: 'chord-private', publicRepo: 'chord-bookmarks' }, littleWindows: true, flags: {}, pageTabs: [], updates: { check: true, auto: true }, mcp: { enabled: false, port: 23120 }, sourceror: { server: 'http://127.0.0.1:5010', checkLinks: true, useLlm: true, discover: true } };
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', googleSignIn: 'firefox', passkeys: 'chord', sync: { enabled: false, user: '', privateRepo: 'chord-private', publicRepo: 'chord-bookmarks' }, littleWindows: true, autofill: true, flags: {}, pageTabs: [], updates: { check: true, auto: true }, mcp: { enabled: false, port: 23120 }, sourceror: { server: 'http://127.0.0.1:5010', checkLinks: true, useLlm: true, discover: true } };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -61,7 +61,7 @@ export function mergeSettings(raw: unknown): Settings {
   if (rsync.theme === 'pragmatic' || rsync.theme === 'digg' || rsync.theme === 'elegant') sync.theme = rsync.theme;
   const rs = (typeof r.sourceror === 'object' && r.sourceror !== null ? r.sourceror : {}) as Partial<Settings['sourceror']>;
   const sourceror = { server: typeof rs.server === 'string' && /^https?:\/\//.test(rs.server) ? rs.server.replace(/\/+$/, '') : 'http://127.0.0.1:5010', checkLinks: rs.checkLinks !== false, useLlm: rs.useLlm !== false, discover: rs.discover !== false };
-  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags, pageTabs, updates, mcp, googleSignIn, passkeys, sync, sourceror, littleWindows: r.littleWindows !== false };
+  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags, pageTabs, updates, mcp, googleSignIn, passkeys, sync, sourceror, littleWindows: r.littleWindows !== false, autofill: r.autofill !== false };
   merged.panelWidth = clampPanel(typeof merged.panelWidth === 'number' ? merged.panelWidth : 360);
   return merged;
 }
