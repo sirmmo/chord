@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Chord — the open-source browser for people leaving Arc</title>
+  <title>Chord, an open-source browser for people leaving Arc</title>
   <meta name="description" content="Arc shuts down in December 2026. Chord keeps the way you browse: Spaces, a sidebar, the command bar, split view, Boosts, Easels, Little windows, Live Folders and Air Traffic Control. Open source, on macOS, Windows and Linux, with your data in your own GitHub. Import your Arc spaces in one step.">
-  <meta property="og:title" content="Chord — the open-source browser for people leaving Arc">
+  <meta property="og:title" content="Chord, an open-source browser for people leaving Arc">
   <meta property="og:description" content="Arc shuts down in December 2026. Spaces, sidebar, command bar, Boosts, Easels, Little windows, Live Folders. Open source, three platforms, your data in your GitHub. Import from Arc in one step.">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="icon.png">
@@ -154,8 +154,8 @@
   <header>
     <div class="wrap">
       <div>
-        <h1>Arc ends in December 2026. <span>Your way of browsing doesn't have to.</span></h1>
-        <p class="lead">Chord is an open-source browser built around the ideas that made Arc worth switching to: Spaces, a sidebar instead of a tab strip, a command bar, split view, Boosts, Easels, Little windows, Live Folders and Air Traffic Control. On macOS, Windows and Linux, with your data in your own GitHub, and nothing that phones home.</p>
+        <h1>Arc shuts down in December 2026. <span>Chord is where your Spaces go next.</span></h1>
+        <p class="lead">Chord is an open-source browser built around the ideas that made Arc worth switching to: Spaces, a sidebar instead of a tab strip, a command bar, split view, Boosts, Easels, Little windows, Live Folders and Air Traffic Control. It runs on macOS, Windows and Linux. Your data syncs through your own GitHub account, and Chord has no servers of its own.</p>
         <div class="cta">
           <a class="btn primary" id="dl" href="https://github.com/sirmmo/chord/releases/latest">Download Chord</a>
           <a class="btn" href="#switch">Import from Arc in one step</a>
@@ -194,33 +194,33 @@
 
   <section id="why">
     <div class="wrap">
-      <h2>Arc is being discontinued. Here is what Chord does about it.</h2>
-      <p class="sub">Arc was the best idea browsers had in a decade. It is officially shutting down in December 2026, and its users need somewhere to take their Spaces. Chord is that somewhere.</p>
+      <h2>Why Chord exists</h2>
+      <p class="sub">Arc changed how a lot of people browse, and it is shutting down in December 2026. Chord gives its Spaces, sidebar and command bar a home that cannot be shut down.</p>
       <div class="why">
-        <div class="card"><span class="k">The product</span><h3>Arc has an end date</h3><p>Its maker has announced that Arc is discontinued as of December 2026. After that, no updates, no sync, no Arc. Every Space you built there needs a new home before then.</p><div class="a"><b>Chord:</b> open source under the MIT licence, so it cannot be discontinued out from under you. It ships a release most weeks, and if the project ever stalls you keep the source and the installers.</div></div>
-        <div class="card"><span class="k">The data</span><h3>Your Spaces live in someone's cloud</h3><p>Arc sync goes through its maker's servers; a closed app, with your setup locked inside it.</p><div class="a"><b>Chord:</b> everything is a JSON file you can read, export and hand-edit. Sync goes through two GitHub repositories Chord creates in your account. Private, password-locked spaces never leave your computer.</div></div>
-        <div class="card"><span class="k">The platforms</span><h3>Mac first, everyone else later</h3><p>Windows arrived late, Linux never did. Switching computers meant switching browsers.</p><div class="a"><b>Chord:</b> the same app on macOS (Apple Silicon and Intel), Windows and Linux, from the same release, on the same day.</div></div>
+        <div class="card"><span class="k">The product</span><h3>Arc has an end date</h3><p>Its maker has announced that Arc is discontinued as of December 2026. After that date there are no updates and no sync, so every Space built there needs a new home before then.</p><div class="a"><b>Chord:</b> open source under the MIT licence. A release ships most weeks, and if the project ever stalls you still have the source and the installers.</div></div>
+        <div class="card"><span class="k">The data</span><h3>Your Spaces live in someone's cloud</h3><p>Arc syncs through its maker's servers, and your setup is locked inside a closed app.</p><div class="a"><b>Chord:</b> everything is a JSON file you can read, export and hand-edit. Sync goes through two GitHub repositories Chord creates in your account. Private, password-locked spaces never leave your computer.</div></div>
+        <div class="card"><span class="k">The platforms</span><h3>Mac first, everyone else later</h3><p>Windows arrived late and Linux never did, so switching computers meant switching browsers.</p><div class="a"><b>Chord:</b> the same app on macOS (Apple Silicon and Intel), Windows and Linux, from the same release, on the same day.</div></div>
       </div>
     </div>
   </section>
 
   <section id="privacy">
     <div class="wrap">
-      <h2>An Arc that puts privacy first</h2>
-      <p class="sub">Not just an ad blocker. These are on from the first launch, and each has a switch.</p>
+      <h2>Privacy first</h2>
+      <p class="sub">Shields block ads and trackers. Four more protections are built in, on from the first launch, each with its own switch under Settings → Privacy.</p>
       <div class="why">
         <div class="card"><span class="k">DNS</span><h3>Encrypted lookups through Quad9</h3><p>Every name lookup goes over DNS-over-HTTPS to a Swiss non-profit resolver that blocks malware domains and keeps no logs. Cloudflare, Mullvad or your own endpoint, if you prefer.</p></div>
-        <div class="card"><span class="k">GPC</span><h3>Global Privacy Control, always on</h3><p>Every request carries a legally meaningful “do not sell or share my data”, and pages can see it. Third-party cookies are neither sent nor accepted.</p></div>
+        <div class="card"><span class="k">GPC</span><h3>Global Privacy Control, always on</h3><p>Every request carries a legally meaningful "do not sell or share my data", and pages can see it. Third-party cookies are neither sent nor accepted.</p></div>
         <div class="card"><span class="k">HTTPS</span><h3>HTTPS first, Shields on</h3><p>Plain addresses open over HTTPS, with a fallback when a site has none. Shields block ads and trackers with EasyList and EasyPrivacy.</p></div>
-        <div class="card"><span class="k">Aliases</span><h3>A new e-mail address per site</h3><p>Right-click any e-mail field: Chord asks SimpleLogin or Firefox Relay for a fresh alias, types it in and copies it. Your real address stays yours.</p></div>
+        <div class="card"><span class="k">Aliases</span><h3>A new e-mail address per site</h3><p>Right-click any e-mail field and Chord asks SimpleLogin or Firefox Relay for a fresh alias, types it in and copies it. The site never sees your real address.</p></div>
       </div>
     </div>
   </section>
 
   <section id="switch">
     <div class="wrap">
-      <h2>Switch in five minutes, before Arc goes dark</h2>
-      <p class="sub">Your Spaces, pinned tabs, favorites and history come along. Nothing to export from Arc first, and nothing lost when it closes.</p>
+      <h2>Switch in five minutes</h2>
+      <p class="sub">Chord reads Arc's own files, so your Spaces, pinned tabs, favorites and history come along without an export step.</p>
       <div class="steps">
         <div class="card"><h3>Install Chord</h3><p>Download the build for your system below and open it. On macOS, right-click → Open the first time, because the builds are not notarised yet.</p></div>
         <div class="card"><h3>Import from Arc</h3><p>File → Import from Another Browser → Arc. Chord finds Arc's sidebar file on its own and brings every Space with its name, emoji and colour, pinned and today tabs, and the favorites bar. Tick History too and the last 20,000 visits come with them.</p></div>
@@ -232,8 +232,8 @@
 
   <section id="compare">
     <div class="wrap">
-      <h2>Everything you loved in Arc, where it is in Chord</h2>
-      <p class="sub">The names changed where they had to. The habits did not.</p>
+      <h2>Where each Arc feature lives in Chord</h2>
+      <p class="sub">A few names are different. The shortcuts and the layout are the same.</p>
       <table class="cmp">
         <tr><th>In Arc</th><th>In Chord</th></tr>
         <tr><td>Spaces with colours and emoji, Ctrl+1…9</td><td><b>Spaces</b>, the same, plus a private, password-locked kind and separate login profiles per space.</td></tr>
@@ -247,7 +247,7 @@
         <tr><td>Air Traffic Control</td><td><b>Routes</b>: links from the sites you name land in the space you choose.</td></tr>
         <tr><td>Live Folders</td><td><b>Live folders</b>: GitHub pull requests, issues and notifications, any feed, or a bookmark tag, kept current.</td></tr>
         <tr><td>Shared spaces (Arc for Teams)</td><td><b>Connected spaces</b>: a space several people keep together live over MQTT, encrypted end to end, through a broker you choose.</td></tr>
-        <tr><td>Peek</td><td><b>Peek</b>: a link that leaves a pinned tab's site opens in a preview over the page, with "Open as Tab" one key away.</td></tr>
+        <tr><td>Peek</td><td><b>Peek</b>: a link that leaves a pinned tab's site opens in a preview over the page; ⌘⇧O turns it into a tab.</td></tr>
         <tr><td>Picture in Picture</td><td><b>Picture in picture</b> that follows you between tabs.</td></tr>
         <tr><td>Rename and re-icon pinned tabs</td><td><b>The same</b>: double-click to rename, pick an emoji.</td></tr>
         <tr><td>Shared Spaces</td><td><b>Shared spaces and pages</b> as links on your GitHub Pages, installable by anyone with Chord.</td></tr>
@@ -260,8 +260,8 @@
 
   <section id="more">
     <div class="wrap">
-      <h2>And the things Arc never did</h2>
-      <p class="sub">Built by people who use the browser all day, for the things a browser should have had already.</p>
+      <h2>What Arc never had</h2>
+      <p class="sub">Things a browser should have shipped with already.</p>
       <div class="grid">
         <div class="card"><span class="k">Shields</span><h3>Ads and trackers blocked</h3><p>EasyList and EasyPrivacy built in, on by default, one switch to turn off per site.</p></div>
         <div class="card"><span class="k">Passkeys · Passwords</span><h3>A password manager with passkeys</h3><p>Saved with the OS keychain, protected by Touch ID or Windows Hello, synced as a KeePass file you can open anywhere.</p></div>
@@ -270,8 +270,8 @@
         <div class="card"><span class="k">Markdown</span><h3>Notes and bookmarks per space</h3><p>A notes page in Markdown for every space, bookmarks with tags and notes, private or published on your own page.</p></div>
         <div class="card"><span class="k">MCP</span><h3>An AI's browser</h3><p>A local MCP server lets Claude Desktop or any MCP client read your tabs, open pages and use the tools sites expose. Off by default, loopback only.</p></div>
         <div class="card"><span class="k">Widevine</span><h3>Music and video that play</h3><p>Amazon Music, Spotify, Netflix and Prime Video work as in Chrome, through castLabs' Electron with the Widevine CDM.</p></div>
-        <div class="card"><span class="k">Extensions</span><h3>Chrome Web Store, one paste away</h3><p>Install from a store address or id, or unpacked from a folder. Content scripts and most page APIs work.</p></div>
-        <div class="card"><span class="k">Skins</span><h3>Yours to theme</h3><p>Any colour per space, tint, accent, icon style, font, light or dark, and an LCARS skin for the brave.</p></div>
+        <div class="card"><span class="k">Extensions</span><h3>Chrome Web Store extensions</h3><p>Paste a store address or id, or load an unpacked folder. Content scripts and most page APIs work.</p></div>
+        <div class="card"><span class="k">Skins</span><h3>Themes</h3><p>Any colour per space, tint, accent, icon style, font, light or dark, plus an LCARS skin.</p></div>
       </div>
       <p class="small" style="margin-top:18px">Every feature in detail: <a href="docs.html#features">the full feature list</a>, <a href="docs.html#shortcuts">shortcuts</a> and the <a href="guide.html">getting-started guide</a>.</p>
     </div>
@@ -280,18 +280,18 @@
   <section id="honest">
     <div class="wrap">
       <h2>What to expect</h2>
-      <p class="sub">Chord is young and honest about it.</p>
+      <p class="sub">Chord is a young project. Read this before you install it.</p>
       <div class="two">
         <ul class="honest">
-          <li><strong>Unsigned builds</strong> for now: macOS asks you to right-click → Open the first time, Windows shows “More info → Run anyway”. Signing is the next item on the roadmap.</li>
+          <li><strong>Unsigned builds</strong> for now: macOS asks you to right-click → Open the first time, Windows shows "More info → Run anyway". Signing is the next item on the roadmap.</li>
           <li><strong>Electron, not a fork of Chrome.</strong> Pages render identically; extension toolbar popups do not show, and extensions that lean on Chrome's own services do not work.</li>
           <li><strong>No phone app.</strong> Your public bookmarks are a web page you can open on any device; that is as mobile as it gets today.</li>
         </ul>
         <ul class="honest">
-          <li><strong>A one-person project with a fast cadence.</strong> Something broken? <a href="https://github.com/sirmmo/chord/issues">Open an issue</a>; most fixes ship within days.</li>
+          <li><strong>A one-person project.</strong> Bugs reported as <a href="https://github.com/sirmmo/chord/issues">issues</a> usually get fixed within days.</li>
           <li><strong>Nothing leaves your computer</strong> unless you set up sync, and then it goes to repositories you own and can delete.</li>
-          <li><strong>No company to be acquired.</strong> Chord is MIT-licensed code on GitHub, made by one person. There is nobody to sell it to and nothing to sell.</li>
-          <li><strong>Not affiliated</strong> with The Browser Company, Arc or Atlassian. Chord reimplements the ideas, not the code.</li>
+          <li><strong>No company to be acquired.</strong> Chord is MIT-licensed code on GitHub, made by one person. If it stops, you keep the code.</li>
+          <li><strong>Not affiliated</strong> with The Browser Company, Arc or Atlassian. Chord reimplements the ideas from scratch and shares no code with Arc.</li>
         </ul>
       </div>
     </div>
@@ -313,10 +313,10 @@
 
   <section id="community">
     <div class="wrap">
-      <p class="quote">If Arc's shutdown is sending you looking, you are exactly who Chord is built for. <span>Star the repository, open an issue with what you miss, and tell the next person.</span></p>
+      <p class="quote">If you are leaving Arc, Chord was made for you. <span>Star the repository and open an issue about anything you miss.</span></p>
       <div class="cta" style="margin-top:22px">
         <a class="btn primary" href="https://github.com/sirmmo/chord">Star on GitHub</a>
-        <a class="btn" href="https://github.com/sirmmo/chord/issues/new">What do you miss from Arc?</a>
+        <a class="btn" href="https://github.com/sirmmo/chord/issues/new">Report what you miss from Arc</a>
         <a class="btn" href="docs.html#contribute">Contribute</a>
       </div>
     </div>
