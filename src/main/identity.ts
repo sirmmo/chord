@@ -26,6 +26,20 @@ export function rememberElectronUserAgent(ua: string): void {
   electronUserAgent = ua.replace(/ ?chord(-browser)?\/\S+/i, '');
 }
 
+/**
+ * Electron's User-Agent as plain Chromium: no Electron or app token, and the build
+ * number reduced to major.0.0.0 like Chrome itself reports. Applied through
+ * app.userAgentFallback rather than a session override, because an override makes
+ * Chromium drop the client hints (sec-ch-ua, navigator.userAgentData) that bot checks
+ * such as Cloudflare's expect next to a Chrome-like User-Agent.
+ */
+export function plainChromiumUserAgent(raw: string): string {
+  return raw
+    .replace(/ ?Electron\/\S+/i, '')
+    .replace(/ ?chord(-browser)?\/\S+/i, '')
+    .replace(/Chrome\/(\d+)\.[\d.]+/, 'Chrome/$1.0.0.0');
+}
+
 /** A believable current Firefox User-Agent for this OS. Firefox ships every four weeks since 91 (2021-08-10). */
 export function firefoxUserAgent(now = Date.now()): string {
   const weeks = (now - Date.UTC(2021, 7, 10)) / (7 * 86_400_000);

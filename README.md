@@ -157,9 +157,12 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   a repo (its releases), a subreddit, a YouTube channel or a Hacker News user. Who a
   space follows is exported with the space; what was read stays local. Refreshes every
   30 minutes and when you come back to the space.
-- **Bot checks** (Cloudflare and the like): the functions Chord patches in pages to watch
-  players, calls and passkeys answer `toString()` like the originals, and `window.chrome`
-  exists as in Chrome, so challenge pages see an ordinary Chromium.
+- **Bot checks** (Cloudflare and the like): the User-Agent is set app-wide rather than as
+  a session override, so the client hints Chromium sends next to it stay consistent; the
+  functions Chord patches in pages to watch players, calls and passkeys are patched on
+  their prototypes and answer `toString()` like the originals, and `window.chrome` exists
+  as in Chrome. If a site still asks you to prove you are human in a loop, Settings →
+  General → Troubleshooting → "Do not patch pages" turns every page hook off.
 - **Boosts that integrate a page with Chord**: on a site you wrote a boost for,
   `navigator.chord` is unlocked without a prompt, so a boost can turn what the page shows
   into Chord's own things: a card in the sidebar with buttons (`chord.card.set`, shown

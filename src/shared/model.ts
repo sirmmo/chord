@@ -46,7 +46,7 @@ export function mergeSettings(raw: unknown): Settings {
   if (ai.provider !== 'anthropic' && ai.provider !== 'openai') ai.provider = 'openai';
   const rawFlags = (typeof r.flags === 'object' && r.flags !== null ? r.flags : {}) as Record<string, unknown>;
   const flags: Settings['flags'] = {};
-  for (const k of ['noHwVideoDecode', 'noMacOverlays', 'noGraphite', 'noGpuCompositing', 'noGpu'] as const) if (rawFlags[k] === true) flags[k] = true;
+  for (const k of ['noHwVideoDecode', 'noMacOverlays', 'noGraphite', 'noGpuCompositing', 'noGpu', 'noPageHooks'] as const) if (rawFlags[k] === true) flags[k] = true;
   const pageTabs = Array.isArray(r.pageTabs) ? r.pageTabs.filter((o): o is string => typeof o === 'string' && /^https?:\/\/[^/]+$/.test(o)) : [];
   const ru = (typeof r.updates === 'object' && r.updates !== null ? r.updates : {}) as Partial<Settings['updates']>;
   const updates = { check: ru.check !== false, auto: ru.auto !== false };

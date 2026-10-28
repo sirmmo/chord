@@ -6,9 +6,13 @@ import { configureSession } from './session.ts';
 import { installErrorHandlers, mark, warnIfTranslated } from './diagnostics.ts';
 import { registerInternalScheme } from './internal.ts';
 import { applyStartupFlags } from './flags.ts';
+import { plainChromiumUserAgent, rememberElectronUserAgent } from './identity.ts';
 
 installErrorHandlers();
 app.setName('Chord');
+// Present as plain Chromium everywhere (see identity.ts): set before any session exists.
+rememberElectronUserAgent(app.userAgentFallback);
+app.userAgentFallback = plainChromiumUserAgent(app.userAgentFallback);
 app.setAboutPanelOptions({ applicationName: 'Chord', applicationVersion: app.getVersion(), website: 'https://ingmmo.com/chord/', copyright: 'MIT licensed · github.com/sirmmo/chord' });
 registerInternalScheme();
 

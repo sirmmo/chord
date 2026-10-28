@@ -96,6 +96,7 @@ const FLAGS: { key: keyof TroubleFlags; label: string; help: string }[] = [
   { key: 'noGraphite', label: 'Disable Skia Graphite', help: 'Falls back to the older Ganesh renderer for all page drawing.' },
   { key: 'noGpuCompositing', label: 'Disable GPU compositing', help: 'Composites pages on the CPU. Slower, but isolates driver problems.' },
   { key: 'noGpu', label: 'Disable the GPU entirely', help: 'Last resort: software rendering for everything.' },
+  { key: 'noPageHooks', label: 'Do not patch pages', help: 'Chord adds small hooks to pages for players, calls, passkeys and Google sign-in. Turn them off (new page loads) to find out whether a site that keeps asking you to prove you are human objects to them.' },
 ];
 const flagInputs = new Map<keyof TroubleFlags, HTMLInputElement>();
 $('#s-flags').replaceChildren(

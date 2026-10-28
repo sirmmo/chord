@@ -447,6 +447,8 @@ export interface TroubleFlags {
   noGraphite?: boolean;
   noGpuCompositing?: boolean;
   noGpu?: boolean;
+  /** do not patch pages at all (smart pages, passkeys, Google identity): to find out whether a site objects to the hooks */
+  noPageHooks?: boolean;
 }
 
 /** A saved link. Public ones are published to the user's GitHub Pages linkroll. */

@@ -179,6 +179,9 @@ export class Controller {
     this.history.init();
     this.passwords.init();
     this.passkeys.init();
+    ipcMain.on('page:hooks', (event) => {
+      event.returnValue = !this.state.settings.flags.noPageHooks;
+    });
     // a horizontal two-finger swipe on a page that cannot scroll sideways (see preload/page.ts)
     ipcMain.on('nav:gesture', (event, direction: unknown) => {
       if (!this.tabs.tabIdOf(event.sender)) return;
