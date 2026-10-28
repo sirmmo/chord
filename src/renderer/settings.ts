@@ -3,6 +3,7 @@
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
 import type { Route, AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasskeysStatus, SyncStatus, PasswordsStatus, State, TroubleFlags, UpdateStatus, ConnectedStatus, MqttSettings } from '../shared/types.ts';
 import { DEFAULT_BROKER, brokerProblem } from '../shared/connected.ts';
+import { ALIAS_PROVIDERS, COMPANIONS, DNS_PROVIDERS } from '../shared/privacy.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { SEARCH_ENGINES, hostOf } from '../shared/url.ts';
@@ -56,7 +57,7 @@ const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = { paths: {}, install: { busy: false, message: '', error: false } };
 
-const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'routes', 'passwords', 'sync', 'connected', 'ai', 'about'];
+const PAGES = ['general', 'appearance', 'privacy', 'layouts', 'addins', 'boosts', 'routes', 'passwords', 'sync', 'connected', 'ai', 'about'];
 const showPage = (raw: string) => {
   const [page, arg] = raw.split(':');
   if (page === 'boosts' && arg) prefillBoost(decodeURIComponent(arg));
@@ -291,6 +292,7 @@ function fillSettings(): void {
   if (!s) return;
   renderLayouts();
   renderConnected();
+  renderPrivacy();
   const t = s.settings.theme;
   const space = activeSpace(s);
   const active = document.activeElement;
@@ -691,6 +693,52 @@ function renderPasskeys(): void {
           h('div', { class: 'btns' }, h('button', { class: 'btn danger', onclick: () => dispatch({ type: 'passkey.delete', id: e.id }) }, 'Delete')),
         ),
       ),
+  );
+}
+
+// ---- privacy page ----
+
+const sDns = $<HTMLSelectElement>('#s-dns');
+const sDnsCustom = $<HTMLInputElement>('#s-dns-custom');
+const sGpc = $<HTMLInputElement>('#s-gpc');
+const s3p = $<HTMLInputElement>('#s-3p');
+const sHttps = $<HTMLInputElement>('#s-https');
+const sAlias = $<HTMLSelectElement>('#s-alias');
+const sAliasKey = $<HTMLInputElement>('#s-alias-key');
+const savePrivacy = () => {
+  if (!state) return;
+  const p = state.settings.privacy;
+  const dns = sDns.value as typeof p.dns;
+  const custom = sDnsCustom.value.trim();
+  const provider = sAlias.value as typeof p.aliases.provider;
+  dispatch({ type: 'settings.update', patch: { privacy: { dns: dns === 'custom' && !custom ? p.dns : dns, dnsCustom: custom || undefined, gpc: sGpc.checked, thirdPartyCookies: s3p.checked, httpsFirst: sHttps.checked, aliases: { provider, key: sAliasKey.value.trim() || undefined } } } });
+};
+for (const el of [sDns, sDnsCustom, sGpc, s3p, sHttps, sAlias, sAliasKey]) el.onchange = savePrivacy;
+sDns.oninput = () => (sDnsCustom.hidden = sDns.value !== 'custom');
+sAlias.oninput = () => (sAliasKey.hidden = sAlias.value === 'none');
+function renderPrivacy(): void {
+  const s = state;
+  if (!s) return;
+  const p = s.settings.privacy;
+  if (document.activeElement !== sDns) sDns.value = p.dns;
+  if (document.activeElement !== sDnsCustom) sDnsCustom.value = p.dnsCustom ?? '';
+  sDnsCustom.hidden = sDns.value !== 'custom';
+  const dnsNote = $('#s-dns-note');
+  const prov = p.dns !== 'system' && p.dns !== 'custom' ? DNS_PROVIDERS[p.dns] : null;
+  dnsNote.replaceChildren(...(prov ? [`${prov.note} · `, h('a', { href: prov.site, onclick: (e: MouseEvent) => { e.preventDefault(); dispatch({ type: 'tab.new', url: prov.site, activate: true }); } }, prov.site.replace(/^https:\/\/|\/$/g, ''))] : [p.dns === 'system' ? 'Name lookups go in clear text to whatever resolver your network hands out.' : 'Any DNS-over-HTTPS endpoint (RFC 8484).']));
+  sGpc.checked = p.gpc;
+  s3p.checked = p.thirdPartyCookies;
+  sHttps.checked = p.httpsFirst;
+  if (document.activeElement !== sAlias) sAlias.value = p.aliases.provider;
+  if (document.activeElement !== sAliasKey) sAliasKey.value = p.aliases.key ?? '';
+  sAliasKey.hidden = sAlias.value === 'none';
+  const ap = p.aliases.provider !== 'none' ? ALIAS_PROVIDERS[p.aliases.provider] : null;
+  const link = (url: string, text: string) => h('a', { href: url, onclick: (e: MouseEvent) => { e.preventDefault(); dispatch({ type: 'tab.new', url, activate: true }); } }, text);
+  $('#s-alias-note').replaceChildren('Right-click an e-mail field → “New Email Alias for this site”: Chord asks the service for a fresh address, types it in and copies it. Your real address stays yours.', ...(ap ? [' ', link(ap.keyUrl, ap.keyHint), '.'] : [' Works with ', link(ALIAS_PROVIDERS.simplelogin.site, 'SimpleLogin'), ' and ', link(ALIAS_PROVIDERS.relay.site, 'Firefox Relay'), '.']));
+  $('#s-companions').replaceChildren(
+    ...COMPANIONS.map((cmp) =>
+      h('div', { class: 'addin' }, h('div', { class: 'addin-text' }, h('strong', {}, link(cmp.url, cmp.name)), h('span', {}, cmp.what)), ...('store' in cmp ? [h('button', { class: 'btn', onclick: () => dispatch({ type: 'tab.new', url: cmp.store, activate: true }) }, 'Open in the store')] : [])),
+    ),
   );
 }
 

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import { serveInternalPages } from './internal.ts';
 import { installIdentity } from './identity.ts';
+import { installHub, onBeforeRequest, onHeadersReceived } from './webrequest.ts';
 
 export const PARTITION = 'persist:chord';
 
@@ -68,7 +69,8 @@ export function configureSession(partition = PARTITION): Session {
 
   // The User-Agent is set app-wide (app.userAgentFallback, see main/index.ts), not here:
   // a session override would cost the client hints that must accompany it.
-  installIdentity(ses);
+  installIdentity();
+  installHooks();
 
   ses.setPermissionRequestHandler((wc, permission, callback, details) => {
     if (ALWAYS.has(permission)) return callback(true);
@@ -89,7 +91,25 @@ export function configureSession(partition = PARTITION): Session {
   serveInternalPages(ses);
   for (const cb of sessionListeners) cb(ses);
   if (shieldsOn && blocker) blocker.enableBlockingInSession(ses);
+  installHub(ses); // last: Ghostery registers its own listeners, the hub takes over and calls it
   return ses;
+}
+
+let hooksInstalled = false;
+/** Shields answer through the hub, so the privacy and identity hooks run alongside them. */
+function installHooks(): void {
+  if (hooksInstalled) return;
+  hooksInstalled = true;
+  onBeforeRequest((d) => {
+    const b = shieldsOn ? blocker : null;
+    if (!b) return undefined;
+    return new Promise((resolve) => b.onBeforeRequest(d, resolve));
+  });
+  onHeadersReceived((d, headers) => {
+    const b = shieldsOn ? blocker : null;
+    if (!b) return undefined;
+    return new Promise((resolve) => b.onHeadersReceived({ ...d, responseHeaders: headers }, resolve));
+  });
 }
 
 // ---- Shields: ad and tracker blocking (Ghostery engine with EasyList and EasyPrivacy) ----
@@ -122,11 +142,17 @@ export async function setShields(enabled: boolean): Promise<void> {
   if (enabled) {
     const b = await loadBlocker();
     if (b && !shieldsOn) {
-      for (const ses of allSessions()) b.enableBlockingInSession(ses);
+      for (const ses of allSessions()) {
+        b.enableBlockingInSession(ses);
+        installHub(ses);
+      }
       shieldsOn = true;
     }
   } else if (blocker && shieldsOn) {
-    for (const ses of allSessions()) blocker.disableBlockingInSession(ses);
+    for (const ses of allSessions()) {
+      blocker.disableBlockingInSession(ses);
+      installHub(ses);
+    }
     shieldsOn = false;
   }
 }

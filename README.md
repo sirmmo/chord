@@ -121,6 +121,9 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   page lists everything with pause, resume, cancel, retry, open and show-in-folder.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
+- **Private by default**: encrypted DNS through Quad9, Global Privacy Control on every
+  request, no cookies to or from third parties, HTTPS first, and e-mail aliases from
+  SimpleLogin or Firefox Relay on any form. See "Privacy" below.
 - **Little windows**: links that arrive from other apps open in a small window of their
   own, with back, forward, the title and an "Open in Chord" button (`⌘⇧O`) that moves the
   page into the current space; `Esc` closes it. Any page can be sent to one from the
@@ -499,6 +502,33 @@ if ('chord' in navigator && (await navigator.chord.requestTabs())) {
 | events `tabclosed` · `tabchanged` | `e.detail` carries `id` (and `url`, `title`). |
 
 Closing the page closes its subspace. Type declarations: [`docs/chord-page-api.d.ts`](docs/chord-page-api.d.ts).
+
+## Privacy
+
+Chord is an Arc that puts privacy first, and the defaults show it. Everything here is on
+from the first launch and lives under Settings → Privacy:
+
+- **Encrypted DNS**: name lookups go over DNS-over-HTTPS to [Quad9](https://quad9.net/),
+  a Swiss non-profit resolver that blocks known malware domains and keeps no logs of who
+  asked. Cloudflare, Mullvad, your own DoH endpoint or the system resolver are a click away.
+- **Global Privacy Control**: every request carries `Sec-GPC: 1` and `DNT: 1`, and pages
+  see `navigator.globalPrivacyControl`. Under the CCPA and similar laws, GPC is a legally
+  binding "do not sell or share my data".
+- **No third-party cookies**: cookies are neither sent to nor accepted from a domain other
+  than the page's, which stops most cross-site tracking. A few embedded sign-ins and
+  payment frames need it off; the switch is in Settings.
+- **HTTPS first**: a plain `http://` page address is opened over HTTPS. When the site has
+  no HTTPS, Chord falls back for the session and says so in a toast. Local addresses and
+  explicit ports are left alone.
+- **E-mail aliases**: with an API key from [SimpleLogin](https://simplelogin.io/) (Proton)
+  or [Firefox Relay](https://relay.firefox.com/), right-click an e-mail field → "New Email
+  Alias for this site" asks the service for a fresh address, types it in and copies it.
+- **Shields** (Add-ins) block ads and trackers with EasyList and EasyPrivacy.
+
+Companions Chord cannot replace but points you to: [Proton VPN](https://protonvpn.com/)
+for the network itself, and EFF's [Privacy Badger](https://privacybadger.org/) for
+heuristic tracker detection, installable from its Chrome Web Store page (parts that lean
+on Chrome-only APIs may not work in Electron).
 
 ## Connected spaces
 

@@ -405,6 +405,8 @@ export function pageContextMenu(c: Controller, tabId: TabId, wc: WebContents, p:
   }
   if (p.isEditable) {
     items.push({ role: 'undo' }, { role: 'redo' }, sep, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'pasteAndMatchStyle' }, { role: 'selectAll' }, sep);
+    const kind = (p as unknown as { formControlType?: string }).formControlType ?? '';
+    if (!kind || /email|text|input/.test(kind)) items.push({ label: `New Email Alias for ${hostOf(p.pageURL) || 'this site'}`, click: () => c.dispatch({ type: 'privacy.alias', tabId }) }, sep);
   }
   items.push(
     { label: 'Back', enabled: wc.navigationHistory.canGoBack(), click: () => wc.navigationHistory.goBack() },

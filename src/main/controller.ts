@@ -43,6 +43,7 @@ import { LittleWindows } from './little.ts';
 import { EaselManager } from './easels.ts';
 import { LiveManager } from './live.ts';
 import { ConnectedManager } from './connected.ts';
+import { PrivacyManager } from './privacy.ts';
 import { brokerProblem, joinLink, newConnected, parseJoinLink } from '../shared/connected.ts';
 import { PeekManager } from './peek.ts';
 import { spaceForUrl } from '../shared/routes.ts';
@@ -92,6 +93,7 @@ export class Controller {
   readonly easels = new EaselManager(this);
   readonly live = new LiveManager(this);
   readonly connected = new ConnectedManager(this);
+  readonly privacy = new PrivacyManager(this);
   readonly peek = new PeekManager(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
@@ -208,6 +210,7 @@ export class Controller {
     this.easels.init();
     this.live.init();
     this.connected.init();
+    this.privacy.init();
     this.ai.init();
     this.capture.init();
     this.pageTabs.init();
@@ -537,6 +540,7 @@ export class Controller {
     if (soundChanged) this.tray.refresh();
     this.pageTabs.diff(prev, next);
     this.connected.diff(prev, next);
+    if (prev.settings.privacy !== next.settings.privacy) this.privacy.apply();
     if (prev.settings.updates.check !== next.settings.updates.check) this.updates.schedule();
     if (prev.settings.mcp.enabled !== next.settings.mcp.enabled || prev.settings.mcp.port !== next.settings.mcp.port) this.mcp.sync();
     if (prev.settings.googleSignIn !== next.settings.googleSignIn) setGoogleSignIn(next.settings.googleSignIn);
@@ -1019,6 +1023,9 @@ export class Controller {
       case 'connected.reconnect':
         this.connected.reconnect();
         return;
+      case 'privacy.alias':
+        void this.newAlias(cmd.tabId);
+        return;
       case 'tab.share': {
         const tab = cmd.id ? this.state.tabs[cmd.id] : focusedTab(this.state);
         if (!tab || isInternal(tab.url)) return;
@@ -1345,6 +1352,27 @@ export class Controller {
     const name = await this.prompt('New subspace', 'Subspace name', tab.title.slice(0, 30));
     this.overlay?.hide();
     if (name && name.trim()) this.apply({ type: 'group.create', spaceId: tab.spaceId, name: name.trim(), tabIds: [tabId] });
+  }
+
+  /** A fresh e-mail alias for the site in this tab, typed into the focused field and copied. */
+  private async newAlias(tabId: TabId): Promise<void> {
+    const tab = this.state.tabs[tabId];
+    const wc = this.tabs.get(tabId)?.webContents;
+    if (!tab || !wc) return;
+    if (this.state.settings.privacy.aliases.provider === 'none') {
+      this.sendSidebar({ kind: 'toast', text: 'Choose an alias service first', detail: 'Settings → Privacy → Email aliases' });
+      this.openInternal('chord://settings/', 'privacy');
+      return;
+    }
+    const host = hostOf(tab.url) || 'site';
+    try {
+      const alias = await this.privacy.createAlias(host);
+      clipboard.writeText(alias);
+      if (!wc.isDestroyed()) wc.insertText(alias);
+      this.sendSidebar({ kind: 'toast', text: 'New alias', detail: `${alias} · copied` });
+    } catch (err) {
+      this.sendSidebar({ kind: 'toast', text: 'Could not create an alias', detail: err instanceof Error ? err.message : String(err) });
+    }
   }
 
   /** Make a space connected (shared over MQTT), or disconnect it after a confirmation. */

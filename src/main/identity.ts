@@ -1,4 +1,5 @@
-import { ipcMain, type Session } from 'electron';
+import { ipcMain } from 'electron';
+import { onBeforeSendHeaders } from './webrequest.ts';
 import type { GoogleSignIn } from '../shared/types.ts';
 
 /**
@@ -12,7 +13,7 @@ import type { GoogleSignIn } from '../shared/types.ts';
  * with the header through the page preload so the two never disagree.
  */
 
-const GOOGLE_HOSTS = ['https://accounts.google.com/*', 'https://accounts.youtube.com/*'];
+const GOOGLE_HOST_RE = /^https:\/\/accounts\.(google|youtube)\.com\//i;
 
 let mode: GoogleSignIn = 'firefox';
 let electronUserAgent = '';
@@ -58,18 +59,17 @@ export function isGoogleSignInHost(host: string): boolean {
   return host === 'accounts.google.com' || host === 'accounts.youtube.com';
 }
 
-/** Rewrite request headers for the sign-in hosts of one session. */
-export function installIdentity(ses: Session): void {
-  ses.webRequest.onBeforeSendHeaders({ urls: GOOGLE_HOSTS }, (details, callback) => {
+let installed = false;
+/** Rewrite request headers for the sign-in hosts (every session, through the webRequest hub). */
+export function installIdentity(): void {
+  if (installed) return;
+  installed = true;
+  onBeforeSendHeaders((details, headers) => {
+    if (!GOOGLE_HOST_RE.test(details.url)) return;
     const ident = identityFor();
-    if (ident.mode === 'off' || !ident.userAgent) return callback({});
-    const headers: Record<string, string> = {};
-    for (const [k, v] of Object.entries(details.requestHeaders)) {
-      if (ident.mode === 'firefox' && /^sec-ch-ua/i.test(k)) continue; // Firefox sends no Client Hints
-      headers[k] = v;
-    }
+    if (ident.mode === 'off' || !ident.userAgent) return;
+    if (ident.mode === 'firefox') for (const k of Object.keys(headers)) if (/^sec-ch-ua/i.test(k)) delete headers[k]; // Firefox sends no Client Hints
     headers['User-Agent'] = ident.userAgent;
-    callback({ requestHeaders: headers });
   });
 }
 

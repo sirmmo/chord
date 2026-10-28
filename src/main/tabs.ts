@@ -313,7 +313,7 @@ export class TabManager {
     });
     wc.on('did-fail-load', (_e, code, description, url, isMainFrame) => {
       if (code !== -3) pageLine(id, `load failed ${code} ${description} ${isMainFrame ? '' : '(subframe) '}${url.slice(0, 120)}`);
-      if (isMainFrame && code !== -3) this.showError(wc, code, description, url);
+      if (isMainFrame && code !== -3 && !this.c.privacy.failed(wc, url, code)) this.showError(wc, code, description, url);
     });
     wc.on('will-navigate', (e, url) => {
       // Web pages may not navigate into Chord's own pages; the user does that from the chrome.

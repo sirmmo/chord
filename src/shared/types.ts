@@ -441,6 +441,8 @@ export interface Settings {
   archiveAfterHours: number;
   /** ad and tracker blocking */
   shields: boolean;
+  /** encrypted DNS, Global Privacy Control, third-party cookies, HTTPS first, e-mail aliases */
+  privacy: PrivacySettings;
   searchEngine: SearchEngine;
   /** how Chord presents itself to accounts.google.com, which rejects embedded browsers */
   googleSignIn: GoogleSignIn;
@@ -564,6 +566,20 @@ export interface Bookmark {
 }
 
 export type LinkrollTheme = 'elegant' | 'pragmatic' | 'digg';
+export interface PrivacySettings {
+  /** DNS-over-HTTPS resolver; 'system' leaves name resolution to the OS */
+  dns: 'quad9' | 'cloudflare' | 'mullvad' | 'system' | 'custom';
+  /** https:// DoH endpoint when dns is 'custom' */
+  dnsCustom?: string;
+  /** send Sec-GPC and DNT, expose navigator.globalPrivacyControl */
+  gpc: boolean;
+  /** block cookies to and from third parties */
+  thirdPartyCookies: boolean;
+  /** upgrade plain http:// page loads to https://, falling back when the site has none */
+  httpsFirst: boolean;
+  /** e-mail alias service for "New Email Alias" on forms */
+  aliases: { provider: 'none' | 'simplelogin' | 'relay'; key?: string };
+}
 export interface MqttSettings {
   broker: string;
   username?: string;
@@ -755,6 +771,7 @@ export type Command =
   | { type: 'space.copyJoinLink'; id: SpaceId }
   | { type: 'space.joinPrompt'; link?: string }
   | { type: 'connected.reconnect' }
+  | { type: 'privacy.alias'; tabId: TabId }
   | { type: 'tab.share'; id?: TabId; withNote?: boolean }
   | { type: 'share.copy'; id: string }
   | { type: 'tab.iconPrompt'; id: TabId }
@@ -884,7 +901,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'tab.renamePrompt', 'tab.iconPrompt', 'space.shareToggle', 'space.copyShareLink', 'space.connectToggle', 'space.copyJoinLink', 'space.joinPrompt', 'connected.reconnect', 'tab.share', 'share.copy', 'extension.pickFolder', 'extension.install', 'extension.update', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
+  'tab.renamePrompt', 'tab.iconPrompt', 'space.shareToggle', 'space.copyShareLink', 'space.connectToggle', 'space.copyJoinLink', 'space.joinPrompt', 'connected.reconnect', 'privacy.alias', 'tab.share', 'share.copy', 'extension.pickFolder', 'extension.install', 'extension.update', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'group.newLive', 'group.refresh', 'group.liveEdit', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'peek.nav', 'peek.open', 'peek.close', 'easel.open', 'easel.create', 'easel.rename', 'easel.remove', 'easel.put', 'easel.removeItem', 'easel.addPage', 'easel.snapshot', 'easel.clip', 'easel.image', 'easel.imageUrl', 'easel.export', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);

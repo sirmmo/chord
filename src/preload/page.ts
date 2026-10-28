@@ -623,6 +623,23 @@ try {
   /* main not ready */
 }
 
+// Global Privacy Control: pages can read the same signal the Sec-GPC header carries.
+function gpcHook(): void {
+  try {
+    Object.defineProperty(Object.getPrototypeOf(navigator) as object, 'globalPrivacyControl', { get: { get() { return true; } }.get, configurable: true, enumerable: true });
+  } catch {
+    /* not configurable */
+  }
+}
+if (pageHooks) {
+  try {
+    const priv = ipcRenderer.sendSync('privacy') as { gpc: boolean } | undefined;
+    if (priv?.gpc) runInMainWorld(gpcHook, []);
+  } catch {
+    /* main not ready */
+  }
+}
+
 // Google's sign-in pages get a different identity (see main/identity.ts); the page must see the same one.
 if (pageHooks && /^(accounts\.google\.com|accounts\.youtube\.com)$/.test(location.host)) {
   try {
