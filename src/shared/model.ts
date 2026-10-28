@@ -4,6 +4,7 @@
 import type { Action, ArchivedTab, Settings, Space, SpaceId, State, Tab, TabGroup, TabId, Theme, WindowState } from './types.ts';
 import { titleFor } from './url.ts';
 import { importConfig } from './config.ts';
+import { mergeBookmarks, normalizeBookmarkUrl, normalizeTags, pruneTombstones, sanitize as sanitizeBookmark } from './bookmarks.ts';
 import { cellCount, parseTiling, presetsFor } from './tiling.ts';
 import { isBoost } from './boosts.ts';
 import { clampPanel, isModeId } from './modes.ts';
@@ -25,7 +26,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', googleSignIn: 'firefox', passkeys: 'chord', flags: {}, pageTabs: [], updates: { check: true, auto: true }, mcp: { enabled: false, port: 23120 }, sourceror: { server: 'http://127.0.0.1:5010', checkLinks: true, useLlm: true, discover: true } };
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', googleSignIn: 'firefox', passkeys: 'chord', sync: { enabled: false, user: '', privateRepo: 'chord-sync', publicRepo: 'chord-bookmarks' }, flags: {}, pageTabs: [], updates: { check: true, auto: true }, mcp: { enabled: false, port: 23120 }, sourceror: { server: 'http://127.0.0.1:5010', checkLinks: true, useLlm: true, discover: true } };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -53,9 +54,12 @@ export function mergeSettings(raw: unknown): Settings {
   const mcp = { enabled: rm.enabled === true, port: typeof rm.port === 'number' && rm.port >= 1024 && rm.port <= 65535 ? Math.round(rm.port) : 23120 };
   const googleSignIn: Settings['googleSignIn'] = r.googleSignIn === 'electron' || r.googleSignIn === 'off' ? r.googleSignIn : 'firefox';
   const passkeys: Settings['passkeys'] = r.passkeys === 'system' ? 'system' : 'chord';
+  const rsync = (typeof r.sync === 'object' && r.sync !== null ? r.sync : {}) as Partial<Settings['sync']>;
+  const repoName = (v: unknown, d: string) => (typeof v === 'string' && /^[\w.-]{1,100}$/.test(v) ? v : d);
+  const sync: Settings['sync'] = { enabled: rsync.enabled === true, user: typeof rsync.user === 'string' ? rsync.user.slice(0, 60) : '', privateRepo: repoName(rsync.privateRepo, 'chord-sync'), publicRepo: repoName(rsync.publicRepo, 'chord-bookmarks') };
   const rs = (typeof r.sourceror === 'object' && r.sourceror !== null ? r.sourceror : {}) as Partial<Settings['sourceror']>;
   const sourceror = { server: typeof rs.server === 'string' && /^https?:\/\//.test(rs.server) ? rs.server.replace(/\/+$/, '') : 'http://127.0.0.1:5010', checkLinks: rs.checkLinks !== false, useLlm: rs.useLlm !== false, discover: rs.discover !== false };
-  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags, pageTabs, updates, mcp, googleSignIn, passkeys, sourceror };
+  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags, pageTabs, updates, mcp, googleSignIn, passkeys, sync, sourceror };
   merged.panelWidth = clampPanel(typeof merged.panelWidth === 'number' ? merged.panelWidth : 360);
   return merged;
 }
@@ -83,6 +87,7 @@ export function initialState(ctx: Ctx): State {
   return {
     version: 1,
     spaces: [space],
+    bookmarks: [],
     activeSpaceId: space.id,
     tabs: {},
     favorites: [],
@@ -101,6 +106,7 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
   const s: State = {
     version: 1,
     spaces: r.spaces,
+    bookmarks: Array.isArray(r.bookmarks) ? r.bookmarks.filter((b) => b && typeof b.id === 'string' && typeof b.url === 'string').map(sanitizeBookmark) : [],
     activeSpaceId: r.activeSpaceId ?? r.spaces[0].id,
     tabs: r.tabs ?? {},
     favorites: r.favorites ?? [],
@@ -471,6 +477,45 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       const tab = s.tabs[a.id];
       if (!tab) return prev;
       Object.assign(tab, a.patch);
+      return s;
+    }
+    case 'bookmark.add': {
+      const url = normalizeBookmarkUrl(a.url);
+      if (!/^(https?|file):/i.test(url)) return prev;
+      const existing = s.bookmarks.find((b) => !b.deletedAt && normalizeBookmarkUrl(b.url) === url);
+      if (existing) {
+        existing.public = a.public;
+        if (a.title) existing.title = a.title.slice(0, 300);
+        if (a.tags) existing.tags = normalizeTags([...existing.tags, ...a.tags]);
+        if (a.note && !existing.note) existing.note = a.note.slice(0, 2000);
+        existing.updatedAt = now;
+        return s;
+      }
+      s.bookmarks.unshift({ id: ctx.newId(), url, title: (a.title || url).slice(0, 300), note: (a.note ?? '').slice(0, 2000), tags: normalizeTags(a.tags ?? []), public: a.public, addedAt: now, updatedAt: now });
+      return s;
+    }
+    case 'bookmark.update': {
+      const b = s.bookmarks.find((x) => x.id === a.id && !x.deletedAt);
+      if (!b) return prev;
+      if (typeof a.patch.title === 'string') b.title = a.patch.title.slice(0, 300);
+      if (typeof a.patch.note === 'string') b.note = a.patch.note.slice(0, 2000);
+      if (a.patch.tags) b.tags = normalizeTags(a.patch.tags);
+      if (typeof a.patch.public === 'boolean') b.public = a.patch.public;
+      if (typeof a.patch.url === 'string' && /^(https?|file):/i.test(a.patch.url)) b.url = normalizeBookmarkUrl(a.patch.url);
+      b.updatedAt = now;
+      return s;
+    }
+    case 'bookmark.remove': {
+      const b = s.bookmarks.find((x) => x.id === a.id && !x.deletedAt);
+      if (!b) return prev;
+      b.deletedAt = now;
+      b.updatedAt = now;
+      return s;
+    }
+    case 'bookmarks.merge': {
+      const { merged, changed } = mergeBookmarks(s.bookmarks, a.remote);
+      if (!changed) return prev;
+      s.bookmarks = merged;
       return s;
     }
     case 'space.setCurators': {
@@ -850,6 +895,11 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
     }
     case 'tick': {
       let changed = false;
+      const pruned = pruneTombstones(s.bookmarks, now);
+      if (pruned.length !== s.bookmarks.length) {
+        s.bookmarks = pruned;
+        changed = true;
+      }
       for (const sp of s.spaces) {
         if (sp.lock && !isLocked(sp) && sp.id !== s.activeSpaceId && now - (sp.leftAt ?? now) >= AUTO_LOCK_MS) {
           lockSpace(s, sp);

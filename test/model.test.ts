@@ -459,3 +459,20 @@ test('tabs kept loaded wake at launch and after unlocking, and are never archive
   s = reduce(s, { type: 'tab.keepLoaded', id: 'id3', on: false }, ctx(later));
   assert.equal(s.tabs.id3.keepLoaded, undefined);
 });
+
+test('bookmarks: add dedupes by URL, remove leaves a tombstone, merge takes remote additions', () => {
+  let s = reduce(fresh(), { type: 'bookmark.add', url: 'https://x.test/page#top', title: 'X', public: false, tags: ['A'] }, ctx(10));
+  assert.equal(s.bookmarks.length, 1);
+  assert.equal(s.bookmarks[0].url, 'https://x.test/page');
+  s = reduce(s, { type: 'bookmark.add', url: 'https://x.test/page', title: 'X again', public: true, tags: ['b'] }, ctx(20));
+  assert.equal(s.bookmarks.length, 1, 'same URL updates in place');
+  assert.equal(s.bookmarks[0].public, true);
+  assert.deepEqual(s.bookmarks[0].tags, ['a', 'b']);
+  const id = s.bookmarks[0].id;
+  s = reduce(s, { type: 'bookmark.remove', id }, ctx(30));
+  assert.equal(s.bookmarks[0].deletedAt, 30);
+  s = reduce(s, { type: 'bookmarks.merge', remote: [{ id: 'r1', url: 'https://r.test', title: 'R', note: '', tags: [], public: true, addedAt: 5, updatedAt: 5 }] }, ctx(40));
+  assert.ok(s.bookmarks.some((b) => b.id === 'r1'));
+  const restored = hydrate(JSON.parse(JSON.stringify(s)), ctx());
+  assert.equal(restored.bookmarks.length, 2);
+});

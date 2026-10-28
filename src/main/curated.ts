@@ -130,6 +130,7 @@ export class CuratedManager {
     const it = this.get(spaceId).items.find((x) => x.id === id);
     if (!it) return;
     it.saved = !it.saved;
+    if (it.saved) this.c.apply({ type: 'bookmark.add', url: it.url, title: it.title, public: false, tags: ['curated'], note: it.summary });
     this.save(spaceId);
   }
 

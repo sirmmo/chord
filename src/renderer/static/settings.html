@@ -10,7 +10,7 @@
 <body>
   <main class="page settings">
     <h1>Settings</h1>
-    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="boosts">Boosts</button><button data-v="passwords">Passwords</button><button data-v="ai">AI</button><button data-v="about">About</button></nav>
+    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="boosts">Boosts</button><button data-v="passwords">Passwords</button><button data-v="sync">Sync</button><button data-v="ai">AI</button><button data-v="about">About</button></nav>
     <section class="s-body">
 
       <div class="s-page" data-page="general">
@@ -183,6 +183,32 @@
           <div class="row"><button class="btn" id="s-ai-test">Test connection</button><span class="s-foot" style="margin:0" id="s-ai-state"></span></div>
         </div>
         <p class="s-foot">Local models need no key: run Ollama (<code>ollama run llama3.1</code>) and keep the default base URL. For Anthropic the model defaults to <code>claude-opus-5-5</code>; requests opt into Anthropic’s server-side fallback so a safety decline is retried on another Claude model. Pages can offer tools to the assistant with <code>navigator.modelContext.registerTool(...)</code> (WebMCP); Chord provides that API when Chromium does not.</p>
+      </div>
+      <div class="s-page" data-page="sync">
+        <p class="s-foot" style="margin-top:0">Chord keeps your spaces and bookmarks in two GitHub repositories it creates for you: a private one (<code>chord-sync</code>: spaces, favorites, appearance, every bookmark) and a public one (<code>chord-bookmarks</code>: your public bookmarks as a page on GitHub Pages, with an RSS feed others can follow in a curated space). Private, password-locked spaces never leave this computer. Changes are pushed about half a minute after you make them and pulled at launch and every 15 minutes; pulls only add, never remove.</p>
+        <div id="s-sync-off">
+          <div class="s-grid">
+            <label>Token</label>
+            <div>
+              <input type="password" id="s-sync-token" class="wide" placeholder="ghp_… or github_pat_…" autocomplete="off" spellcheck="false">
+              <p class="s-foot">A GitHub personal access token with the <code>repo</code> scope (classic) or, fine-grained, with Administration, Contents and Pages write access on all repositories, so Chord can create the two repositories and write to them. <a href="https://github.com/settings/tokens/new?scopes=repo&description=Chord%20sync" id="s-sync-token-link">Create one on GitHub</a>. It is stored encrypted with your operating system's keychain.</p>
+            </div>
+            <label></label>
+            <div><button class="btn primary" id="s-sync-connect">Connect and create the repositories</button></div>
+          </div>
+        </div>
+        <div id="s-sync-on" hidden>
+          <div class="s-grid">
+            <label>Account</label><div id="s-sync-user"></div>
+            <label>Repositories</label><div id="s-sync-repos"></div>
+            <label>Public page</label><div id="s-sync-pages"></div>
+            <label>Status</label><div id="s-sync-state"></div>
+            <label></label>
+            <div class="row"><button class="btn" id="s-sync-now">Sync now</button><button class="btn danger" id="s-sync-disconnect">Disconnect</button></div>
+          </div>
+          <p class="s-foot">Disconnecting forgets the token on this computer; the repositories stay as they are.</p>
+        </div>
+        <p class="s-foot" id="s-sync-error"></p>
       </div>
       <div class="s-page" data-page="about">
         <div class="about-head">

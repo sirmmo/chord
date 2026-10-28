@@ -295,6 +295,8 @@ export interface Settings {
   googleSignIn: GoogleSignIn;
   /** who answers WebAuthn requests: Chord's built-in passkeys or the system */
   passkeys: PasskeysMode;
+  /** GitHub sync of spaces and bookmarks */
+  sync: SyncSettings;
   /** Chromium troubleshooting switches applied at the next launch */
   flags: TroubleFlags;
   /** origins allowed to open and close tabs of their own through navigator.chord */
@@ -379,9 +381,43 @@ export interface TroubleFlags {
   noGpu?: boolean;
 }
 
+/** A saved link. Public ones are published to the user's GitHub Pages linkroll. */
+export interface Bookmark {
+  id: string;
+  url: string;
+  title: string;
+  note: string;
+  tags: string[];
+  public: boolean;
+  addedAt: number;
+  updatedAt: number;
+  /** a deletion that still has to reach other devices */
+  deletedAt?: number;
+}
+
+export interface SyncSettings {
+  enabled: boolean;
+  /** GitHub login */
+  user: string;
+  privateRepo: string;
+  publicRepo: string;
+}
+export interface SyncStatus {
+  connected: boolean;
+  user: string;
+  privateRepo: string;
+  publicRepo: string;
+  pagesUrl: string;
+  lastPush: number;
+  lastPull: number;
+  busy: boolean;
+  error: string;
+}
+
 export interface State {
   version: 1;
   spaces: Space[];
+  bookmarks: Bookmark[];
   activeSpaceId: SpaceId;
   tabs: Record<TabId, Tab>;
   favorites: TabId[];
@@ -409,6 +445,10 @@ export type Action =
   | { type: 'tab.sleep'; id: TabId }
   | { type: 'tab.keepLoaded'; id: TabId; on: boolean }
   | { type: 'space.setCurators'; id: SpaceId; curators: Curator[] }
+  | { type: 'bookmark.add'; url: string; title: string; public: boolean; tags?: string[]; note?: string }
+  | { type: 'bookmark.update'; id: string; patch: Partial<Pick<Bookmark, 'title' | 'note' | 'tags' | 'public' | 'url'>> }
+  | { type: 'bookmark.remove'; id: string }
+  | { type: 'bookmarks.merge'; remote: Bookmark[] }
   | { type: 'tab.volume'; id: TabId; volume: number }
   | { type: 'tab.pin'; id: TabId }
   | { type: 'tab.unpin'; id: TabId }
@@ -501,6 +541,11 @@ export type Command =
   | { type: 'space.newProfile'; id: SpaceId }
   | { type: 'space.forgetProfile'; id: SpaceId }
   | { type: 'prompt.answer'; token: string; text: string }
+  | { type: 'bookmarks.open' }
+  | { type: 'bookmark.page'; public: boolean; id?: TabId }
+  | { type: 'sync.connect'; token: string }
+  | { type: 'sync.disconnect' }
+  | { type: 'sync.now' }
   | { type: 'curated.add'; spaceId: SpaceId; input: string }
   | { type: 'curated.remove'; spaceId: SpaceId; id: string }
   | { type: 'curated.refresh'; spaceId: SpaceId }
@@ -565,7 +610,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmark.page', 'sync.connect', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
 
 export type Message = Action | Command;
@@ -766,4 +811,6 @@ export interface ChordApi {
   getSources(spaceId: SpaceId): Promise<SourcesStatus>;
   onCurated(cb: (status: CuratedStatus) => void): () => void;
   getCurated(spaceId: SpaceId): Promise<CuratedStatus>;
+  onSync(cb: (status: SyncStatus) => void): () => void;
+  getSync(): Promise<SyncStatus>;
 }

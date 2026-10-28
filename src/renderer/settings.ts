@@ -1,7 +1,7 @@
 // chord://settings — the settings page.
 
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
-import type { AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasskeysStatus, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
+import type { AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasskeysStatus, SyncStatus, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { SEARCH_ENGINES } from '../shared/url.ts';
@@ -55,7 +55,7 @@ const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = {};
 
-const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'passwords', 'ai', 'about'];
+const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'passwords', 'sync', 'ai', 'about'];
 const showPage = (raw: string) => {
   const [page, arg] = raw.split(':');
   if (page === 'boosts' && arg) prefillBoost(decodeURIComponent(arg));
@@ -588,6 +588,51 @@ function renderPasskeys(): void {
         ),
       ),
   );
+}
+
+// ---- sync page ----
+
+let syncStatus: SyncStatus | null = null;
+const sSyncToken = $<HTMLInputElement>('#s-sync-token');
+$('#s-sync-connect').onclick = () => {
+  const token = sSyncToken.value.trim();
+  if (!token) {
+    sSyncToken.focus();
+    return;
+  }
+  dispatch({ type: 'sync.connect', token });
+  sSyncToken.value = '';
+};
+$('#s-sync-token-link').onclick = (e) => {
+  e.preventDefault();
+  dispatch({ type: 'tab.new', url: 'https://github.com/settings/tokens/new?scopes=repo&description=Chord%20sync', activate: true });
+};
+$('#s-sync-now').onclick = () => dispatch({ type: 'sync.now' });
+$('#s-sync-disconnect').onclick = () => dispatch({ type: 'sync.disconnect' });
+api.onSync((st) => {
+  syncStatus = st;
+  renderSync();
+});
+void api.getSync().then((st) => {
+  syncStatus = st;
+  renderSync();
+});
+
+function renderSync(): void {
+  const st = syncStatus;
+  if (!st) return;
+  $('#s-sync-off').hidden = st.connected;
+  $('#s-sync-on').hidden = !st.connected;
+  ($('#s-sync-connect') as HTMLButtonElement).disabled = st.busy;
+  $('#s-sync-connect').textContent = st.busy ? 'Connecting…' : 'Connect and create the repositories';
+  $('#s-sync-error').textContent = st.error;
+  if (!st.connected) return;
+  const link = (url: string, text = url) => h('a', { href: url, onclick: (e: MouseEvent) => { e.preventDefault(); dispatch({ type: 'tab.new', url, activate: true }); } }, text);
+  $('#s-sync-user').replaceChildren(link(`https://github.com/${st.user}`, st.user));
+  $('#s-sync-repos').replaceChildren(link(`https://github.com/${st.user}/${st.privateRepo}`, st.privateRepo), ' (private) · ', link(`https://github.com/${st.user}/${st.publicRepo}`, st.publicRepo), ' (public)');
+  $('#s-sync-pages').replaceChildren(link(st.pagesUrl), h('span', { class: 's-foot', style: 'margin-left:8px' }, 'GitHub serves it a minute or two after the first push'));
+  const t = (ts: number) => (ts ? new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'never');
+  $('#s-sync-state').textContent = `${st.busy ? 'Syncing… · ' : ''}last push ${t(st.lastPush)} · last pull ${t(st.lastPull)}`;
 }
 
 // ---- ai page ----

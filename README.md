@@ -112,6 +112,17 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   page lists everything with pause, resume, cancel, retry, open and show-in-folder.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
   engine). Toggle from the command bar.
+- **Bookmarks** (`⌘⌥B`, page at `chord://bookmarks`): save any page privately (`⌘⇧B`, the
+  tab menu, the command bar) or publicly, with tags and a note, search and filter them.
+  Saving an item in a curated space bookmarks it too.
+- **Sync through GitHub** (Settings → Sync): paste a personal access token with the `repo`
+  scope and Chord creates two repositories for you. `chord-sync` (private) holds your
+  spaces, favorites, appearance and every bookmark; `chord-bookmarks` (public) holds the
+  public bookmarks as `bookmarks.json`, an RSS `feed.xml` and a linkroll site that Chord
+  publishes on GitHub Pages (`https://<you>.github.io/chord-bookmarks/`), so anyone can
+  follow your finds in a curated space. Changes push half a minute after you make them;
+  pulls happen at launch and every 15 minutes and only ever add, never remove. Private
+  spaces stay out of it. The token is stored encrypted with the OS keychain.
 - **Curated mode**: a space follows curators — people and feeds that share sites,
   repositories and finds — and their items arrive in the side panel, newest first, with
   unread marks, filters (sites, repos, saved) and one-click opening in the space. Follow

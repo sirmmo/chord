@@ -79,6 +79,9 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Settings…', accelerator: isMac ? undefined : 'Ctrl+,', click: d({ type: 'settings.open' }) },
         { label: 'Downloads', accelerator: 'CmdOrCtrl+Shift+J', click: d({ type: 'downloads.open' }) },
         { label: 'History', accelerator: 'CmdOrCtrl+Y', click: d({ type: 'history.open' }) },
+        { label: 'Bookmarks', accelerator: 'CmdOrCtrl+Alt+B', click: d({ type: 'bookmarks.open' }) },
+        { label: 'Bookmark This Page', accelerator: 'CmdOrCtrl+Shift+B', click: d({ type: 'bookmark.page', public: false }) },
+        { label: 'Bookmark This Page Publicly', click: d({ type: 'bookmark.page', public: true }) },
         { label: 'Picture in Picture', accelerator: 'CmdOrCtrl+Alt+P', click: d({ type: 'media.pip' }) },
         { label: 'Side Panel', accelerator: 'CmdOrCtrl+Shift+U', type: 'checkbox', checked: c.state.settings.panelOpen, click: d({ type: 'panel.toggle' }) },
         sep,
@@ -200,6 +203,7 @@ export function tabContextMenu(c: Controller, id: TabId): void {
   }
   items.push(sep);
   items.push({ label: 'Keep Loaded', type: 'checkbox', checked: Boolean(tab.keepLoaded), click: d({ type: 'tab.keepLoaded', id, on: !tab.keepLoaded }) });
+  items.push({ label: 'Bookmark', submenu: [{ label: 'Private', click: d({ type: 'bookmark.page', public: false, id }) }, { label: 'Public (on your linkroll)', click: d({ type: 'bookmark.page', public: true, id }) }] });
   if (tab.awake) {
     items.push({ label: tab.muted ? 'Unmute' : 'Mute', click: d({ type: 'tab.mute', id }) });
   items.push(volumeMenu(c, tab));

@@ -37,6 +37,7 @@ import { PIP_JS } from './pip.ts';
 import { installSpace } from './installer.ts';
 import { ResearchManager } from './research.ts';
 import { CuratedManager } from './curated.ts';
+import { SyncManager } from './sync.ts';
 import { AiManager } from './ai.ts';
 import { modesMenu } from './menu.ts';
 import { installUrlFrom } from '../shared/installer.ts';
@@ -74,6 +75,7 @@ export class Controller {
   readonly passkeys = new PasskeyManager(this);
   readonly research = new ResearchManager(this);
   readonly curated = new CuratedManager(this);
+  readonly sync = new SyncManager(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
@@ -180,6 +182,7 @@ export class Controller {
     });
     this.research.init();
     this.curated.init();
+    this.sync.init();
     this.ai.init();
     this.capture.init();
     this.pageTabs.init();
@@ -486,6 +489,7 @@ export class Controller {
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.activeSpaceId !== next.activeSpaceId || JSON.stringify(activeSpace(prev).modes) !== JSON.stringify(activeSpace(next).modes)) this.curated.touch(next.activeSpaceId);
+    if (prev.bookmarks !== next.bookmarks || prev.spaces !== next.spaces || prev.favorites !== next.favorites || prev.settings.theme !== next.settings.theme || prev.tabs !== next.tabs) this.sync.schedulePush();
     if (prev.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() !== next.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() || JSON.stringify(prev.settings.sourceror) !== JSON.stringify(next.settings.sourceror)) this.sources.refresh();
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
     if (prev.settings.extensions !== next.settings.extensions && JSON.stringify(prev.settings.extensions) !== JSON.stringify(next.settings.extensions)) {
@@ -725,6 +729,24 @@ export class Controller {
         return;
       case 'history.open':
         this.openInternal('chord://history/');
+        return;
+      case 'bookmarks.open':
+        this.openInternal('chord://bookmarks/');
+        return;
+      case 'bookmark.page': {
+        const tab = cmd.id ? this.state.tabs[cmd.id] : focusedTab(this.state);
+        if (!tab || isInternal(tab.url)) return;
+        this.apply({ type: 'bookmark.add', url: tab.url, title: tab.title, public: cmd.public });
+        return;
+      }
+      case 'sync.connect':
+        void this.sync.connect(cmd.token);
+        return;
+      case 'sync.disconnect':
+        this.sync.disconnect();
+        return;
+      case 'sync.now':
+        void this.sync.syncNow();
         return;
       case 'guide.open':
         this.openInternal('chord://guide/');
