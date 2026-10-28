@@ -44,6 +44,15 @@ export interface TabGroup {
   owner?: TabId;
 }
 
+/** Air Traffic Control: links from a site land in a space (see shared/routes.ts). */
+export interface Route {
+  id: string;
+  /** site patterns with optional path prefix, comma separated */
+  pattern: string;
+  spaceId: SpaceId;
+  enabled: boolean;
+}
+
 export interface Boost {
   id: string;
   name: string;
@@ -379,6 +388,8 @@ export interface Settings {
   tilings: { name: string; spec: string }[];
   /** per-site CSS and JavaScript */
   boosts: Boost[];
+  /** Air Traffic Control rules, first match wins */
+  routes: Route[];
   /** pop a playing video out when switching away from its tab */
   autoPip: boolean;
   /** the side panel (modes) is shown for spaces that have modes */

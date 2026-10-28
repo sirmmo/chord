@@ -41,6 +41,7 @@ import { SyncManager } from './sync.ts';
 import { ReaderManager } from './reader.ts';
 import { LittleWindows } from './little.ts';
 import { EaselManager } from './easels.ts';
+import { spaceForUrl } from '../shared/routes.ts';
 import { AiManager } from './ai.ts';
 import { modesMenu } from './menu.ts';
 import { installUrlFrom } from '../shared/installer.ts';
@@ -421,6 +422,13 @@ export class Controller {
     if (manifest) {
       this.focusWindow();
       void installSpace(this, manifest);
+      return;
+    }
+    // Air Traffic Control: a rule for this site sends the link straight into its space
+    const routed = spaceForUrl(this.state.settings.routes, this.state.spaces, url);
+    if (routed) {
+      this.focusWindow();
+      this.apply({ type: 'tab.new', url, spaceId: routed, activate: true });
       return;
     }
     // a link from another app: a Little window, unless the user prefers tabs

@@ -51,6 +51,11 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
     navigate them, fetch URLs, and call tools that pages expose through WebMCP
     (`navigator.modelContext.registerTool`); Chord supplies that API when Chromium does
     not. Keys are stored with the OS keychain; nothing is sent until you write.
+- **Air Traffic Control** (Settings → Routes): rules that send links from chosen sites
+  into a chosen space, whichever space you are in. They apply to links arriving from
+  other apps and to pages a site opens in a new tab; what you click or type stays put.
+  Patterns like boosts, with an optional path (`github.com/myorg`); first match wins.
+  Right-click a page → "Route this site to a Space…". Part of the exported configuration.
 - **Boosts**: per-site CSS and JavaScript of yours. Right-click a page → "Boost this
   site…" or Settings → Boosts. Site lists like `youtube.com, *.google.com`; CSS applies
   live, JavaScript at page load. Part of the exported configuration.
@@ -532,7 +537,6 @@ Most of the original list has shipped: Little windows, sidebar peek, multiple wi
 boosts, picture-in-picture, downloads, history, passwords and passkeys, the app icon
 and auto-update. What is still open:
 
-- Air Traffic Control: rules that route links from chosen sites into a chosen space.
 - History import from Chrome, Brave, Edge and Arc; a Firefox importer.
 - Signed and notarised macOS and Windows builds.
 

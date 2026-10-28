@@ -10,7 +10,7 @@
 <body>
   <main class="page settings">
     <h1>Settings</h1>
-    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="boosts">Boosts</button><button data-v="passwords">Passwords</button><button data-v="sync">Sync</button><button data-v="ai">AI</button><button data-v="about">About</button></nav>
+    <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="boosts">Boosts</button><button data-v="routes">Routes</button><button data-v="passwords">Passwords</button><button data-v="sync">Sync</button><button data-v="ai">AI</button><button data-v="about">About</button></nav>
     <section class="s-body">
 
       <div class="s-page" data-page="general">
@@ -179,6 +179,15 @@ update();</pre>
           <textarea id="s-boost-css" rows="6" placeholder="/* CSS */&#10;#secondary { display: none !important; }" spellcheck="false"></textarea>
           <textarea id="s-boost-js" rows="6" placeholder="// JavaScript, runs at page load&#10;document.title = '🚀 ' + document.title;" spellcheck="false"></textarea>
           <div class="row"><button class="btn" id="s-boost-save">Save boost</button><button class="btn" id="s-boost-cancel" hidden>Cancel</button></div>
+        </div>
+      </div>
+      <div class="s-page" data-page="routes">
+        <p class="s-foot" style="margin-top:0">Air Traffic Control: links from the sites you name land in the space you choose, whichever space you are in. A rule applies to links that arrive from other apps and to pages a site opens in a new tab; what you click or type stays where you are. Patterns as for boosts (<code>example.com</code>, <code>*.example.com</code>, <code>*</code>), with an optional path: <code>github.com/myorg</code>. The first matching rule wins.</p>
+        <h3>Your routes</h3>
+        <div id="s-routes" class="boost-list"></div>
+        <h3>New route</h3>
+        <div class="boost-form">
+          <div class="row"><input type="text" id="s-route-pattern" placeholder="Sites, e.g. github.com/myorg, *.atlassian.net" style="flex:1"><select id="s-route-space"></select><button class="btn" id="s-route-save">Add route</button></div>
         </div>
       </div>
       <div class="s-page" data-page="passwords">

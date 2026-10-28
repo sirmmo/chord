@@ -1,5 +1,6 @@
 import { WebContentsView, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
+import { spaceForUrl } from '../shared/routes.ts';
 import type { State, Tab, TabId } from '../shared/types.ts';
 import { isLocked, spaceOfTab, visiblePanes } from '../shared/model.ts';
 import type { ChordWindow } from './window.ts';
@@ -358,7 +359,7 @@ export class TabManager {
             type: 'tab.new',
             id: newId,
             url,
-            spaceId: opener?.spaceId ?? this.c.state.activeSpaceId,
+            spaceId: spaceForUrl(this.c.state.settings.routes, this.c.state.spaces, url) ?? opener?.spaceId ?? this.c.state.activeSpaceId,
             activate: !background,
             adopt: true,
           });

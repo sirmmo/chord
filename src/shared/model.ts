@@ -7,6 +7,7 @@ import { importConfig } from './config.ts';
 import { mergeBookmarks, normalizeBookmarkUrl, normalizeTags, pruneTombstones, sanitize as sanitizeBookmark } from './bookmarks.ts';
 import { cellCount, parseTiling, presetsFor } from './tiling.ts';
 import { isBoost } from './boosts.ts';
+import { isRoute } from './routes.ts';
 import { clampPanel, isModeId } from './modes.ts';
 
 export const SPACE_COLORS = ['#5B6CFF', '#FF6B6B', '#2EC4B6', '#FFB347', '#B388FF', '#4CC9F0', '#F72585', '#8AC926'];
@@ -26,7 +27,7 @@ export function defaultTheme(): Theme {
 }
 
 export function defaultSettings(): Settings {
-  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', googleSignIn: 'firefox', passkeys: 'chord', sync: { enabled: false, user: '', privateRepo: 'chord-private', publicRepo: 'chord-bookmarks' }, littleWindows: true, autofill: true, passwordLock: false, passwordSync: false, flags: {}, pageTabs: [], updates: { check: true, auto: true }, mcp: { enabled: false, port: 23120 }, sourceror: { server: 'http://127.0.0.1:5010', checkLinks: true, useLlm: true, discover: true } };
+  return { theme: defaultTheme(), smartPages: true, askDownloadPath: false, downloadDir: null, closeToTray: false, tilings: [], boosts: [], routes: [], autoPip: false, panelOpen: true, panelWidth: 360, ai: { provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1' }, addressBar: false, extensions: [], sidebarOpen: true, sidebarWidth: 260, archiveAfterHours: 12, shields: true, searchEngine: 'duckduckgo', googleSignIn: 'firefox', passkeys: 'chord', sync: { enabled: false, user: '', privateRepo: 'chord-private', publicRepo: 'chord-bookmarks' }, littleWindows: true, autofill: true, passwordLock: false, passwordSync: false, flags: {}, pageTabs: [], updates: { check: true, auto: true }, mcp: { enabled: false, port: 23120 }, sourceror: { server: 'http://127.0.0.1:5010', checkLinks: true, useLlm: true, discover: true } };
 }
 
 /** Deep-ish merge of persisted settings over the defaults. */
@@ -42,6 +43,7 @@ export function mergeSettings(raw: unknown): Settings {
     ? r.tilings.filter((t): t is { name: string; spec: string } => typeof t === 'object' && t !== null && typeof t.name === 'string' && typeof t.spec === 'string' && parseTiling(t.spec) !== null)
     : [];
   const boosts = Array.isArray(r.boosts) ? r.boosts.filter(isBoost) : [];
+  const routes = Array.isArray(r.routes) ? r.routes.filter(isRoute) : [];
   const ai = { ...defaultSettings().ai, ...((r.ai ?? {}) as Partial<Settings['ai']>) };
   if (ai.provider !== 'anthropic' && ai.provider !== 'openai') ai.provider = 'openai';
   const rawFlags = (typeof r.flags === 'object' && r.flags !== null ? r.flags : {}) as Record<string, unknown>;
@@ -61,7 +63,7 @@ export function mergeSettings(raw: unknown): Settings {
   if (rsync.theme === 'pragmatic' || rsync.theme === 'digg' || rsync.theme === 'elegant') sync.theme = rsync.theme;
   const rs = (typeof r.sourceror === 'object' && r.sourceror !== null ? r.sourceror : {}) as Partial<Settings['sourceror']>;
   const sourceror = { server: typeof rs.server === 'string' && /^https?:\/\//.test(rs.server) ? rs.server.replace(/\/+$/, '') : 'http://127.0.0.1:5010', checkLinks: rs.checkLinks !== false, useLlm: rs.useLlm !== false, discover: rs.discover !== false };
-  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, ai, flags, pageTabs, updates, mcp, googleSignIn, passkeys, sync, sourceror, littleWindows: r.littleWindows !== false, autofill: r.autofill !== false, passwordLock: r.passwordLock === true, passwordSync: r.passwordSync === true };
+  const merged = { ...defaultSettings(), ...r, theme, extensions, tilings, boosts, routes, ai, flags, pageTabs, updates, mcp, googleSignIn, passkeys, sync, sourceror, littleWindows: r.littleWindows !== false, autofill: r.autofill !== false, passwordLock: r.passwordLock === true, passwordSync: r.passwordSync === true };
   merged.panelWidth = clampPanel(typeof merged.panelWidth === 'number' ? merged.panelWidth : 360);
   return merged;
 }

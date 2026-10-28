@@ -5,6 +5,7 @@ import { configureSession } from './session.ts';
 import { PAGE_PRELOAD, PRELOAD, RENDERER_DIR } from './paths.ts';
 import { isMac } from './platform.ts';
 import type { Controller } from './controller.ts';
+import { spaceForUrl } from '../shared/routes.ts';
 
 const BAR = 44;
 
@@ -138,7 +139,7 @@ export class LittleWindows {
     const l = this.all.get(id);
     if (!l) return;
     const url = l.view.webContents.getURL();
-    if (/^https?:/i.test(url)) this.c.apply({ type: 'tab.new', url, activate: true });
+    if (/^https?:/i.test(url)) this.c.apply({ type: 'tab.new', url, spaceId: spaceForUrl(this.c.state.settings.routes, this.c.state.spaces, url), activate: true });
     this.c.focusWindow();
     l.win.close();
   }

@@ -1,7 +1,7 @@
 // chord://settings — the settings page.
 
 import { cellCount, defaultTiling, formatTiling, parseTiling, tilingRects, TILING_PRESETS, type Tiling } from '../shared/tiling.ts';
-import type { AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasskeysStatus, SyncStatus, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
+import type { Route, AiStatus, Boost, ExtensionsStatus, McpStatus, Message, PasskeysStatus, SyncStatus, PasswordsStatus, State, TroubleFlags, UpdateStatus } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS } from '../shared/model.ts';
 import { applyTheme } from './theme.ts';
 import { SEARCH_ENGINES } from '../shared/url.ts';
@@ -55,10 +55,11 @@ const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = { paths: {}, install: { busy: false, message: '', error: false } };
 
-const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'passwords', 'sync', 'ai', 'about'];
+const PAGES = ['general', 'appearance', 'layouts', 'addins', 'boosts', 'routes', 'passwords', 'sync', 'ai', 'about'];
 const showPage = (raw: string) => {
   const [page, arg] = raw.split(':');
   if (page === 'boosts' && arg) prefillBoost(decodeURIComponent(arg));
+  if (page === 'routes' && arg) prefillRoute(decodeURIComponent(arg));
   settingsPage = PAGES.includes(page) ? page : 'general';
   $('#s-tabs').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === settingsPage));
   document.querySelectorAll<HTMLElement>('.s-page').forEach((p) => p.classList.toggle('on', p.dataset.page === settingsPage));
@@ -330,6 +331,7 @@ function fillSettings(): void {
       : [h('span', { class: 'muted' }, 'None yet. A site that calls navigator.chord asks the first time; sites you allow are listed here.')]),
   );
   renderBoosts();
+  renderRoutes();
   renderAiSettings();
   sDlDir.textContent = s.settings.downloadDir ?? 'System Downloads folder';
   sDlDirReset.hidden = s.settings.downloadDir === null;
@@ -546,6 +548,57 @@ function renderBoosts(): void {
       ),
     ),
     s.settings.boosts.length ? '' : h('span', { class: 's-foot', style: 'margin:0' }, 'No boosts yet. Right-click a page → “Boost this site…” or fill the form below.'),
+  );
+}
+
+// ---- routes page (Air Traffic Control) ----
+
+const rPattern = $<HTMLInputElement>('#s-route-pattern');
+const rSpace = $<HTMLSelectElement>('#s-route-space');
+
+function prefillRoute(host: string): void {
+  if (!rPattern.value) rPattern.value = host;
+}
+$('#s-route-save').onclick = () => {
+  const s = state;
+  if (!s) return;
+  const pattern = rPattern.value.trim();
+  rPattern.classList.toggle('bad', !pattern);
+  if (!pattern || !rSpace.value) return;
+  const routes: Route[] = [...s.settings.routes, { id: newBoostId(), pattern, spaceId: rSpace.value, enabled: true }];
+  dispatch({ type: 'settings.update', patch: { routes } });
+  rPattern.value = '';
+};
+rPattern.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('#s-route-save').click();
+});
+
+function renderRoutes(): void {
+  const s = state;
+  if (!s) return;
+  const spaces = s.settings ? s.spaces.filter((sp) => !sp.reader) : [];
+  const label = (sp: { name: string; icon?: string }) => `${sp.icon ? `${sp.icon} ` : ''}${sp.name}`;
+  const cur = rSpace.value;
+  rSpace.replaceChildren(...spaces.map((sp) => h('option', { value: sp.id }, label(sp))));
+  rSpace.value = spaces.some((sp) => sp.id === cur) ? cur : s.activeSpaceId;
+  const update = (routes: Route[]) => dispatch({ type: 'settings.update', patch: { routes } });
+  $('#s-routes').replaceChildren(
+    ...s.settings.routes.map((r, i) => {
+      const sp = s.spaces.find((x) => x.id === r.spaceId);
+      const pick = h('select', { title: 'Space' }, ...spaces.map((x) => h('option', { value: x.id }, label(x)))) as HTMLSelectElement;
+      pick.value = r.spaceId;
+      pick.onchange = () => update(s.settings.routes.map((x) => (x.id === r.id ? { ...x, spaceId: pick.value } : x)));
+      return h(
+        'div',
+        { class: 'boost' },
+        h('label', { class: 'switch' }, Object.assign(h('input', { type: 'checkbox' }), { checked: r.enabled, onchange: (e: Event) => update(s.settings.routes.map((x) => (x.id === r.id ? { ...x, enabled: (e.target as HTMLInputElement).checked } : x))) }), h('i')),
+        h('div', { class: 'text' }, h('strong', {}, r.pattern), h('span', {}, sp ? `→ ${label(sp)}` : '→ a space that no longer exists')),
+        pick,
+        h('button', { class: 'btn', title: 'Earlier rules win', disabled: i === 0, onclick: () => { const routes = [...s.settings.routes]; [routes[i - 1], routes[i]] = [routes[i], routes[i - 1]]; update(routes); } }, '↑'),
+        h('button', { class: 'btn danger', onclick: () => update(s.settings.routes.filter((x) => x.id !== r.id)) }, 'Remove'),
+      );
+    }),
+    s.settings.routes.length ? '' : h('span', { class: 's-foot', style: 'margin:0' }, 'No routes yet. Right-click a page → “Route this site to a Space…” or add one below.'),
   );
 }
 

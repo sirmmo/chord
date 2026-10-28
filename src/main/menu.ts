@@ -393,6 +393,7 @@ export function pageContextMenu(c: Controller, tabId: TabId, wc: WebContents, p:
     if (p.mediaType === 'image' && /^https?:/i.test(p.srcURL)) easel.unshift({ label: 'Add Image', click: d({ type: 'easel.imageUrl', src: p.srcURL, url: p.pageURL, title: wc.getTitle() }) });
     items.push({ label: 'Easel', submenu: easel }, sep);
   }
+  items.push({ label: `Route ${hostOf(p.pageURL) || 'this site'} to a Space…`, click: d({ type: 'settings.open', page: `routes:${hostOf(p.pageURL)}` }) });
   items.push({ label: `Boost ${hostOf(p.pageURL) || 'this site'}…`, click: d({ type: 'settings.open', page: `boosts:${hostOf(p.pageURL)}` }) });
   Menu.buildFromTemplate(items).popup({ window: c.win });
 }
