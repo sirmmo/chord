@@ -118,7 +118,11 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   command bar. Settings → General turns it off to get tabs instead.
 - **Peek**: with the sidebar collapsed, hovering the left edge (the gutter, or the first
   pixel of the page) shows the sidebar until the pointer leaves it.
-- **Reader** (`⌘⇧R`, page at `chord://reader`): an RSS reader with subscriptions grouped
+- **Reader** (`⌘⇧R`): both a space and a page. `⌘⇧R` opens the Reader space, a space of
+  its own that lists every feed of every space, with spaces as tags (sections). Each
+  other space has its own page (space menu → Feeds of This Space) showing only the feeds
+  tagged with it; subscribing from the sidebar's feed button tags the feed with the space
+  you are in, and the feed's menu can retag it. An RSS reader with subscriptions grouped
   into subspaces, an item list with unread marks, search and a reading pane that shows the
   entry's text (sanitised: no scripts, frames or handlers). Subscribe from a site or feed
   address, from an `@handle`, or with the feed button that appears in the sidebar's title

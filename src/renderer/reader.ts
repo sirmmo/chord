@@ -11,6 +11,10 @@ const dispatch = (m: Message) => void api.dispatch(m);
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
 
 let status: ReaderStatus | null = null;
+let state: State | null = null;
+/** a space's own reader page shows only the feeds tagged with it; the global reader shows all, spaces as tags */
+const spaceParam = new URLSearchParams(location.search).get('space');
+const spaceMode: string | null = spaceParam && spaceParam !== 'all' ? spaceParam : null;
 let items: ReaderItem[] = [];
 let scope = 'all';
 let onlyUnread = false;
@@ -18,8 +22,17 @@ let selected: string | null = null;
 let itemsTimer = 0;
 const q = $<HTMLInputElement>('#q');
 
-api.onState((s: State) => applyTheme(s.settings.theme, activeSpace(s)));
-void api.getState().then((s) => s && applyTheme(s.settings.theme, activeSpace(s)));
+api.onState((s: State) => {
+  state = s;
+  applyTheme(s.settings.theme, activeSpace(s));
+  renderNav();
+});
+void api.getState().then((s) => {
+  if (!s) return;
+  state = s;
+  applyTheme(s.settings.theme, activeSpace(s));
+  renderNav();
+});
 api.onReader((st) => {
   status = st;
   renderNav();
@@ -39,7 +52,7 @@ $('#more').onclick = () => {
   const menu = h(
     'div',
     { class: 'menu', style: 'position:absolute;z-index:9;top:40px;left:120px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px;display:grid;box-shadow:0 8px 24px rgba(0,0,0,.18)' },
-    h('button', { class: 'ib', onclick: () => { dispatch({ type: 'reader.importOpml' }); menu.remove(); } }, 'Import OPML… (becomes a subspace)'),
+    h('button', { class: 'ib', onclick: () => { dispatch({ type: 'reader.importOpml', spaceId: spaceMode }); menu.remove(); } }, 'Import OPML… (becomes a subspace)'),
     h('button', { class: 'ib', onclick: () => { dispatch({ type: 'reader.exportOpml' }); menu.remove(); } }, 'Export OPML…'),
     h('button', { class: 'ib', onclick: () => { const name = prompt('Name of the new subspace'); if (name) dispatch({ type: 'reader.group', op: 'create', name }); menu.remove(); } }, 'New subspace…'),
   );
@@ -51,7 +64,7 @@ $<HTMLFormElement>('#add-form').onsubmit = (e) => {
   const input = $<HTMLInputElement>('#add-input');
   const v = input.value.trim();
   if (!v) return;
-  dispatch({ type: 'reader.subscribe', input: v, groupId: $<HTMLSelectElement>('#add-group').value || null });
+  dispatch({ type: 'reader.subscribe', input: v, groupId: $<HTMLSelectElement>('#add-group').value || null, spaceId: spaceMode });
   input.value = '';
 };
 
@@ -59,39 +72,63 @@ function navRow(label: string, key: string, count: number, extra: Record<string,
   return h('div', { class: `row${scope === key ? ' on' : ''}`, ...extra, onclick: () => { scope = key; selected = null; renderNav(); void loadItems(); } }, h('span', { class: 't' }, label), count ? h('span', { class: 'n' }, String(count)) : '');
 }
 
+const spaceName = (id: string | null): string => (id ? state?.spaces.find((sp) => sp.id === id)?.name ?? 'Another space' : 'Every space');
+
 function renderNav(): void {
   const st = status;
   if (!st) return;
   const nav = $('#nav');
-  const nodes: HTMLElement[] = [navRow('All', 'all', st.unread), navRow('Starred', 'starred', 0)];
-  const feedRow = (f: ReaderStatus['feeds'][number]) => {
+  const feeds = spaceMode ? st.feeds.filter((f) => f.spaceId === spaceMode) : st.feeds;
+  const unreadOf = (list: typeof feeds) => list.reduce((n, f) => n + f.unread, 0);
+  const nodes: HTMLElement[] = [navRow('All', 'all', unreadOf(feeds)), navRow('Starred', 'starred', 0)];
+  const feedRow = (f: ReaderStatus['feeds'][number], indent = false) => {
     const row = navRow(f.title || hostOf(f.url), f.id, f.unread, { title: f.error ? `${f.url}\n${f.error}` : f.url });
     if (f.error) row.classList.add('err');
+    if (indent) row.style.paddingLeft = '34px';
     row.oncontextmenu = (e) => { e.preventDefault(); dispatch({ type: 'reader.feedMenu', id: f.id }); };
     return row;
   };
-  const loose = st.feeds.filter((f) => !f.groupId);
-  if (loose.length) {
-    nodes.push(h('div', { class: 'group' }, h('span', { class: 't', style: 'padding-left:20px' }, 'Feeds')));
-    nodes.push(h('div', { class: 'feeds' }, ...loose.map(feedRow)));
-  }
-  for (const g of st.groups) {
-    const feeds = st.feeds.filter((f) => f.groupId === g.id);
-    const unread = feeds.reduce((n, f) => n + f.unread, 0);
-    nodes.push(
+  const groupBlock = (g: ReaderStatus['groups'][number], members: typeof feeds, indent: boolean): HTMLElement[] => {
+    const unread = unreadOf(members);
+    return [
       h(
         'div',
-        { class: `group${g.collapsed ? ' closed' : ''}`, oncontextmenu: (e: MouseEvent) => { e.preventDefault(); const name = prompt('Rename the subspace', g.name); if (name === null) return; if (name.trim()) dispatch({ type: 'reader.group', op: 'rename', id: g.id, name }); } },
+        { class: `group${g.collapsed ? ' closed' : ''}`, style: indent ? 'padding-left:18px' : '', oncontextmenu: (e: MouseEvent) => { e.preventDefault(); const name = prompt('Rename the subspace', g.name); if (name === null) return; if (name.trim()) dispatch({ type: 'reader.group', op: 'rename', id: g.id, name }); } },
         h('span', { class: 'chev', onclick: () => dispatch({ type: 'reader.group', op: 'toggle', id: g.id }) }, '▾'),
         h('span', { class: 't', onclick: () => { scope = `group:${g.id}`; selected = null; renderNav(); void loadItems(); } }, g.name),
         unread ? h('span', { class: 'n' }, String(unread)) : '',
         h('button', { class: 'x', title: 'Export this subspace as OPML', onclick: () => dispatch({ type: 'reader.exportOpml', groupId: g.id }) }, '⤓'),
         h('button', { class: 'x', title: 'Delete the subspace (its feeds stay)', onclick: () => dispatch({ type: 'reader.group', op: 'delete', id: g.id }) }, '×'),
       ),
-    );
-    nodes.push(h('div', { class: 'feeds' }, ...feeds.map(feedRow)));
+      h('div', { class: 'feeds' }, ...members.map((f) => feedRow(f, indent))),
+    ];
+  };
+  const section = (list: typeof feeds, indent: boolean): HTMLElement[] => {
+    const out: HTMLElement[] = [];
+    const loose = list.filter((f) => !f.groupId);
+    if (loose.length) out.push(h('div', { class: 'feeds' }, ...loose.map((f) => feedRow(f, indent))));
+    for (const g of st.groups) {
+      const members = list.filter((f) => f.groupId === g.id);
+      if (members.length) out.push(...groupBlock(g, members, indent));
+    }
+    return out;
+  };
+  if (spaceMode) {
+    nodes.push(...section(feeds, false));
+  } else {
+    // the global reader: spaces are tags, each a section of its own
+    const spaces = [...(state?.spaces ?? []).filter((sp) => !sp.reader).map((sp) => ({ id: sp.id as string | null, name: sp.name })), { id: null, name: 'Every space' }];
+    const known = new Set(spaces.map((sp) => sp.id));
+    for (const f of feeds) if (f.spaceId && !known.has(f.spaceId)) spaces.push({ id: f.spaceId, name: 'Another space' }), known.add(f.spaceId);
+    for (const sp of spaces) {
+      const list = feeds.filter((f) => (f.spaceId ?? null) === sp.id);
+      if (list.length === 0) continue;
+      const key = `space:${sp.id ?? ''}`;
+      nodes.push(h('div', { class: `group${scope === key ? ' on' : ''}`, style: 'color:var(--fg);font-size:12px;text-transform:none;letter-spacing:0;font-weight:700;padding-top:12px' }, h('span', { class: 't', onclick: () => { scope = key; selected = null; renderNav(); void loadItems(); } }, sp.name), unreadOf(list) ? h('span', { class: 'n' }, String(unreadOf(list))) : ''));
+      nodes.push(...section(list, true));
+    }
   }
-  if (st.feeds.length === 0) nodes.push(h('div', { class: 'placeholder', style: 'padding:20px 12px' }, 'No subscriptions yet. Add a site below, press the feed button in the sidebar on a site that offers one, or import an OPML file.'));
+  if (feeds.length === 0) nodes.push(h('div', { class: 'placeholder', style: 'padding:20px 12px' }, spaceMode ? `No feeds in ${spaceName(spaceMode)} yet. Add a site below, or press the feed button in the sidebar on a site that offers one while you are in this space.` : 'No subscriptions yet. Add a site below, press the feed button in the sidebar on a site that offers one, or import an OPML file.'));
   nav.replaceChildren(...nodes);
   const sel = $<HTMLSelectElement>('#add-group');
   const cur = sel.value;
@@ -99,8 +136,11 @@ function renderNav(): void {
   sel.value = cur;
   $('#add-error').textContent = st.error;
   $('#refresh').classList.toggle('on', st.refreshing);
-  document.title = st.unread ? `(${st.unread}) Reader` : 'Reader';
-  const title = scope === 'all' ? 'All' : scope === 'starred' ? 'Starred' : scope.startsWith('group:') ? st.groups.find((g) => g.id === scope.slice(6))?.name ?? 'Subspace' : st.feeds.find((f) => f.id === scope)?.title ?? 'Feed';
+  const unread = unreadOf(feeds);
+  const heading = spaceMode ? `Feeds · ${spaceName(spaceMode)}` : 'Reader';
+  $('.nav .head h2').textContent = heading;
+  document.title = unread ? `(${unread}) ${heading}` : heading;
+  const title = scope === 'all' ? 'All' : scope === 'starred' ? 'Starred' : scope.startsWith('group:') ? st.groups.find((g) => g.id === scope.slice(6))?.name ?? 'Subspace' : scope.startsWith('space:') ? spaceName(scope.slice(6) || null) : st.feeds.find((f) => f.id === scope)?.title ?? 'Feed';
   $('#scope-title').textContent = title;
 }
 
@@ -121,7 +161,7 @@ $('#read-all').onclick = () => {
 };
 
 async function loadItems(): Promise<void> {
-  const list = await api.getReaderItems({ scope, text: q.value, limit: 400 });
+  const list = await api.getReaderItems({ scope, text: q.value, limit: 400, spaceId: spaceMode });
   items = onlyUnread ? list.filter((it) => !it.read || it.id === selected) : list;
   renderItems();
   if (selected && !items.some((it) => it.id === selected)) selected = null;

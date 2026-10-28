@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import type { ReaderFeed, ReaderGroup, ReaderItem, ReaderQuery, ReaderStatus, TabId } from '../shared/types.ts';
 import { resolveCuratorInput, type FeedItem } from '../shared/feed.ts';
 import { parseOpml, renderOpml } from '../shared/opml.ts';
-import { focusedTab } from '../shared/model.ts';
+import { focusedTab, spaceById } from '../shared/model.ts';
 import { hostOf } from '../shared/url.ts';
 import { Store } from './store.ts';
 import { discoverFeed, fetchFeed } from './feeds.ts';
@@ -47,7 +47,7 @@ export class ReaderManager {
   init(): void {
     const raw = this.store.load() as Partial<File> | null;
     if (raw) {
-      if (Array.isArray(raw.feeds)) this.feeds = raw.feeds.filter((f) => f && typeof f.id === 'string' && typeof f.url === 'string');
+      if (Array.isArray(raw.feeds)) this.feeds = raw.feeds.filter((f) => f && typeof f.id === 'string' && typeof f.url === 'string').map((f) => ({ ...f, spaceId: typeof f.spaceId === 'string' ? f.spaceId : null }));
       if (Array.isArray(raw.groups)) this.groups = raw.groups.filter((g) => g && typeof g.id === 'string' && typeof g.name === 'string');
       if (Array.isArray(raw.items)) this.items = raw.items.filter((it) => it && typeof it.id === 'string' && typeof it.feedId === 'string');
     }
@@ -72,8 +72,10 @@ export class ReaderManager {
 
   query(q: ReaderQuery): ReaderItem[] {
     const text = (q.text ?? '').trim().toLowerCase();
-    const feedIds = q.scope.startsWith('group:') ? new Set(this.feeds.filter((f) => f.groupId === q.scope.slice(6)).map((f) => f.id)) : null;
+    const within = q.spaceId ? new Set(this.feeds.filter((f) => f.spaceId === q.spaceId).map((f) => f.id)) : null;
+    const feedIds = q.scope.startsWith('group:') ? new Set(this.feeds.filter((f) => f.groupId === q.scope.slice(6)).map((f) => f.id)) : q.scope.startsWith('space:') ? new Set(this.feeds.filter((f) => (q.scope === 'space:' ? !f.spaceId : f.spaceId === q.scope.slice(6))).map((f) => f.id)) : null;
     const out = this.items.filter((it) => {
+      if (within && !within.has(it.feedId)) return false;
       if (q.scope === 'starred' && !it.starred) return false;
       if (q.scope === 'unread' && it.read) return false;
       if (feedIds && !feedIds.has(it.feedId)) return false;
@@ -87,7 +89,7 @@ export class ReaderManager {
   // ---- subscriptions ----
 
   /** Subscribe from an address, a site, an @handle…; feeds a page advertises come with their title. */
-  async subscribe(input: string, groupId: string | null = null, title?: string): Promise<ReaderFeed | null> {
+  async subscribe(input: string, groupId: string | null = null, title?: string, spaceId: string | null = null): Promise<ReaderFeed | null> {
     const resolved = resolveCuratorInput(input);
     this.error = '';
     if (!resolved || resolved.kind === 'github') {
@@ -100,10 +102,17 @@ export class ReaderManager {
       const url = resolved.kind === 'discover' ? await discoverFeed(resolved.url) : resolved.url;
       if (!url) throw new Error('No feed found on that page. Try the address of its RSS feed.');
       const existing = this.feeds.find((f) => f.url === url);
-      if (existing) return { ...existing, unread: 0 };
+      if (existing) {
+        // subscribed from another space: tag it with this one too? one tag per feed; the later one wins
+        if (spaceId && existing.spaceId !== spaceId) {
+          existing.spaceId = spaceId;
+          this.save();
+        }
+        return { ...existing, unread: 0 };
+      }
       const parsed = await fetchFeed(url);
       const site = resolved.kind === 'discover' ? resolved.url : '';
-      const feed: Omit<ReaderFeed, 'unread'> = { id: randomUUID(), title: (title || parsed.title || resolved.name || hostOf(url)).slice(0, 120), url, site, groupId, addedAt: Date.now(), lastFetch: Date.now() };
+      const feed: Omit<ReaderFeed, 'unread'> = { id: randomUUID(), title: (title || parsed.title || resolved.name || hostOf(url)).slice(0, 120), url, site, groupId, spaceId, addedAt: Date.now(), lastFetch: Date.now() };
       this.feeds.push(feed);
       this.merge(feed, parsed.items, Date.now(), true);
       this.save();
@@ -115,25 +124,36 @@ export class ReaderManager {
     }
   }
 
-  /** The sidebar's button: one advertised feed subscribes at once, several offer a choice. */
+  /** The sidebar's button: one advertised feed subscribes at once, several offer a choice. The feed is tagged with the tab's space. */
   subscribeFrom(tabId?: TabId): void {
     const tab = tabId ? this.c.state.tabs[tabId] : focusedTab(this.c.state);
     if (!tab) return;
+    const space = tab.spaceId ? spaceById(this.c.state, tab.spaceId) : undefined;
+    const spaceId = space && !space.reader ? space.id : null;
+    const done = (f: ReaderFeed | null) => f && this.c.openReader(spaceId);
     const feeds = (this.c.smart.getStatus()[tab.id]?.feeds ?? []).filter((f) => !this.has(f.url));
     const win = this.c.win;
     if (feeds.length === 0) {
-      void this.subscribe(tab.url).then((f) => f && this.c.openInternal('chord://reader/'));
+      void this.subscribe(tab.url, null, undefined, spaceId).then(done);
       return;
     }
     if (feeds.length === 1 || !win) {
-      void this.subscribe(feeds[0].url, null, feeds[0].title).then((f) => f && this.c.openInternal('chord://reader/'));
+      void this.subscribe(feeds[0].url, null, feeds[0].title, spaceId).then(done);
       return;
     }
     Menu.buildFromTemplate([
-      { label: `Subscribe in the reader (${hostOf(tab.url)})`, enabled: false },
+      { label: `Subscribe in the reader (${hostOf(tab.url)})${space && !space.reader ? ` · ${space.name}` : ''}`, enabled: false },
       { type: 'separator' },
-      ...feeds.map((f) => ({ label: (f.title || f.url).slice(0, 80), click: () => void this.subscribe(f.url, null, f.title).then((r) => r && this.c.openInternal('chord://reader/')) })),
+      ...feeds.map((f) => ({ label: (f.title || f.url).slice(0, 80), click: () => void this.subscribe(f.url, null, f.title, spaceId).then(done) })),
     ]).popup({ window: win });
+  }
+
+  /** Tag a feed with a space (null: every space). */
+  tag(id: string, spaceId: string | null): void {
+    const f = this.feeds.find((x) => x.id === id);
+    if (!f) return;
+    f.spaceId = spaceId && spaceById(this.c.state, spaceId) ? spaceId : null;
+    this.save();
   }
 
   unsubscribe(id: string): void {
@@ -186,6 +206,13 @@ export class ReaderManager {
           ...this.groups.map((g) => ({ label: g.name, type: 'radio' as const, checked: f.groupId === g.id, click: () => this.move(id, g.id) })),
         ],
       },
+      {
+        label: 'Space',
+        submenu: [
+          { label: 'Every space', type: 'radio', checked: !f.spaceId, click: () => this.tag(id, null) },
+          ...this.c.state.spaces.filter((sp) => !sp.reader && !sp.lock).map((sp) => ({ label: sp.name, type: 'radio' as const, checked: f.spaceId === sp.id, click: () => this.tag(id, sp.id) })),
+        ],
+      },
       { type: 'separator' },
       { label: 'Unsubscribe', click: () => this.unsubscribe(id) },
     ]).popup({ window: win });
@@ -193,7 +220,7 @@ export class ReaderManager {
 
   // ---- OPML ----
 
-  async importOpml(): Promise<void> {
+  async importOpml(spaceId: string | null = null): Promise<void> {
     const win = this.c.win;
     if (!win) return;
     const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Import OPML', filters: [{ name: 'OPML', extensions: ['opml', 'xml'] }], properties: ['openFile'] });
@@ -225,11 +252,11 @@ export class ReaderManager {
     for (const f of doc.feeds) {
       if (this.has(f.xmlUrl)) continue;
       const groupId = ensureGroup(f.folder ? `${base} / ${f.folder}` : base);
-      this.feeds.push({ id: randomUUID(), title: f.title.slice(0, 120), url: f.xmlUrl, site: f.htmlUrl, groupId, addedAt: Date.now(), lastFetch: 0 });
+      this.feeds.push({ id: randomUUID(), title: f.title.slice(0, 120), url: f.xmlUrl, site: f.htmlUrl, groupId, spaceId, addedAt: Date.now(), lastFetch: 0 });
       added++;
     }
     this.save();
-    this.c.openInternal('chord://reader/');
+    this.c.openReader(spaceId);
     void this.refresh();
     if (added === 0) dialog.showMessageBox(win, { type: 'info', message: 'Every feed in that file was already subscribed.' }).catch(() => {});
   }

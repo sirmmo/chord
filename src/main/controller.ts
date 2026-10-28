@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { Action, AppInfo, Command, Message, SidebarMessage, SpaceId, State, TabId, WindowState } from '../shared/types.ts';
 import { isCommand } from '../shared/types.ts';
-import { activeSpace, focusedTab, hydrate, isLocked, panelVisibleFor, reduce, spaceOfTab, visiblePanes, type Ctx } from '../shared/model.ts';
+import { activeSpace, focusedTab, hydrate, isLocked, panelVisibleFor, reduce, spaceById, spaceOfTab, visiblePanes, type Ctx } from '../shared/model.ts';
 import { makeLock, verifyLock } from './locks.ts';
 import { titleFor } from '../shared/url.ts';
 import { exportConfig, exportFileName, parseConfig } from '../shared/config.ts';
@@ -785,7 +785,7 @@ export class Controller {
         this.reader.openItem(cmd.id);
         return;
       case 'reader.importOpml':
-        void this.reader.importOpml();
+        void this.reader.importOpml(cmd.spaceId ?? null);
         return;
       case 'reader.exportOpml':
         void this.reader.exportOpml(cmd.groupId);
@@ -1154,6 +1154,35 @@ export class Controller {
   }
 
   /** Show one of Chord's own pages: reuse it if the active space already has it open. */
+  /**
+   * The reader: a space's own page (its feeds only), or the Reader space, which is
+   * created on first use and lists every feed with spaces as tags.
+   */
+  openReader(spaceId: SpaceId | null): void {
+    if (spaceId) {
+      const sp = spaceById(this.state, spaceId);
+      if (!sp || sp.reader) return this.openReader(null);
+      if (this.state.activeSpaceId !== spaceId) this.apply({ type: 'space.activate', id: spaceId });
+      this.openInternal(`chord://reader/?space=${encodeURIComponent(spaceId)}`);
+      return;
+    }
+    let readerSpace = this.state.spaces.find((sp) => sp.reader);
+    if (!readerSpace) {
+      this.apply({ type: 'space.create', name: 'Reader', icon: '📰' });
+      readerSpace = activeSpace(this.state);
+      this.apply({ type: 'space.update', id: readerSpace.id, patch: { reader: true } });
+    }
+    if (this.state.activeSpaceId !== readerSpace.id) this.apply({ type: 'space.activate', id: readerSpace.id });
+    this.openInternal('chord://reader/');
+    // the page lives pinned and always loaded in that space
+    const space = activeSpace(this.state);
+    const tab = [...space.pinned, ...space.today].map((id) => this.state.tabs[id]).find((t) => t && t.url.startsWith('chord://reader/'));
+    if (tab) {
+      if (tab.kind === 'today') this.apply({ type: 'tab.pin', id: tab.id });
+      if (!tab.keepLoaded) this.apply({ type: 'tab.keepLoaded', id: tab.id, on: true });
+    }
+  }
+
   openInternal(url: string, hash?: string): void {
     const space = activeSpace(this.state);
     const base = url.split('#')[0];

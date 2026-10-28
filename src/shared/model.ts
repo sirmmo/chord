@@ -811,6 +811,10 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       if (a.patch.name !== undefined) sp.name = a.patch.name.trim() || sp.name;
       if (a.patch.color !== undefined) sp.color = a.patch.color;
       if (a.patch.icon !== undefined) sp.icon = a.patch.icon || undefined;
+      if (a.patch.reader !== undefined) {
+        if (a.patch.reader) sp.reader = true;
+        else delete sp.reader;
+      }
       return s;
     }
     case 'space.delete': {

@@ -80,7 +80,8 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Downloads', accelerator: 'CmdOrCtrl+Shift+J', click: d({ type: 'downloads.open' }) },
         { label: 'History', accelerator: 'CmdOrCtrl+Y', click: d({ type: 'history.open' }) },
         { label: 'Bookmarks', accelerator: 'CmdOrCtrl+Alt+B', click: d({ type: 'bookmarks.open' }) },
-        { label: 'Reader', accelerator: 'CmdOrCtrl+Shift+R', click: d({ type: 'reader.open' }) },
+        { label: 'Reader', accelerator: 'CmdOrCtrl+Shift+R', click: d({ type: 'reader.space' }) },
+        { label: 'Feeds of This Space', click: d({ type: 'reader.openSpace' }) },
         { label: 'Subscribe to This Site', click: d({ type: 'reader.subscribeFrom' }) },
         { label: 'Bookmark This Page', accelerator: 'CmdOrCtrl+Shift+B', click: d({ type: 'bookmark.page', public: false }) },
         { label: 'Bookmark This Page Publicly', click: d({ type: 'bookmark.page', public: true }) },
@@ -252,6 +253,7 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
   const d = (m: Message) => () => c.dispatch(m);
   const items: MenuItemConstructorOptions[] = [
     { label: 'Rename…', click: () => c.sendSidebar({ kind: 'space.renameStart', id }) },
+    ...(space.reader ? [] : [{ label: 'Feeds of This Space', click: d({ type: 'reader.openSpace', spaceId: id }) }]),
     { label: c.windowForSpace(id) && c.windowForSpace(id) !== c.active ? 'Show Its Window' : 'Open in New Window', enabled: c.windowForSpace(id) !== c.active, click: d({ type: 'space.openInWindow', id }) },
     {
       label: 'Icon',
