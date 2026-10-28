@@ -140,6 +140,11 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   (headings, lists, task boxes, code, quotes, tables, links), with a split editor and
   preview, autosave, and a button that inserts a link to the current page. Notes travel
   with the space in exports and in sync. "Notes of Every Space" shows them all.
+- **Sharing** (needs GitHub sync): right-click a space → "Share Space" publishes it on
+  your public page as an installable space with a landing page listing its tabs and an
+  "Open in Chord" button; the link is copied, and the space updates with every push until
+  you stop sharing. Right-click a tab → Share copies a link to a page of its own, with an
+  optional note. Settings → Sync lists everything shared.
 - **Live folders**: a subspace Chord keeps filled from a source. Right-click a space →
   New Live Folder: GitHub pull requests waiting for your review, your open pull requests,
   issues assigned to you, unread notifications or any GitHub search (with the token from

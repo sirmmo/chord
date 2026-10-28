@@ -9,6 +9,7 @@ import { mergeBookmarks, normalizeBookmarkUrl, normalizeTags, pruneTombstones, s
 import { cellCount, parseTiling, presetsFor } from './tiling.ts';
 import { isBoost } from './boosts.ts';
 import { isRoute } from './routes.ts';
+import { slugify } from './share.ts';
 import { clampPanel, isModeId } from './modes.ts';
 
 export const SPACE_COLORS = ['#5B6CFF', '#FF6B6B', '#2EC4B6', '#FFB347', '#B388FF', '#4CC9F0', '#F72585', '#8AC926'];
@@ -116,6 +117,7 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     tabs: r.tabs ?? {},
     favorites: r.favorites ?? [],
     archived: r.archived ?? [],
+    shares: Array.isArray(r.shares) ? r.shares.filter((x) => x && typeof x.id === 'string' && typeof x.url === 'string').map((x) => ({ id: x.id, url: x.url, title: typeof x.title === 'string' ? x.title : '', note: typeof x.note === 'string' ? x.note : '', at: typeof x.at === 'number' ? x.at : 0 })) : undefined,
     recentlyClosed: r.recentlyClosed ?? [],
     settings: mergeSettings(r.settings),
   };
@@ -159,6 +161,7 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     if (sp.lock) sp.locked = true;
     if (sp.modes) sp.modes = sp.modes.filter(isModeId);
     if (sp.notes !== undefined && typeof sp.notes !== 'string') delete sp.notes;
+    if (sp.shared !== undefined && (typeof sp.shared !== 'object' || sp.shared === null || typeof sp.shared.slug !== 'string' || sp.lock)) delete sp.shared;
     if (sp.curators) {
       sp.curators = sp.curators.filter((c) => c && typeof c.id === 'string' && typeof c.feed === 'string' && (c.kind === 'feed' || c.kind === 'github'));
       if (sp.curators.length === 0) delete sp.curators;
@@ -533,6 +536,30 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       const { merged, changed } = mergeBookmarks(s.bookmarks, a.remote);
       if (!changed) return prev;
       s.bookmarks = merged;
+      return s;
+    }
+    case 'space.share': {
+      const sp = spaceById(s, a.id);
+      if (!sp || sp.reader) return prev;
+      if (a.on) {
+        if (sp.shared || isLocked(sp) || sp.lock) return prev;
+        sp.shared = { slug: slugify(sp.name, new Set(s.spaces.map((x) => x.shared?.slug).filter((x): x is string => Boolean(x)))), since: now };
+      } else {
+        if (!sp.shared) return prev;
+        delete sp.shared;
+      }
+      return s;
+    }
+    case 'share.add': {
+      const sh = a.share;
+      if (!/^https?:/i.test(sh.url) || !/^[a-z0-9]{4,16}$/.test(sh.id)) return prev;
+      s.shares = [{ id: sh.id, url: sh.url.slice(0, 2000), title: sh.title.slice(0, 300), note: sh.note.slice(0, 2000), at: sh.at }, ...(s.shares ?? []).filter((x) => x.id !== sh.id)].slice(0, 500);
+      return s;
+    }
+    case 'share.remove': {
+      if (!(s.shares ?? []).some((x) => x.id === a.id)) return prev;
+      s.shares = (s.shares ?? []).filter((x) => x.id !== a.id);
+      if (!s.shares.length) delete s.shares;
       return s;
     }
     case 'space.notes': {

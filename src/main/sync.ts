@@ -1,3 +1,4 @@
+import { sharedFiles } from '../shared/share.ts';
 import { app, ipcMain, net, safeStorage } from 'electron';
 import { join } from 'node:path';
 import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
@@ -300,6 +301,19 @@ export class SyncManager {
           this.pushed[`${s.privateRepo}/passwords.kdbx#sig`] = vaultSig;
         }
       }
+      // shared spaces and pages: manifests and landing pages in the public repository
+      const slugs = new Map<string, string>();
+      for (const sp of state.spaces) if (sp.shared && !sp.lock) slugs.set(sp.name, sp.shared.slug);
+      const shared = sharedFiles(config, slugs, state.shares ?? [], { user: s.user, siteUrl: site.siteUrl });
+      for (const [path, content] of shared) files.push([s.publicRepo, path, content]);
+      const wantedShared = new Set([...shared.keys()].map((path) => `${s.publicRepo}/${path}`));
+      for (const key of Object.keys(this.pushed)) {
+        if (!key.startsWith(`${s.publicRepo}/`) || key.includes('#')) continue;
+        const path = key.slice(s.publicRepo.length + 1);
+        if (!/^(spaces\/|t\/|shared\.html$)/.test(path) || wantedShared.has(key)) continue;
+        await this.removePath(s.publicRepo, path);
+        delete this.pushed[key];
+      }
       for (const [repo, path, content] of files) {
         const key = `${repo}/${path}`;
         const hash = createHash('sha1').update(content).digest('hex');
@@ -419,6 +433,38 @@ export class SyncManager {
     if (!r || typeof r.sha !== 'string' || typeof r.content !== 'string') return null;
     this.shas[`${repo}/${path}`] = r.sha;
     return { content: Buffer.from(r.content.replace(/\n/g, ''), 'base64'), sha: r.sha };
+  }
+
+  /** Take a shared space or page down: its folder in the public repository goes, at the next push or right away. */
+  async unpublish(path: string): Promise<void> {
+    if (!this.connected()) return;
+    for (const key of Object.keys(this.pushed)) if (key.startsWith(`${this.settings.publicRepo}/${path}`)) delete this.pushed[key];
+    try {
+      await this.removePath(this.settings.publicRepo, path);
+    } catch (err) {
+      console.warn('sync: could not remove', path, err);
+    }
+    this.schedulePush();
+  }
+
+  /** The public address of something shared, if sync is connected. */
+  shareUrl(path: string): string {
+    const base = this.status().pagesUrl;
+    return this.connected() && base ? `${base}${path}` : '';
+  }
+
+  /** Delete a file, or every file under a folder, in a repository. */
+  private async removePath(repo: string, path: string): Promise<void> {
+    const r = await this.api('GET', `/repos/${this.settings.user}/${repo}/contents/${path}`);
+    if (!r) return;
+    const entries = Array.isArray(r) ? (r as { type: string; path: string; sha: string }[]) : [r as { type: string; path: string; sha: string }];
+    for (const e of entries) {
+      if (e.type === 'dir') await this.removePath(repo, e.path);
+      else {
+        await this.api('DELETE', `/repos/${this.settings.user}/${repo}/contents/${e.path}`, { message: `Chord: remove ${e.path}`, sha: e.sha });
+        delete this.shas[`${repo}/${e.path}`];
+      }
+    }
   }
 
   private async put(repo: string, path: string, content: string | Buffer, message: string): Promise<void> {

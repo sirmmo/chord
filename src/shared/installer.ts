@@ -80,3 +80,15 @@ export function installUrlFrom(link: string): string | null {
     return null;
   }
 }
+
+/** The page carried by a chord://open link (from a shared page's "Open in Chord" button), if valid. */
+export function openUrlFrom(link: string): string | null {
+  try {
+    const u = new URL(link);
+    if (u.protocol !== 'chord:' || u.hostname !== 'open') return null;
+    const target = u.searchParams.get('url') ?? '';
+    return /^https?:\/\//i.test(target) ? target : null;
+  } catch {
+    return null;
+  }
+}

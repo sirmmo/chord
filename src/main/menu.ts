@@ -6,7 +6,7 @@ import { LIVE_KINDS, type LiveKind } from '../shared/types.ts';
 import { liveLabel } from './live.ts';
 import type { Message, SpaceId, Tab, TabId } from '../shared/types.ts';
 import { activeSpace, SPACE_COLORS, spaceOfTab } from '../shared/model.ts';
-import { hostOf, searchUrl } from '../shared/url.ts';
+import { isInternal, hostOf, searchUrl } from '../shared/url.ts';
 import type { Controller } from './controller.ts';
 
 const isMac = process.platform === 'darwin';
@@ -204,6 +204,7 @@ export function tabContextMenu(c: Controller, id: TabId): void {
   else items.push({ label: 'Open in Split View', enabled: !tab.spaceId || tab.spaceId === space.id, click: d({ type: 'tab.split', id }) });
   items.push({ label: 'Duplicate', click: d({ type: 'tab.duplicate', id }) });
   items.push({ label: 'Copy Link', click: () => clipboard.writeText(tab.url) });
+  if (!isInternal(tab.url)) items.push({ label: 'Share', submenu: [{ label: 'Copy Share Link', click: d({ type: 'tab.share', id }) }, { label: 'Share with a Note…', click: d({ type: 'tab.share', id, withNote: true }) }] });
 
   const others = c.state.spaces.filter((sp) => sp.id !== tab.spaceId);
   if (tab.kind !== 'favorite' && others.length) {
@@ -290,6 +291,8 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
     ...(space.reader ? [] : [
       { label: 'Notes of This Space', click: d({ type: 'notes.open', spaceId: id }) },
       { label: 'Easel of This Space', click: d({ type: 'easel.open', spaceId: id }) },
+      ...(space.lock ? [] : [{ label: space.shared ? 'Stop Sharing Space' : 'Share Space (publish a link)', click: d({ type: 'space.shareToggle', id }) }]),
+      ...(space.shared ? [{ label: 'Copy Share Link', click: d({ type: 'space.copyShareLink', id }) }] : []),
       { label: 'New Live Folder', submenu: (Object.keys(LIVE_KINDS) as LiveKind[]).map((kind) => ({ label: LIVE_KINDS[kind].label, click: d({ type: 'group.newLive', spaceId: id, kind }) })) },
       { label: 'Bookmarks of This Space', click: d({ type: 'bookmarks.openSpace', spaceId: id }) },
       { label: 'Feeds of This Space', click: d({ type: 'reader.openSpace', spaceId: id }) },

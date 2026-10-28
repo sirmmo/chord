@@ -753,6 +753,16 @@ function renderSync(): void {
   if (state) sSyncTheme.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === (state!.settings.sync.theme ?? 'elegant')));
   const t = (ts: number) => (ts ? new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'never');
   $('#s-sync-state').textContent = `${st.busy ? 'Syncing… · ' : ''}last push ${t(st.lastPush)} · last pull ${t(st.lastPull)}`;
+  const s = state;
+  if (!s) return;
+  const sharedSpaces = s.spaces.filter((sp) => sp.shared);
+  const shares = s.shares ?? [];
+  const row = (title: string, url: string, onStop: () => void) => h('div', { class: 'row', style: 'margin-bottom:4px' }, h('span', { style: 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, title), link(url, 'open'), h('button', { class: 'btn', onclick: () => void navigator.clipboard.writeText(url) }, 'Copy link'), h('button', { class: 'btn danger', onclick: onStop }, 'Stop'));
+  $('#s-shares').replaceChildren(
+    ...sharedSpaces.map((sp) => row(`${sp.icon ? `${sp.icon} ` : ''}${sp.name} (space)`, `${st.pagesUrl}spaces/${sp.shared!.slug}/`, () => dispatch({ type: 'space.shareToggle', id: sp.id }))),
+    ...shares.map((sh) => row(sh.title || sh.url, `${st.pagesUrl}t/${sh.id}/`, () => dispatch({ type: 'share.remove', id: sh.id }))),
+    sharedSpaces.length || shares.length ? link(`${st.pagesUrl}shared.html`, 'Everything shared, as a page') : h('span', { class: 'muted' }, 'Nothing shared yet.'),
+  );
 }
 
 // ---- ai page ----

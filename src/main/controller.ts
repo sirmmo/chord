@@ -43,7 +43,9 @@ import { LittleWindows } from './little.ts';
 import { EaselManager } from './easels.ts';
 import { LiveManager } from './live.ts';
 import { spaceForUrl } from '../shared/routes.ts';
-import { LIVE_KINDS, type LiveKind } from '../shared/types.ts';
+import { shareId } from '../shared/share.ts';
+import { openUrlFrom } from '../shared/installer.ts';
+import { LIVE_KINDS, type LiveKind, type SharedTab } from '../shared/types.ts';
 import { AiManager } from './ai.ts';
 import { modesMenu } from './menu.ts';
 import { installUrlFrom } from '../shared/installer.ts';
@@ -422,6 +424,9 @@ export class Controller {
   }
 
   openUrl(url: string): void {
+    // chord://open/?url=… from a shared page: open the page itself
+    const opened = openUrlFrom(url);
+    if (opened) url = opened;
     const manifest = installUrlFrom(url);
     if (manifest) {
       this.focusWindow();
@@ -520,10 +525,11 @@ export class Controller {
     if (prev.settings.mcp.enabled !== next.settings.mcp.enabled || prev.settings.mcp.port !== next.settings.mcp.port) this.mcp.sync();
     if (prev.settings.googleSignIn !== next.settings.googleSignIn) setGoogleSignIn(next.settings.googleSignIn);
     if (prev.spaces.length > next.spaces.length) this.easels.keepOnly(new Set(next.spaces.map((sp) => sp.id)));
+    if (prev.shares !== next.shares) for (const old of prev.shares ?? []) if (!(next.shares ?? []).some((x) => x.id === old.id)) void this.sync.unpublish(`t/${old.id}`);
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.activeSpaceId !== next.activeSpaceId || JSON.stringify(activeSpace(prev).modes) !== JSON.stringify(activeSpace(next).modes)) this.curated.touch(next.activeSpaceId);
-    if (prev.bookmarks !== next.bookmarks || prev.spaces !== next.spaces || prev.favorites !== next.favorites || prev.settings.theme !== next.settings.theme || prev.settings.sync.theme !== next.settings.sync.theme || prev.tabs !== next.tabs) this.sync.schedulePush();
+    if (prev.bookmarks !== next.bookmarks || prev.spaces !== next.spaces || prev.shares !== next.shares || prev.favorites !== next.favorites || prev.settings.theme !== next.settings.theme || prev.settings.sync.theme !== next.settings.sync.theme || prev.tabs !== next.tabs) this.sync.schedulePush();
     if (prev.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() !== next.spaces.map((sp) => `${sp.id}:${sp.focused ?? ''}`).join() || JSON.stringify(prev.settings.sourceror) !== JSON.stringify(next.settings.sourceror)) this.sources.refresh();
     if (prev.settings.theme.mode !== next.settings.theme.mode || prev.settings.theme.skin !== next.settings.theme.skin) this.applyChromeColors();
     if (prev.settings.theme !== next.settings.theme || prev.spaces.map((sp) => `${sp.id}:${sp.color}:${sp.name}:${sp.icon ?? ''}`).join() !== next.spaces.map((sp) => `${sp.id}:${sp.color}:${sp.name}:${sp.icon ?? ''}`).join()) this.pushTheme();
@@ -942,6 +948,64 @@ export class Controller {
         });
         return;
       }
+      case 'space.shareToggle': {
+        const sp = spaceById(this.state, cmd.id);
+        if (!sp) return;
+        if (sp.shared) {
+          const slug = sp.shared.slug;
+          this.apply({ type: 'space.share', id: cmd.id, on: false });
+          void this.sync.unpublish(`spaces/${slug}`);
+          this.sendSidebar({ kind: 'toast', text: 'Space no longer shared', detail: sp.name });
+          return;
+        }
+        if (!this.sync.connected()) {
+          this.sendSidebar({ kind: 'toast', text: 'Sharing needs GitHub sync', detail: 'Sign in under Settings → Sync first' });
+          this.openInternal('chord://settings/', 'sync');
+          return;
+        }
+        if (sp.lock) {
+          this.sendSidebar({ kind: 'toast', text: 'Private spaces cannot be shared' });
+          return;
+        }
+        this.apply({ type: 'space.share', id: cmd.id, on: true });
+        this.copyShareLink(cmd.id);
+        void this.sync.push();
+        return;
+      }
+      case 'space.copyShareLink':
+        this.copyShareLink(cmd.id);
+        return;
+      case 'tab.share': {
+        const tab = cmd.id ? this.state.tabs[cmd.id] : focusedTab(this.state);
+        if (!tab || isInternal(tab.url)) return;
+        if (!this.sync.connected()) {
+          this.sendSidebar({ kind: 'toast', text: 'Sharing needs GitHub sync', detail: 'Sign in under Settings → Sync first' });
+          this.openInternal('chord://settings/', 'sync');
+          return;
+        }
+        const publish = (note: string) => {
+          const share: SharedTab = { id: shareId(), url: tab.url, title: tab.title || tab.url, note, at: Date.now() };
+          this.apply({ type: 'share.add', share });
+          const url = this.sync.shareUrl(`t/${share.id}/`);
+          clipboard.writeText(url);
+          this.sendSidebar({ kind: 'toast', text: 'Share link copied', detail: `${url} · live in a minute or two` });
+          void this.sync.push();
+        };
+        if (cmd.withNote) {
+          void this.prompt(`Share “${tab.title || tab.url}”`, 'A note for whoever opens the link (optional)').then((note) => {
+            this.overlay?.hide();
+            if (note !== null) publish(note.trim());
+          });
+        } else publish('');
+        return;
+      }
+      case 'share.copy': {
+        const sh = (this.state.shares ?? []).find((x) => x.id === cmd.id);
+        if (!sh) return;
+        clipboard.writeText(this.sync.shareUrl(`t/${sh.id}/`));
+        this.sendSidebar({ kind: 'toast', text: 'Share link copied' });
+        return;
+      }
       case 'tab.renamePrompt': {
         const tab = this.state.tabs[cmd.id];
         if (!tab) return;
@@ -1237,6 +1301,15 @@ export class Controller {
     const name = await this.prompt('New subspace', 'Subspace name', tab.title.slice(0, 30));
     this.overlay?.hide();
     if (name && name.trim()) this.apply({ type: 'group.create', spaceId: tab.spaceId, name: name.trim(), tabIds: [tabId] });
+  }
+
+  private copyShareLink(spaceId: SpaceId): void {
+    const sp = spaceById(this.state, spaceId);
+    if (!sp?.shared) return;
+    const url = this.sync.shareUrl(`spaces/${sp.shared.slug}/`);
+    if (!url) return;
+    clipboard.writeText(url);
+    this.sendSidebar({ kind: 'toast', text: 'Share link copied', detail: `${url} · live in a minute or two` });
   }
 
   private async newLiveFolder(spaceId: SpaceId, kind: LiveKind, query?: string): Promise<void> {

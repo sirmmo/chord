@@ -463,6 +463,8 @@ function compute(raw: string): Item[] {
     { title: 'Notes of This Space', keywords: 'notes markdown space write', subtitle: '⌘⇧M', run: () => dispatch({ type: 'notes.open' }) },
     { title: 'Notes of Every Space', keywords: 'notes all spaces', run: () => dispatch({ type: 'notes.open', spaceId: null }) },
     ...(Object.keys(LIVE_KINDS) as LiveKind[]).map((kind) => ({ title: `New Live Folder: ${LIVE_KINDS[kind].label.replace(/…$/, '')}`, keywords: 'live folder subspace github pull requests issues notifications feed bookmarks', subtitle: 'A subspace Chord keeps filled from a source', run: () => dispatch({ type: 'group.newLive', kind }) })),
+    { title: 'Share This Page (copy link)', keywords: 'share link page tab publish', subtitle: 'A page of its own on your GitHub Pages, link copied', when: !!current, run: () => dispatch({ type: 'tab.share' }) },
+    { title: space.shared ? 'Stop Sharing This Space' : 'Share This Space', keywords: 'share space publish link install', subtitle: 'An installable space on your GitHub Pages', when: !space.lock, run: () => dispatch({ type: 'space.shareToggle', id: space.id }) },
     { title: 'Easel of This Space', keywords: 'easel canvas board clips pictures', subtitle: '⌘⇧E', run: () => dispatch({ type: 'easel.open' }) },
     { title: 'Easels of Every Space', keywords: 'easel all spaces', run: () => dispatch({ type: 'easel.open', spaceId: null }) },
     { title: 'Add This Page to the Easel', keywords: 'easel add page link', run: () => dispatch({ type: 'easel.addPage' }) },

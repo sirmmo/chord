@@ -531,3 +531,23 @@ test('live folders: items become pinned tabs in the group, follow the source, su
   assert.equal(activeSpace(s).groups?.[0].live, undefined);
   assert.equal(activeSpace(s).pinned.filter((id) => s.tabs[id].groupId === 'g1').length, 2);
 });
+
+test('sharing: spaces get a unique slug, private spaces never share, shared pages are kept and sanitised', () => {
+  let s = fresh();
+  const id = s.activeSpaceId;
+  s = reduce(s, { type: 'space.share', id, on: true }, ctx());
+  assert.equal(typeof activeSpace(s).shared?.slug, 'string');
+  const slug = activeSpace(s).shared?.slug;
+  s = reduce(s, { type: 'space.create', name: activeSpace(s).name }, ctx());
+  const second = s.spaces[s.spaces.length - 1];
+  s = reduce(s, { type: 'space.share', id: second.id, on: true }, ctx());
+  assert.notEqual(s.spaces[s.spaces.length - 1].shared?.slug, slug, 'two spaces with the same name get different slugs');
+  s = reduce(s, { type: 'space.setLock', id, lock: { salt: 'x', hash: 'y' } }, ctx());
+  assert.equal(reduce(s, { type: 'space.share', id, on: true }, ctx()), s);
+  assert.equal(hydrate(JSON.parse(JSON.stringify(s)), ctx()).spaces.find((sp) => sp.id === id)?.shared, undefined, 'a locked space drops its share on load');
+  s = reduce(s, { type: 'share.add', share: { id: 'abcd2345', url: 'https://e.com/', title: 'E', note: 'n', at: 1 } }, ctx());
+  assert.equal(s.shares?.[0].id, 'abcd2345');
+  assert.equal(reduce(s, { type: 'share.add', share: { id: 'bad id', url: 'https://e.com/', title: '', note: '', at: 1 } }, ctx()), s);
+  s = reduce(s, { type: 'share.remove', id: 'abcd2345' }, ctx());
+  assert.equal(s.shares, undefined);
+});
