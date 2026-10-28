@@ -9,7 +9,7 @@ A *chord* is the straight line between two points on an arc.
 Website: https://ingmmo.com/chord/ · Downloads: https://github.com/sirmmo/chord/releases/latest
 
 Chord is built on Electron, so pages render with Chromium exactly as in Arc, Chrome
-or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the roadmap.
+or Brave. It is young: usable daily, still unpolished in places. See the roadmap for what is missing.
 
 ## Features
 
@@ -518,13 +518,15 @@ equivalent). Browsing data uses the `persist:chord` session partition.
 
 ## Roadmap
 
-- Hover to peek the sidebar when it is hidden; "Little Arc" style popup windows.
-- Multiple windows; tab search across windows.
-- Chrome extensions (Electron supports a subset of the extension API).
-- Import bookmarks and history from Chrome, Brave, Arc, Firefox.
-- Boosts (per-site CSS and JS), Easels, media picture-in-picture controls.
-- Downloads panel, history view, password manager integration.
-- Icons, auto-update, signed and notarised builds.
+Most of the original list has shipped: Little windows, sidebar peek, multiple windows,
+boosts, picture-in-picture, downloads, history, passwords and passkeys, the app icon
+and auto-update. What is still open:
+
+- Easels: a freeform canvas per space for clippings, notes and links.
+- Chrome Web Store extensions (install by store URL, within the subset Electron supports).
+- Air Traffic Control: rules that route links from chosen sites into a chosen space.
+- History import from Chrome, Brave, Edge and Arc; a Firefox importer.
+- Signed and notarised macOS and Windows builds.
 
 ## License
 
