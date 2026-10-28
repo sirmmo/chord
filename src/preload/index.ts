@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { AiStatus, ChordApi, CuratedStatus, McpStatus, SourcesStatus, UpdateStatus, DownloadsStatus, ExtensionsStatus, HistoryQuery, PasskeysStatus, PasswordsStatus, ResearchStatus, SmartStatus, Message, OverlayMessage, SidebarMessage, LittleStatus, ReaderQuery, ReaderStatus, State, SyncStatus } from '../shared/types.ts';
+import type { AiStatus, ChordApi, CuratedStatus, McpStatus, SourcesStatus, UpdateStatus, DownloadsStatus, EaselStatus, ExtensionsStatus, HistoryQuery, PasskeysStatus, PasswordsStatus, ResearchStatus, SmartStatus, Message, OverlayMessage, SidebarMessage, LittleStatus, ReaderQuery, ReaderStatus, State, SyncStatus } from '../shared/types.ts';
 
 const listen =
   <T>(channel: string) =>
@@ -47,6 +47,8 @@ const api: ChordApi = {
   onSync: listen<SyncStatus>('sync'),
   getSync: () => ipcRenderer.invoke('sync'),
   onLittle: listen<LittleStatus>('little'),
+  onEasels: listen<EaselStatus>('easels'),
+  getEasels: () => ipcRenderer.invoke('easels'),
   onReader: listen<ReaderStatus>('reader'),
   getReader: () => ipcRenderer.invoke('reader'),
   getReaderItems: (query: ReaderQuery) => ipcRenderer.invoke('reader:items', query),

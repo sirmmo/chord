@@ -88,6 +88,9 @@ export function buildAppMenu(c: Controller): void {
         { label: 'Bookmark This Page with a Note…', click: d({ type: 'bookmark.page', public: false, withNote: true }) },
         { label: 'Notes of This Space', accelerator: 'CmdOrCtrl+Shift+M', click: d({ type: 'notes.open' }) },
         { label: 'Notes of Every Space', click: d({ type: 'notes.open', spaceId: null }) },
+        { label: 'Easel of This Space', accelerator: 'CmdOrCtrl+Shift+E', click: d({ type: 'easel.open' }) },
+        { label: 'Add This Page to the Easel', click: d({ type: 'easel.addPage' }) },
+        { label: 'Snapshot This Page to the Easel', click: d({ type: 'easel.snapshot' }) },
         { label: 'Picture in Picture', accelerator: 'CmdOrCtrl+Alt+P', click: d({ type: 'media.pip' }) },
         { label: 'Side Panel', accelerator: 'CmdOrCtrl+Shift+U', type: 'checkbox', checked: c.state.settings.panelOpen, click: d({ type: 'panel.toggle' }) },
         sep,
@@ -258,6 +261,7 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
     { label: 'Rename…', click: () => c.sendSidebar({ kind: 'space.renameStart', id }) },
     ...(space.reader ? [] : [
       { label: 'Notes of This Space', click: d({ type: 'notes.open', spaceId: id }) },
+      { label: 'Easel of This Space', click: d({ type: 'easel.open', spaceId: id }) },
       { label: 'Bookmarks of This Space', click: d({ type: 'bookmarks.openSpace', spaceId: id }) },
       { label: 'Feeds of This Space', click: d({ type: 'reader.openSpace', spaceId: id }) },
     ]),
@@ -383,6 +387,12 @@ export function pageContextMenu(c: Controller, tabId: TabId, wc: WebContents, p:
   if ((sp.modes ?? []).includes('research')) items.push({ label: 'Save Page to Zotero', click: d({ type: 'research.zotero', tabId }) }, { label: 'Add Page to Sources', click: d({ type: 'research.source', url: p.pageURL, title: wc.getTitle() }) });
   if (p.selectionText && (sp.modes ?? []).includes('ai')) items.push({ label: 'Ask AI About Selection', click: d({ type: 'ai.send', spaceId: sp.id, text: `About this passage from ${hostOf(p.pageURL)}:\n\n“${p.selectionText.slice(0, 2000)}”\n\nExplain it briefly.` }) });
   if ((sp.modes ?? []).length) items.push(sep);
+  if (!sp.reader) {
+    const easel: MenuItemConstructorOptions[] = [{ label: 'Add Page', click: d({ type: 'easel.addPage', tabId }) }, { label: 'Snapshot Page', click: d({ type: 'easel.snapshot', tabId }) }];
+    if (p.selectionText.trim()) easel.unshift({ label: 'Add Selection', click: d({ type: 'easel.clip', text: p.selectionText, url: p.pageURL, title: wc.getTitle() }) });
+    if (p.mediaType === 'image' && /^https?:/i.test(p.srcURL)) easel.unshift({ label: 'Add Image', click: d({ type: 'easel.imageUrl', src: p.srcURL, url: p.pageURL, title: wc.getTitle() }) });
+    items.push({ label: 'Easel', submenu: easel }, sep);
+  }
   items.push({ label: `Boost ${hostOf(p.pageURL) || 'this site'}…`, click: d({ type: 'settings.open', page: `boosts:${hostOf(p.pageURL)}` }) });
   Menu.buildFromTemplate(items).popup({ window: c.win });
 }

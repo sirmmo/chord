@@ -517,3 +517,8 @@ body.space-locked .lists { display: none; }
 :root[data-skin="lcars"] #address { text-transform: none; letter-spacing: 0; font-weight: 400; }
 :root[data-skin="lcars"] .lists::-webkit-scrollbar-thumb { background: var(--lc-lavender); border-radius: 999px; }
 :root[data-skin="lcars"] .resizer:hover { background: var(--lc-orange); }
+
+/* short confirmations (easel adds, clips) */
+#toast { position: fixed; left: 12px; right: 12px; bottom: 14px; padding: 8px 12px; border-radius: 10px; background: var(--bg, #16161c); color: var(--fg); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.25); font-size: 12px; display: flex; flex-direction: column; gap: 2px; opacity: 0; transform: translateY(8px); transition: opacity .18s, transform .18s; pointer-events: none; z-index: 50; }
+#toast.on { opacity: 1; transform: none; }
+#toast span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

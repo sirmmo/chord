@@ -40,6 +40,7 @@ import { CuratedManager } from './curated.ts';
 import { SyncManager } from './sync.ts';
 import { ReaderManager } from './reader.ts';
 import { LittleWindows } from './little.ts';
+import { EaselManager } from './easels.ts';
 import { AiManager } from './ai.ts';
 import { modesMenu } from './menu.ts';
 import { installUrlFrom } from '../shared/installer.ts';
@@ -80,6 +81,7 @@ export class Controller {
   readonly sync = new SyncManager(this);
   readonly reader = new ReaderManager(this);
   readonly little = new LittleWindows(this);
+  readonly easels = new EaselManager(this);
   readonly ai = new AiManager(this);
   readonly extensions = new ExtensionManager({
     apply: (a) => this.apply(a),
@@ -191,6 +193,7 @@ export class Controller {
     this.curated.init();
     this.sync.init();
     this.reader.init();
+    this.easels.init();
     this.ai.init();
     this.capture.init();
     this.pageTabs.init();
@@ -503,6 +506,7 @@ export class Controller {
     if (prev.settings.updates.check !== next.settings.updates.check) this.updates.schedule();
     if (prev.settings.mcp.enabled !== next.settings.mcp.enabled || prev.settings.mcp.port !== next.settings.mcp.port) this.mcp.sync();
     if (prev.settings.googleSignIn !== next.settings.googleSignIn) setGoogleSignIn(next.settings.googleSignIn);
+    if (prev.spaces.length > next.spaces.length) this.easels.keepOnly(new Set(next.spaces.map((sp) => sp.id)));
     const focusedNow = activeSpace(next).focused;
     if (focusedNow && focusedNow !== activeSpace(prev).focused) this.smart.seen(focusedNow);
     if (prev.activeSpaceId !== next.activeSpaceId || JSON.stringify(activeSpace(prev).modes) !== JSON.stringify(activeSpace(next).modes)) this.curated.touch(next.activeSpaceId);
@@ -762,6 +766,51 @@ export class Controller {
         return;
       case 'reader.open':
         this.openInternal('chord://reader/');
+        return;
+      case 'easel.open': {
+        const spaceId = cmd.spaceId === undefined ? this.state.activeSpaceId : cmd.spaceId;
+        const sp = spaceId ? spaceById(this.state, spaceId) : undefined;
+        if (sp && !sp.reader) {
+          if (this.state.activeSpaceId !== sp.id) this.apply({ type: 'space.activate', id: sp.id });
+          const easel = cmd.easelId ? this.easels.get(cmd.easelId) : (this.easels.forSpace(sp.id)[0] ?? this.easels.create(sp.id));
+          this.openInternal(`chord://easel/?space=${encodeURIComponent(sp.id)}${easel ? `&easel=${encodeURIComponent(easel.id)}` : ''}`);
+        } else this.openInternal('chord://easel/?space=all');
+        return;
+      }
+      case 'easel.create': {
+        const easel = this.easels.create(cmd.spaceId, cmd.name);
+        this.openInternal(`chord://easel/?space=${encodeURIComponent(cmd.spaceId)}&easel=${encodeURIComponent(easel.id)}`);
+        return;
+      }
+      case 'easel.rename':
+        this.easels.rename(cmd.id, cmd.name);
+        return;
+      case 'easel.remove':
+        void this.easels.remove(cmd.id);
+        return;
+      case 'easel.put':
+        this.easels.put(cmd.id, cmd.item);
+        return;
+      case 'easel.removeItem':
+        this.easels.removeItem(cmd.id, cmd.itemId);
+        return;
+      case 'easel.addPage':
+        this.easels.addPage(cmd.id, cmd.tabId);
+        return;
+      case 'easel.snapshot':
+        void this.easels.snapshot(cmd.id, cmd.tabId);
+        return;
+      case 'easel.clip':
+        this.easels.clip(cmd.id, cmd.text, cmd.url, cmd.title);
+        return;
+      case 'easel.image':
+        void this.easels.image(cmd.id, cmd.dataUrl, cmd.url, cmd.title, cmd.x, cmd.y);
+        return;
+      case 'easel.imageUrl':
+        void this.easels.imageUrl(cmd.id, cmd.src, cmd.url, cmd.title);
+        return;
+      case 'easel.export':
+        void this.easels.export(cmd.id);
         return;
       case 'little.open': {
         const url = cmd.url ?? focusedTab(this.state)?.url;

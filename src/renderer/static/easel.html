@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data: chord:; style-src 'self' 'unsafe-inline'">
+  <title>Easel</title>
+  <link rel="stylesheet" href="internal.css">
+  <style>
+    html, body { height: 100%; overflow: hidden; }
+    .easel { display: flex; flex-direction: column; height: 100vh; }
+    .top { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+    .top h1 { font-size: 15px; margin: 0; display: flex; align-items: center; gap: 6px; }
+    .top h1 input { font: inherit; font-weight: 600; color: var(--fg); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; width: 180px; }
+    .top h1 input:hover, .top h1 input:focus { border-color: var(--line); background: var(--card); outline: none; }
+    .top select { font: inherit; font-size: 13px; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; max-width: 200px; }
+    .grow { flex: 1; }
+    .tools { display: flex; gap: 4px; align-items: center; }
+    .tools .btn { padding: 4px 9px; font-size: 12.5px; }
+    .zoom { display: flex; align-items: center; gap: 2px; border: 1px solid var(--line); border-radius: 7px; padding: 1px; }
+    .zoom button { border: 0; background: transparent; color: var(--fg); font: inherit; font-size: 12px; padding: 3px 7px; border-radius: 5px; cursor: pointer; }
+    .zoom button:hover { background: var(--hover); }
+    .zoom span { font-size: 11.5px; color: var(--muted); min-width: 38px; text-align: center; }
+    #viewport { flex: 1; position: relative; overflow: hidden; cursor: grab; background-color: var(--bg);
+      background-image: radial-gradient(color-mix(in srgb, var(--fg) 14%, transparent) 1px, transparent 1px); background-size: 24px 24px; touch-action: none; }
+    #viewport.panning { cursor: grabbing; }
+    #viewport.dropping { outline: 2px dashed var(--accent); outline-offset: -4px; }
+    #canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+    .item { position: absolute; box-sizing: border-box; border-radius: 10px; background: color-mix(in srgb, var(--bg) 92%, var(--fg)); border: 1px solid var(--line); box-shadow: 0 2px 10px rgba(0,0,0,.14); display: flex; flex-direction: column; overflow: hidden; cursor: default; }
+    .item.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .item.dragging { box-shadow: 0 10px 28px rgba(0,0,0,.3); opacity: .95; }
+    .item .x { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: color-mix(in srgb, var(--bg) 70%, transparent); color: var(--fg); font-size: 13px; line-height: 20px; text-align: center; cursor: pointer; opacity: 0; transition: opacity .12s; z-index: 2; }
+    .item:hover .x { opacity: 1; }
+    .item .x:hover { background: var(--danger); color: #fff; }
+    .rs { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 2; }
+    .rs::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); opacity: .6; }
+    /* notes */
+    .item.note { background: var(--note-bg, var(--card)); }
+    .item.note .grip { height: 22px; cursor: grab; display: flex; align-items: center; gap: 4px; padding: 0 6px; background: rgba(0,0,0,.06); }
+    .item.note .grip .dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); cursor: pointer; opacity: .7; }
+    .item.note .grip .dot:hover { opacity: 1; transform: scale(1.15); }
+    .item.note textarea { flex: 1; width: 100%; border: 0; outline: none; resize: none; background: transparent; color: var(--note-fg, var(--fg)); font: 13.5px/1.5 var(--font); padding: 8px 10px; }
+    .item.note.c-yellow { --note-bg: #fff3a8; --note-fg: #3a3200; } .item.note.c-pink { --note-bg: #ffd3e0; --note-fg: #4a1020; }
+    .item.note.c-blue { --note-bg: #d2e6ff; --note-fg: #0f2a4a; } .item.note.c-green { --note-bg: #d4f5d6; --note-fg: #0f3a14; }
+    .item.note.c-orange { --note-bg: #ffe0b8; --note-fg: #4a2a00; }
+    /* links */
+    .item.link { cursor: grab; padding: 10px 12px; gap: 4px; justify-content: center; }
+    .item.link .head { display: flex; align-items: center; gap: 8px; }
+    .item.link img { width: 16px; height: 16px; border-radius: 3px; }
+    .item.link .t { font-weight: 600; font-size: 13.5px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .item.link .u { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .item.link .u a { color: var(--accent); }
+    /* images */
+    .item.image { cursor: grab; background: var(--card); }
+    .item.image img { flex: 1; width: 100%; min-height: 0; object-fit: cover; pointer-events: none; }
+    .item.image .cap { height: 28px; display: flex; align-items: center; padding: 0 10px; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item.image .cap a { color: var(--accent); }
+    /* clips */
+    .item.clip { cursor: grab; padding: 10px 12px 8px; }
+    .item.clip blockquote { margin: 0; flex: 1; overflow: auto; font-size: 13px; line-height: 1.5; border-left: 3px solid var(--accent); padding-left: 10px; white-space: pre-wrap; }
+    .item.clip cite { font-style: normal; font-size: 11.5px; color: var(--muted); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item.clip cite a { color: var(--accent); }
+    .hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--muted); font-size: 13px; line-height: 1.7; pointer-events: none; max-width: 420px; }
+    .hint kbd { font: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+    .status { padding: 5px 14px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); display: flex; gap: 14px; }
+    /* every space */
+    .all { padding: 22px 26px 60px; overflow-y: auto; flex: 1; }
+    .all section { margin-bottom: 24px; }
+    .all h2.space { font-size: 14px; display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+    .all h2.space .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .all h2.space button { margin-left: auto; }
+    .all .row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .all .ecard { width: 200px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); cursor: pointer; }
+    .all .ecard:hover { background: var(--hover); }
+    .all .ecard b { display: block; font-size: 13.5px; margin-bottom: 4px; }
+    .all .ecard span { font-size: 12px; color: var(--muted); }
+    .empty { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="easel">
+    <div class="top">
+      <h1 id="title"><span id="space-label"></span><input id="name" title="Rename this easel" hidden></h1>
+      <select id="space-pick" hidden></select>
+      <select id="easel-pick" hidden></select>
+      <span class="grow"></span>
+      <div class="tools" id="tools">
+        <button class="btn" id="add-note" title="A new note (or double-click the canvas)">Note</button>
+        <button class="btn" id="add-page" title="A card linking to the page you are on">Current page</button>
+        <button class="btn" id="snapshot" title="A picture of the page you are on">Snapshot</button>
+        <div class="zoom"><button id="zoom-out" title="Zoom out">−</button><span id="zoom-label">100%</span><button id="zoom-in" title="Zoom in">+</button><button id="zoom-fit" title="Fit everything in view">Fit</button></div>
+        <button class="btn" id="export" title="Save as a Markdown file with the pictures beside it">Export</button>
+        <button class="btn" id="delete" title="Delete this easel">Delete</button>
+      </div>
+    </div>
+    <div id="viewport">
+      <div id="canvas"></div>
+      <div class="hint" id="hint" hidden>Double-click for a note. Drag to pan, <kbd>⌘</kbd>+scroll to zoom.<br>Paste or drop text, links and pictures. Right-click any page for “Easel”.</div>
+    </div>
+    <div class="all" id="all" hidden></div>
+    <div class="status"><span id="count"></span><span id="saved"></span></div>
+  </div>
+  <script src="easel.js"></script>
+</body>
+</html>

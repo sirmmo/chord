@@ -152,7 +152,21 @@ api.getState().then((s) => {
 });
 api.onSidebar((m) => {
   if (m.kind === 'space.renameStart') startRename(m.id);
+  if (m.kind === 'toast') toast(m.text, m.detail);
 });
+
+let toastTimer = 0;
+function toast(text: string, detail?: string): void {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = h('div', { id: 'toast' });
+    document.body.append(el);
+  }
+  el.replaceChildren(h('b', {}, text), detail ? h('span', {}, detail) : '');
+  el.classList.add('on');
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => el?.classList.remove('on'), 2600);
+}
 
 let lastSpaceKey = '';
 let smart: SmartStatus = {};
@@ -808,7 +822,7 @@ const faviconsOn = (): boolean => state?.settings.theme.favicons !== 'off';
 
 function makeIcon(tab: Tab, spinner: boolean): Node {
   if (spinner && tab.loading) return h('div', { class: 'spinner' });
-  if (isInternal(tab.url)) return h('div', { class: 'glyph internal' }, svg(hostOf(tab.url) === 'downloads' ? ICONS.download : hostOf(tab.url) === 'settings' ? ICONS.settings : hostOf(tab.url) === 'history' ? ICONS.clock : hostOf(tab.url) === 'bookmarks' ? ICONS.star : hostOf(tab.url) === 'reader' ? ICONS.rss : hostOf(tab.url) === 'notes' ? ICONS.note : ICONS.globe, 12));
+  if (isInternal(tab.url)) return h('div', { class: 'glyph internal' }, svg(hostOf(tab.url) === 'downloads' ? ICONS.download : hostOf(tab.url) === 'settings' ? ICONS.settings : hostOf(tab.url) === 'history' ? ICONS.clock : hostOf(tab.url) === 'bookmarks' ? ICONS.star : hostOf(tab.url) === 'reader' ? ICONS.rss : hostOf(tab.url) === 'notes' ? ICONS.note : hostOf(tab.url) === 'easel' ? ICONS.easel : ICONS.globe, 12));
   const glyph = h('div', { class: 'glyph' }, initialOf(hostOf(tab.url) || tab.title));
   if (!tab.favicon || !faviconsOn()) return glyph;
   const img = h('img', { class: 'favicon', src: tab.favicon, alt: '', draggable: 'false' });

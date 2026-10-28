@@ -133,6 +133,13 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   (headings, lists, task boxes, code, quotes, tables, links), with a split editor and
   preview, autosave, and a button that inserts a link to the current page. Notes travel
   with the space in exports and in sync. "Notes of Every Space" shows them all.
+- **Easels** (`⌘⇧E`, page at `chord://easel`): every space has a freeform canvas, as
+  many as you like. Double-click for a sticky note (five colours, Markdown-free text),
+  paste or drop links, text and pictures, add the current page as a card or as a
+  snapshot, and right-click any page for "Easel → Add Selection / Add Image / Add Page /
+  Snapshot Page". Drag to arrange, resize from the corner, pan by dragging the background,
+  `⌘`+scroll to zoom, Fit to see everything. Export an easel as Markdown with its pictures
+  beside it. Pictures live in the profile folder; easels are not part of config exports.
 - **Bookmarks** (`⌘⌥B`, page at `chord://bookmarks`): save any page privately (`⌘⇧B`, the
   tab menu, the command bar) or publicly, with tags and a note in Markdown (rendered on
   the public page too), search and filter them. A bookmark is tagged with the space it
@@ -522,7 +529,6 @@ Most of the original list has shipped: Little windows, sidebar peek, multiple wi
 boosts, picture-in-picture, downloads, history, passwords and passkeys, the app icon
 and auto-update. What is still open:
 
-- Easels: a freeform canvas per space for clippings, notes and links.
 - Chrome Web Store extensions (install by store URL, within the subset Electron supports).
 - Air Traffic Control: rules that route links from chosen sites into a chosen space.
 - History import from Chrome, Brave, Edge and Arc; a Firefox importer.

@@ -178,6 +178,43 @@ export interface ReaderItem {
   /** HTML as the feed gave it; the page sanitises it before showing */
   content?: string;
 }
+// ---- easels: a freeform canvas per space ----
+
+export type EaselItemKind = 'note' | 'link' | 'image' | 'clip';
+export interface EaselItem {
+  id: string;
+  kind: EaselItemKind;
+  /** canvas coordinates and size, in canvas pixels */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** stacking order; higher is on top */
+  z: number;
+  /** note or clip text (Markdown for notes, plain for clips) */
+  text?: string;
+  /** link target, or the page a clip or snapshot came from */
+  url?: string;
+  title?: string;
+  /** image file name under the easels folder, served as chord://easel/images/<file> */
+  image?: string;
+  /** card colour, one of the palette names */
+  color?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+export interface Easel {
+  id: string;
+  spaceId: SpaceId;
+  name: string;
+  items: EaselItem[];
+  createdAt: number;
+  updatedAt: number;
+}
+export interface EaselStatus {
+  easels: Easel[];
+}
+
 export interface ReaderStatus {
   feeds: ReaderFeed[];
   groups: ReaderGroup[];
@@ -637,6 +674,18 @@ export type Command =
   | { type: 'space.forgetProfile'; id: SpaceId }
   | { type: 'prompt.answer'; token: string; text: string }
   | { type: 'bookmarks.open' }
+  | { type: 'easel.open'; spaceId?: SpaceId | null; easelId?: string }
+  | { type: 'easel.create'; spaceId: SpaceId; name?: string }
+  | { type: 'easel.rename'; id: string; name: string }
+  | { type: 'easel.remove'; id: string }
+  | { type: 'easel.put'; id: string; item: EaselItem }
+  | { type: 'easel.removeItem'; id: string; itemId: string }
+  | { type: 'easel.addPage'; id?: string; tabId?: TabId }
+  | { type: 'easel.snapshot'; id?: string; tabId?: TabId }
+  | { type: 'easel.clip'; id?: string; text: string; url: string; title: string }
+  | { type: 'easel.image'; id: string; dataUrl: string; url?: string; title?: string; x?: number; y?: number }
+  | { type: 'easel.imageUrl'; id?: string; src: string; url: string; title: string }
+  | { type: 'easel.export'; id: string }
   | { type: 'reader.open' }
   | { type: 'little.open'; url?: string }
   | { type: 'little.nav'; action: 'back' | 'forward' | 'reload' | 'open' | 'close' }
@@ -730,7 +779,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
   'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'card.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
-  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
+  'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'bookmarks.openSpace', 'notes.open', 'little.open', 'little.nav', 'easel.open', 'easel.create', 'easel.rename', 'easel.remove', 'easel.put', 'easel.removeItem', 'easel.addPage', 'easel.snapshot', 'easel.clip', 'easel.image', 'easel.imageUrl', 'easel.export', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.tag', 'reader.space', 'reader.openSpace', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);
 
 export type Message = Action | Command;
@@ -765,7 +814,9 @@ export type OverlayMessage =
 
 /** Messages from main to the sidebar page */
 export type SidebarMessage =
-  | { kind: 'space.renameStart'; id: SpaceId };
+  | { kind: 'space.renameStart'; id: SpaceId }
+  /** a short confirmation shown at the bottom of the sidebar */
+  | { kind: 'toast'; text: string; detail?: string };
 
 /** Media Session actions Chord can send back to a page. */
 export type MediaAction = 'play' | 'pause' | 'previoustrack' | 'nexttrack' | 'seekbackward' | 'seekforward' | 'stop';
@@ -949,6 +1000,8 @@ export interface ChordApi {
   onSync(cb: (status: SyncStatus) => void): () => void;
   getSync(): Promise<SyncStatus>;
   onLittle(cb: (status: LittleStatus) => void): () => void;
+  onEasels(cb: (status: EaselStatus) => void): () => void;
+  getEasels(): Promise<EaselStatus>;
   onReader(cb: (status: ReaderStatus) => void): () => void;
   getReader(): Promise<ReaderStatus>;
   getReaderItems(query: ReaderQuery): Promise<ReaderItem[]>;
