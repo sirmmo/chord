@@ -291,6 +291,15 @@ export class SyncManager {
         [s.publicRepo, '.nojekyll', ''],
         [s.publicRepo, 'README.md', `# Bookmarks\n\nLinks bookmarked publicly with [Chord](https://ingmmo.com/chord/). Browse them at ${site.siteUrl} or follow feed.xml.\n`],
       ];
+      // the vault, when password sync is on: a KeePass file, rebuilt only when an entry changed
+      const vaultSig = this.c.passwords.vaultSignature();
+      if (state.settings.passwordSync && (force || this.pushed[`${s.privateRepo}/passwords.kdbx#sig`] !== vaultSig)) {
+        const kdbx = await this.c.passwords.toKdbx();
+        if (kdbx) {
+          await this.put(s.privateRepo, 'passwords.kdbx', kdbx, 'Chord: update passwords.kdbx');
+          this.pushed[`${s.privateRepo}/passwords.kdbx#sig`] = vaultSig;
+        }
+      }
       for (const [repo, path, content] of files) {
         const key = `${repo}/${path}`;
         const hash = createHash('sha1').update(content).digest('hex');
@@ -327,6 +336,17 @@ export class SyncManager {
           /* unreadable: ours will overwrite it on the next push */
         }
         this.shas[`${s.privateRepo}/bookmarks.json#pulled`] = bm.sha;
+      }
+      if (this.c.state.settings.passwordSync) {
+        const vault = await this.getBinary(s.privateRepo, 'passwords.kdbx');
+        if (vault && vault.sha !== this.shas[`${s.privateRepo}/passwords.kdbx#pulled`]) {
+          try {
+            await this.c.passwords.mergeKdbx(vault.content);
+            this.shas[`${s.privateRepo}/passwords.kdbx#pulled`] = vault.sha;
+          } catch (err) {
+            console.warn('sync: passwords.kdbx not merged (wrong master password?)', err);
+          }
+        }
       }
       const cfg = await this.get(s.privateRepo, 'config.json');
       if (cfg && cfg.sha !== this.shas[`${s.privateRepo}/config.json#pulled`]) {
@@ -394,7 +414,14 @@ export class SyncManager {
     return { content, sha: r.sha };
   }
 
-  private async put(repo: string, path: string, content: string, message: string): Promise<void> {
+  private async getBinary(repo: string, path: string): Promise<{ content: Buffer; sha: string } | null> {
+    const r = (await this.api('GET', `/repos/${this.settings.user}/${repo}/contents/${path}`)) as { content?: string; sha?: string } | null;
+    if (!r || typeof r.sha !== 'string' || typeof r.content !== 'string') return null;
+    this.shas[`${repo}/${path}`] = r.sha;
+    return { content: Buffer.from(r.content.replace(/\n/g, ''), 'base64'), sha: r.sha };
+  }
+
+  private async put(repo: string, path: string, content: string | Buffer, message: string): Promise<void> {
     const key = `${repo}/${path}`;
     let sha = this.shas[key];
     if (sha === undefined) {
@@ -402,7 +429,7 @@ export class SyncManager {
       sha = existing?.sha;
     }
     const attempt = async (withSha: string | undefined) =>
-      (await this.api('PUT', `/repos/${this.settings.user}/${repo}/contents/${path}`, { message, content: Buffer.from(content, 'utf8').toString('base64'), ...(withSha ? { sha: withSha } : {}) })) as { content?: { sha?: string } };
+      (await this.api('PUT', `/repos/${this.settings.user}/${repo}/contents/${path}`, { message, content: (typeof content === 'string' ? Buffer.from(content, 'utf8') : content).toString('base64'), ...(withSha ? { sha: withSha } : {}) })) as { content?: { sha?: string } };
     let r: { content?: { sha?: string } };
     try {
       r = await attempt(sha);

@@ -74,6 +74,20 @@ sTray.onchange = () => dispatch({ type: 'settings.update', patch: { closeToTray:
 const sLittle = $<HTMLInputElement>('#s-little');
 const sAutofill = $<HTMLInputElement>('#s-autofill');
 sAutofill.onchange = () => dispatch({ type: 'settings.update', patch: { autofill: sAutofill.checked } });
+const sPwLock = $<HTMLInputElement>('#s-pwlock');
+sPwLock.onchange = () => dispatch({ type: 'settings.update', patch: { passwordLock: sPwLock.checked } });
+const sKpMaster = $<HTMLInputElement>('#s-kp-master');
+$('#s-kp-set').onclick = () => {
+  const pw = sKpMaster.value;
+  if (pw.length < 8) {
+    $('#s-kp-state').textContent = 'Use at least 8 characters.';
+    sKpMaster.focus();
+    return;
+  }
+  dispatch({ type: 'passwords.setMaster', password: pw });
+  sKpMaster.value = '';
+};
+$('#s-kp-clear').onclick = () => dispatch({ type: 'passwords.clearMaster' });
 sLittle.onchange = () => dispatch({ type: 'settings.update', patch: { littleWindows: sLittle.checked } });
 sAutoPip.onchange = () => dispatch({ type: 'settings.update', patch: { autoPip: sAutoPip.checked } });
 const FLAGS: { key: keyof TroubleFlags; label: string; help: string }[] = [
@@ -283,6 +297,7 @@ function fillSettings(): void {
   sTray.checked = s.settings.closeToTray;
   sLittle.checked = s.settings.littleWindows;
   sAutofill.checked = s.settings.autofill;
+  sPwLock.checked = s.settings.passwordLock;
   sAutoPip.checked = s.settings.autoPip;
   for (const [k, input] of flagInputs) input.checked = s.settings.flags[k] === true;
   sUpdCheck.checked = s.settings.updates.check;
@@ -517,7 +532,7 @@ function renderBoosts(): void {
 
 // ---- passwords page ----
 
-let passwords: PasswordsStatus = { available: false, entries: [], never: [] };
+let passwords: PasswordsStatus = { available: false, entries: [], never: [], verify: 'dialog', keepassReady: false };
 api.onPasswords((p) => {
   passwords = p;
   renderPasswords();
@@ -528,6 +543,12 @@ void api.getPasswords().then((p) => {
 });
 
 function renderPasswords(): void {
+  const how = passwords.verify === 'touchid' ? 'Touch ID' : passwords.verify === 'hello' ? 'Windows Hello' : 'a confirmation';
+  $('#s-pwlock-label').textContent = `Ask for ${how} before revealing or filling a password (then not again for ten minutes)`;
+  $('#s-pwlock-note').textContent = passwords.verify === 'dialog' ? 'This computer offers neither Touch ID nor Windows Hello, so the check is a plain confirmation dialog: it guards against a slip, not an intruder.' : `${how} is the same check a passkey uses; the vault itself is encrypted with the operating system keychain either way.`;
+  $('#s-kp-clear').hidden = !passwords.keepassReady;
+  $('#s-kp-set').textContent = passwords.keepassReady ? 'Change master password' : 'Set and sync';
+  $('#s-kp-state').textContent = passwords.keepassReady ? (state?.settings.sync.enabled ? 'A master password is set: passwords.kdbx is kept in the private repository.' : 'A master password is set; turn on GitHub sync (Settings → Sync) to publish the file.') : '';
   $('#s-pw-note').textContent = passwords.available
     ? 'Chord offers to save passwords when you sign in on an https site and fills them in when you return. They are encrypted with your operating system’s keychain (macOS Keychain, Windows DPAPI, your Linux keyring), so the file in the profile folder is unreadable without your OS account. Password-manager extensions (1Password, Bitwarden, KeePassXC) need extension popups and native messaging, which Electron does not provide; their web vaults work as ordinary pages.'
     : 'Password storage is unavailable: the operating system keychain cannot be reached (on Linux, install and unlock a keyring such as GNOME Keyring or KWallet). Nothing will be saved.';

@@ -1,4 +1,5 @@
 import { app, dialog, ipcMain, safeStorage, systemPreferences, type WebContents } from 'electron';
+import { verifyMethod, verifyUser } from './verify.ts';
 import { join } from 'node:path';
 import type { PasskeyEntry, PasskeysMode, PasskeysStatus } from '../shared/types.ts';
 import { fromB64url, rpIdMatches } from '../shared/passkeys.ts';
@@ -88,7 +89,7 @@ export class PasskeyManager {
     return {
       available: this.available(),
       mode: this.mode(),
-      touchId: process.platform === 'darwin' && systemPreferences.canPromptTouchID(),
+      touchId: verifyMethod() !== 'dialog',
       entries: this.entries.map(({ id, rpId, userName, userDisplayName, createdAt, lastUsedAt }): PasskeyEntry => ({ id, rpId, userName, userDisplayName, createdAt, lastUsedAt })),
     };
   }
@@ -180,20 +181,15 @@ export class PasskeyManager {
     return { ok: true };
   }
 
-  /** Touch ID when the Mac has it; otherwise the dialog already shown is the confirmation. */
+  /** Touch ID or Windows Hello; elsewhere the dialog already shown is the confirmation. */
   private async verify(win: Electron.BrowserWindow, reason: string, button: string): Promise<boolean> {
-    if (process.platform === 'darwin' && systemPreferences.canPromptTouchID()) {
-      try {
-        await systemPreferences.promptTouchID(reason);
-        return true;
-      } catch {
-        const { response } = await dialog.showMessageBox(win, { type: 'question', buttons: [button, 'Cancel'], defaultId: 0, cancelId: 1, message: reason, detail: 'Touch ID was not confirmed. Continue anyway?' });
-        return response === 0;
-      }
+    const method = verifyMethod();
+    if (method === 'dialog') {
+      if (button === 'Create') return true; // the create dialog was the confirmation
+      const { response } = await dialog.showMessageBox(win, { type: 'question', buttons: [button, 'Cancel'], defaultId: 0, cancelId: 1, message: reason, detail: 'Chord will answer this site with the passkey it stores for you.' });
+      return response === 0;
     }
-    if (button === 'Create') return true; // the create dialog was the confirmation
-    const { response } = await dialog.showMessageBox(win, { type: 'question', buttons: [button, 'Cancel'], defaultId: 0, cancelId: 1, message: reason, detail: 'Chord will answer this site with the passkey it stores for you.' });
-    return response === 0;
+    return verifyUser(win, reason, button);
   }
 
   /** Attach a virtual authenticator holding these credentials to the page for one request. */

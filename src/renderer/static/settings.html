@@ -18,8 +18,10 @@
           <label>Smart pages</label>
           <label class="check"><input type="checkbox" id="s-smart"> Show player controls for pages with media (YouTube Music, Spotify…) in the sidebar, across spaces</label>
 
+          <label>Links from other apps</label>
+          <label class="check"><input type="checkbox" id="s-little"> Open them in a Little window (a small window of their own, with “Open in Chord” to move the page into a space)</label>
+
           <label>Closing the window</label>
-          <label class="check"><input type="checkbox" id="s-little"> Open links from other apps in a Little window (a small window of their own, with “Open in Chord” to move them into a space)</label>
           <label class="check"><input type="checkbox" id="s-tray"> Keep Chord running in the menu bar / tray, with player and call controls</label>
 
           <label>Download folder</label>
@@ -32,9 +34,12 @@
           <label class="check"><input type="checkbox" id="s-autopip"> Pop a playing video out (picture in picture) when switching away from its tab</label>
 
           <label>Troubleshooting</label>
-          <p class="s-foot">Chromium switches for when a video stays black or pages draw wrong. Each one takes effect at the next launch; turn one on at a time, relaunch, and check the page again. Help → Copy Diagnostics reports which are active.</p>
-          <div id="s-flags"></div>
-          <div class="row"><button class="btn" id="s-relaunch">Relaunch Chord</button></div>
+          <div>
+            <p class="s-foot">Chromium switches for when a video stays black or pages draw wrong. Each one takes effect at the next launch; turn one on at a time, relaunch, and check the page again. Help → Copy Diagnostics reports which are active.</p>
+            <div id="s-flags"></div>
+            <div class="row"><button class="btn" id="s-relaunch">Relaunch Chord</button></div>
+
+          </div>
 
           <label>Address bar</label>
           <label class="check"><input type="checkbox" id="s-addressbar"> Show an editable address bar above the page <span class="kbd">⌘⇧L</span></label>
@@ -151,7 +156,18 @@
       </div>
       <div class="s-page" data-page="passwords">
         <p class="s-foot" style="margin-top:0" id="s-pw-note"></p>
-        <label class="check"><input type="checkbox" id="s-autofill"> Fill saved passwords automatically when a sign-in form appears (off: only when you click into it)</label>
+        <label class="check"><input type="checkbox" id="s-autofill"> Fill saved passwords automatically when a sign-in form appears (off: only when you click into it)</label><br>
+        <label class="check"><input type="checkbox" id="s-pwlock"> <span id="s-pwlock-label">Ask for Touch ID before revealing or filling a password</span></label>
+        <p class="s-foot" id="s-pwlock-note"></p>
+        <h3>Sync as a KeePass file</h3>
+        <p class="s-foot">With GitHub sync on, your passwords can travel in the private repository as <code>passwords.kdbx</code>, a KeePass file (KDBX 4, Argon2) encrypted with a master password of its own. Other computers running Chord with the same master password merge it; KeePassXC and friends open it too. Nothing leaves this computer until a master password is set.</p>
+        <div class="s-grid">
+          <label>Master password</label>
+          <div>
+            <div class="row"><input type="password" id="s-kp-master" class="wide" placeholder="Choose a master password for the KeePass file" autocomplete="new-password"><button class="btn primary" id="s-kp-set">Set and sync</button><button class="btn danger" id="s-kp-clear" hidden>Stop syncing</button></div>
+            <p class="s-foot" id="s-kp-state"></p>
+          </div>
+        </div>
         <h3>Saved passwords</h3>
         <div id="s-passwords" class="pw-list"></div>
         <h3>Never save for</h3>

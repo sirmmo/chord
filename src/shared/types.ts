@@ -64,6 +64,10 @@ export interface PasswordsStatus {
   available: boolean;
   entries: PasswordEntry[];
   never: string[];
+  /** how "is it you?" is checked on this computer */
+  verify: 'touchid' | 'hello' | 'dialog';
+  /** a master password for the KeePass file is set */
+  keepassReady: boolean;
 }
 
 /** 'chord': Chord stores passkeys and answers sites itself; 'system': Chromium's own stack (Windows Hello, security keys). */
@@ -349,6 +353,10 @@ export interface Settings {
   littleWindows: boolean;
   /** fill saved passwords as soon as a sign-in form appears (otherwise on click) */
   autofill: boolean;
+  /** Touch ID / Windows Hello before revealing or filling passwords */
+  passwordLock: boolean;
+  /** keep passwords in the private sync repository as a KeePass file */
+  passwordSync: boolean;
   /** Chromium troubleshooting switches applied at the next launch */
   flags: TroubleFlags;
   /** origins allowed to open and close tabs of their own through navigator.chord */
@@ -655,6 +663,8 @@ export type Command =
   | { type: 'downloads.panel' }
   | { type: 'password.delete'; id: string }
   | { type: 'passkey.delete'; id: string }
+  | { type: 'passwords.setMaster'; password: string }
+  | { type: 'passwords.clearMaster' }
   | { type: 'password.allowAgain'; host: string }
   | { type: 'import.browser' }
   | { type: 'download.pause'; id: string }
@@ -698,7 +708,7 @@ export const COMMAND_TYPES: ReadonlySet<string> = new Set<Command['type']>([
   'nav.back', 'nav.forward', 'nav.reload', 'nav.stop',
   'palette.open', 'palette.close', 'settings.open', 'sidebar.peek', 'find.open', 'find.query', 'find.close',
   'url.copy', 'devtools.toggle', 'zoom.in', 'zoom.out', 'zoom.reset', 'open.external', 'app.setDefaultBrowser',
-  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'import.browser',
+  'extension.pickFolder', 'config.export', 'config.importFile', 'diagnostics.copy', 'media.action', 'call.action', 'dev.action', 'media.pip', 'space.install', 'space.modesMenu', 'space.newProfile', 'space.forgetProfile', 'prompt.answer', 'research.note', 'research.clip', 'research.remove', 'research.source', 'research.zotero', 'ai.send', 'ai.stop', 'ai.clear', 'ai.setKey', 'ai.test', 'downloads.panel', 'password.delete', 'password.allowAgain', 'passkey.delete', 'passwords.setMaster', 'passwords.clearMaster', 'import.browser',
   'download.pause', 'download.resume', 'download.cancel', 'download.open', 'download.show', 'download.retry', 'download.remove',
   'downloads.clear', 'downloads.openFolder', 'downloads.chooseFolder', 'downloads.open', 'space.passwordPrompt', 'space.password', 'history.open', 'history.remove', 'history.clear', 'capture.pick', 'capture.settings', 'app.relaunch', 'guide.open', 'group.contextmenu', 'group.new', 'group.renamePrompt', 'pageTabs.forget', 'update.check', 'update.download', 'update.install', 'update.openPage', 'window.new', 'space.openInWindow', 'mcp.copyConfig', 'mcp.regenerate', 'sources.analyze', 'sources.clear', 'sources.focus', 'bookmarks.open', 'little.open', 'little.nav', 'reader.open', 'reader.subscribe', 'reader.subscribeFrom', 'reader.unsubscribe', 'reader.refresh', 'reader.read', 'reader.star', 'reader.openItem', 'reader.importOpml', 'reader.exportOpml', 'reader.group', 'reader.move', 'reader.feedMenu', 'bookmark.page', 'sync.connect', 'sync.login', 'sync.loginCancel', 'sync.loginGh', 'sync.disconnect', 'sync.now', 'curated.add', 'curated.remove', 'curated.refresh', 'curated.read', 'curated.save', 'curated.open',
 ]);

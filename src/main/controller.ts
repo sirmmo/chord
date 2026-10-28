@@ -699,6 +699,12 @@ export class Controller {
       case 'passkey.delete':
         this.passkeys.remove(cmd.id);
         return;
+      case 'passwords.setMaster':
+        this.passwords.setMasterPassword(cmd.password);
+        return;
+      case 'passwords.clearMaster':
+        this.passwords.clearMasterPassword();
+        return;
       case 'call.action':
         this.smart.callAction(cmd.id, cmd.action);
         return;

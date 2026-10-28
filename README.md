@@ -153,6 +153,12 @@ or Brave. It is an early 0.1: usable, unpolished, and missing plenty. See the ro
   decrypts for a VMP-signed binary: the release builds are signed through castLabs' EVS
   service when the `EVS_ACCOUNT_NAME` / `EVS_PASSWD` secrets are set for the workflow
   (`build/afterPack.js`); Linux needs no signature.
+- **Password lock and KeePass sync**: Settings → Passwords can require Touch ID or
+  Windows Hello (the check a passkey uses) before a password is revealed or filled, once
+  per ten minutes. With a master password set, the vault travels in the private sync
+  repository as `passwords.kdbx`, a KeePass 4 file (Argon2) that other Chords merge and
+  KeePassXC opens. Google's password manager has no API for other apps, so that one
+  cannot be used.
 - **Password autofill**: saved passwords are filled the moment a sign-in form appears,
   also in single-page apps, and username-first pages get the username so the password
   follows on the next screen; Settings → Passwords can limit filling to a click into the

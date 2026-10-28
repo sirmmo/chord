@@ -1,4 +1,7 @@
 import { app, dialog, ipcMain, safeStorage, type IpcMainEvent } from 'electron';
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { verifyMethod, verifyUser } from './verify.ts';
+import { exportKdbx, importKdbx, type KeePassEntry } from './keepass.ts';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { PasswordEntry, PasswordsStatus } from '../shared/types.ts';
@@ -20,6 +23,7 @@ interface File {
 }
 
 const PROMPT_DELAY_MS = 2500;
+const UNLOCK_MS = 10 * 60_000;
 
 /**
  * A small password manager. Secrets are encrypted with Electron's safeStorage,
@@ -32,6 +36,8 @@ export class PasswordManager {
   private entries: Stored[] = [];
   private never = new Set<string>();
   private pending = new Map<string, { host: string; username: string; password: string; timer: NodeJS.Timeout }>();
+  private unlockedUntil = 0;
+  private unlocking: Promise<boolean> | null = null;
 
   constructor(c: Controller) {
     this.c = c;
@@ -55,16 +61,21 @@ export class PasswordManager {
       if (existing && this.decrypt(existing) === password) return;
       this.queuePrompt(id, host, username, password);
     });
-    ipcMain.handle('passwords:lookup', (event, rawHost: unknown) => {
+    ipcMain.handle('passwords:lookup', async (event, rawHost: unknown) => {
       if (!this.c.tabs.tabIdOf(event.sender) || !this.available()) return { auto: false, entries: [] };
       const host = str(rawHost, 253);
-      return { auto: this.c.state.settings.autofill, entries: this.forHost(host).map((e) => ({ username: e.username, password: this.decrypt(e) })) };
+      const matches = this.forHost(host);
+      if (matches.length === 0) return { auto: this.c.state.settings.autofill, entries: [] };
+      if (!(await this.unlock(`Fill the password for ${host}`))) return { auto: false, entries: [] };
+      return { auto: this.c.state.settings.autofill, entries: matches.map((e) => ({ username: e.username, password: this.decrypt(e) })) };
     });
     ipcMain.handle('passwords', (event) => (this.c.trustedEvent(event) ? this.status() : { entries: [], never: [], available: false }));
-    ipcMain.handle('passwords:reveal', (event, id: unknown) => {
+    ipcMain.handle('passwords:reveal', async (event, id: unknown) => {
       if (!this.c.trustedEvent(event) || typeof id !== 'string') return null;
       const e = this.entries.find((x) => x.id === id);
-      return e ? this.decrypt(e) : null;
+      if (!e) return null;
+      if (!(await this.unlock(`Show the password for ${e.username || e.host}`))) return null;
+      return this.decrypt(e);
     });
   }
 
@@ -77,7 +88,93 @@ export class PasswordManager {
       available: this.available(),
       entries: this.entries.map(({ id, host, username, updatedAt }) => ({ id, host, username, updatedAt })),
       never: [...this.never].sort(),
+      verify: verifyMethod(),
+      keepassReady: this.masterPassword() !== '',
     };
+  }
+
+  /** With the lock on: Touch ID / Windows Hello once, then quiet for ten minutes. */
+  private unlock(reason: string): Promise<boolean> {
+    if (!this.c.state.settings.passwordLock) return Promise.resolve(true);
+    if (Date.now() < this.unlockedUntil) return Promise.resolve(true);
+    if (this.unlocking) return this.unlocking;
+    this.unlocking = verifyUser(this.c.win ?? undefined, reason, 'Unlock')
+      .then((ok) => {
+        if (ok) this.unlockedUntil = Date.now() + UNLOCK_MS;
+        return ok;
+      })
+      .finally(() => {
+        this.unlocking = null;
+      });
+    return this.unlocking;
+  }
+
+  // ---- the KeePass file in the private sync repository ----
+
+  private masterPath(): string {
+    return join(app.getPath('userData'), 'keepass-key');
+  }
+
+  masterPassword(): string {
+    try {
+      const raw = readFileSync(this.masterPath());
+      return this.available() ? safeStorage.decryptString(raw) : '';
+    } catch {
+      return '';
+    }
+  }
+
+  setMasterPassword(password: string): void {
+    const pw = password.trim();
+    if (!pw || !this.available()) return;
+    writeFileSync(this.masterPath(), safeStorage.encryptString(pw), { mode: 0o600 });
+    this.c.apply({ type: 'settings.update', patch: { passwordSync: true } });
+    this.c.sendAll('passwords', this.status());
+    this.c.sync.schedulePush();
+  }
+
+  clearMasterPassword(): void {
+    try {
+      unlinkSync(this.masterPath());
+    } catch {
+      /* none */
+    }
+    this.c.apply({ type: 'settings.update', patch: { passwordSync: false } });
+    this.c.sendAll('passwords', this.status());
+  }
+
+  /** The vault as a KeePass file, or null when password sync is off or has no master password. */
+  async toKdbx(): Promise<Buffer | null> {
+    const master = this.masterPassword();
+    if (!this.c.state.settings.passwordSync || !master) return null;
+    const entries: KeePassEntry[] = this.entries.map((e) => ({ host: e.host, username: e.username, password: this.decrypt(e), updatedAt: e.updatedAt })).filter((e) => e.password);
+    return exportKdbx(entries, master);
+  }
+
+  /** Merge a KeePass file from another device: missing entries are added, newer ones win. Nothing is removed. */
+  async mergeKdbx(file: Buffer): Promise<boolean> {
+    const master = this.masterPassword();
+    if (!this.c.state.settings.passwordSync || !master) return false;
+    const remote = await importKdbx(file, master);
+    let changed = false;
+    for (const r of remote) {
+      const local = this.entries.find((e) => e.host === r.host && e.username === r.username);
+      if (!local) {
+        this.entries.push({ id: randomUUID(), host: r.host, username: r.username, secret: safeStorage.encryptString(r.password).toString('base64'), createdAt: r.updatedAt || Date.now(), updatedAt: r.updatedAt || Date.now() });
+        changed = true;
+      } else if (r.updatedAt > local.updatedAt && this.decrypt(local) !== r.password) {
+        local.secret = safeStorage.encryptString(r.password).toString('base64');
+        local.updatedAt = r.updatedAt;
+        changed = true;
+      }
+    }
+    if (changed) this.save();
+    return changed;
+  }
+
+  /** A fingerprint of the vault, so the sync knows when the file needs pushing again. */
+  vaultSignature(): string {
+    return this.entries.map((e) => `${e.id}:${e.updatedAt}`).join('|');
   }
 
   /** The page navigated: a pending login looks successful, ask now. */
@@ -158,6 +255,7 @@ export class PasswordManager {
   private save(): void {
     this.store.save({ entries: this.entries, never: [...this.never] });
     this.c.sendAll('passwords', this.status());
+    this.c.sync.schedulePush();
   }
 }
 
