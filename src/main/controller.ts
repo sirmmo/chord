@@ -921,6 +921,24 @@ export class Controller {
       case 'group.renamePrompt':
         void this.renameGroup(cmd.id);
         return;
+      case 'tab.renamePrompt': {
+        const tab = this.state.tabs[cmd.id];
+        if (!tab) return;
+        void this.prompt('Rename tab', 'Leave empty to show the page title again', tab.name ?? tab.title).then((name) => {
+          this.overlay?.hide();
+          if (name !== null) this.apply({ type: 'tab.rename', id: cmd.id, name: name.trim() === tab.title ? null : name });
+        });
+        return;
+      }
+      case 'tab.iconPrompt': {
+        const tab = this.state.tabs[cmd.id];
+        if (!tab) return;
+        void this.prompt('Tab icon', 'An emoji, or empty for the site icon', tab.icon ?? '').then((icon) => {
+          this.overlay?.hide();
+          if (icon !== null) this.apply({ type: 'tab.icon', id: cmd.id, icon });
+        });
+        return;
+      }
       case 'update.check':
         void this.updates.check(true);
         return;

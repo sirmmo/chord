@@ -476,3 +476,28 @@ test('bookmarks: add dedupes by URL, remove leaves a tombstone, merge takes remo
   const restored = hydrate(JSON.parse(JSON.stringify(s)), ctx());
   assert.equal(restored.bookmarks.length, 2);
 });
+
+test('tabs can carry a name and an emoji of their own, exported and imported with the config', () => {
+  let s = run(fresh(), [{ type: 'tab.new', url: 'https://mail.test' }]);
+  s = reduce(s, { type: 'tab.pin', id: 'id2' }, ctx());
+  s = reduce(s, { type: 'tab.rename', id: 'id2', name: '  Inbox ' }, ctx());
+  s = reduce(s, { type: 'tab.icon', id: 'id2', icon: '📧' }, ctx());
+  assert.equal(s.tabs.id2.name, 'Inbox');
+  assert.equal(s.tabs.id2.icon, '📧');
+  assert.equal(reduce(s, { type: 'tab.rename', id: 'id2', name: 'Inbox' }, ctx()), s, 'same name is a no-op');
+  const cfg = exportConfig(s, 5_000);
+  const exported = cfg.spaces[0].pinned.find((t) => t.url === 'https://mail.test');
+  assert.equal(exported?.name, 'Inbox');
+  assert.equal(exported?.icon, '📧');
+  const other = reduce(fresh(), { type: 'config.import', config: cfg, mode: 'merge' }, ctx());
+  const imported = Object.values(other.tabs).find((t) => t.url === 'https://mail.test');
+  assert.equal(imported?.name, 'Inbox');
+  assert.equal(imported?.icon, '📧');
+  s = reduce(s, { type: 'tab.rename', id: 'id2', name: null }, ctx());
+  s = reduce(s, { type: 'tab.icon', id: 'id2', icon: '' }, ctx());
+  assert.equal(s.tabs.id2.name, undefined);
+  assert.equal(s.tabs.id2.icon, undefined);
+  const raw = JSON.parse(JSON.stringify(s)) as State;
+  (raw.tabs.id2 as unknown as { name: unknown }).name = 42;
+  assert.equal(hydrate(raw, ctx()).tabs.id2.name, undefined);
+});

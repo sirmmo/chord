@@ -8,6 +8,7 @@ import { hostOf, searchUrl } from '../shared/url.ts';
 import type { Controller } from './controller.ts';
 
 const isMac = process.platform === 'darwin';
+const TAB_ICONS = ['📌', '⭐', '📧', '📅', '📝', '💬', '🎵', '📺', '🛠️', '🐙', '📊', '🧠', '🔥', '❤️', '🏠', '💼'];
 const SPACE_ICONS = ['🏠', '💼', '🎨', '📚', '🎮', '🧪', '✈️', '🛒', '🎵', '💬'];
 const sep: MenuItemConstructorOptions = { type: 'separator' };
 
@@ -181,6 +182,20 @@ export function tabContextMenu(c: Controller, id: TabId): void {
   else items.push({ label: 'Remove from Favorites', click: d({ type: 'tab.unfavorite', id }) });
   if (tab.homeUrl && tab.url !== tab.homeUrl) items.push({ label: 'Reset to Pinned Page', click: d({ type: 'tab.home', id }) });
   items.push(sep);
+  if (tab.kind !== 'today') {
+    items.push({ label: tab.name ? `Rename… (${tab.name})` : 'Rename…', click: d({ type: 'tab.renamePrompt', id }) });
+    items.push({
+      label: 'Icon',
+      submenu: [
+        { label: 'Site icon', type: 'radio', checked: !tab.icon, click: d({ type: 'tab.icon', id, icon: null }) },
+        ...TAB_ICONS.map((icon) => ({ label: icon, type: 'radio' as const, checked: tab.icon === icon, click: d({ type: 'tab.icon', id, icon }) })),
+        ...(tab.icon && !TAB_ICONS.includes(tab.icon) ? [{ label: tab.icon, type: 'radio' as const, checked: true }] : []),
+        sep,
+        { label: 'Other Emoji…', click: d({ type: 'tab.iconPrompt', id }) },
+      ],
+    });
+    items.push(sep);
+  }
 
   const inSplit = space.panes.includes(id);
   if (inSplit && space.panes.length > 1) items.push({ label: 'Remove from Split View', click: d({ type: 'tab.unsplit', id }) });

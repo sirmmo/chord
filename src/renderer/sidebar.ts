@@ -829,6 +829,7 @@ function setIconKey(slot: HTMLElement, key: string, make: () => Node): void {
 
 function iconKey(tab: Tab, spinner: boolean): string {
   if (spinner && tab.loading) return 'spinner';
+  if (tab.icon) return `emoji:${tab.icon}`;
   if (isInternal(tab.url)) return `internal:${hostOf(tab.url)}`;
   return tab.favicon && faviconsOn() ? `img:${tab.favicon}` : `glyph:${initialOf(hostOf(tab.url) || tab.title)}`;
 }
@@ -837,6 +838,7 @@ const faviconsOn = (): boolean => state?.settings.theme.favicons !== 'off';
 
 function makeIcon(tab: Tab, spinner: boolean): Node {
   if (spinner && tab.loading) return h('div', { class: 'spinner' });
+  if (tab.icon) return h('div', { class: 'glyph emoji' }, tab.icon);
   if (isInternal(tab.url)) return h('div', { class: 'glyph internal' }, svg(hostOf(tab.url) === 'downloads' ? ICONS.download : hostOf(tab.url) === 'settings' ? ICONS.settings : hostOf(tab.url) === 'history' ? ICONS.clock : hostOf(tab.url) === 'bookmarks' ? ICONS.star : hostOf(tab.url) === 'reader' ? ICONS.rss : hostOf(tab.url) === 'notes' ? ICONS.note : hostOf(tab.url) === 'easel' ? ICONS.easel : ICONS.globe, 12));
   const glyph = h('div', { class: 'glyph' }, initialOf(hostOf(tab.url) || tab.title));
   if (!tab.favicon || !faviconsOn()) return glyph;
@@ -962,6 +964,11 @@ function tabEvents(el: HTMLElement): void {
   el.addEventListener('auxclick', (e) => {
     if (e.button === 1) dispatch({ type: 'tab.close', id: tabId(el) });
   });
+  el.addEventListener('dblclick', (e) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    const tab = state?.tabs[tabId(el)];
+    if (tab && tab.kind !== 'today') dispatch({ type: 'tab.renamePrompt', id: tab.id });
+  });
   el.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     dispatch({ type: 'tab.contextmenu', id: tabId(el) });
@@ -1006,10 +1013,10 @@ function updateTab(el: HTMLElement, tab: Tab, space: Space): void {
   setClass(el, 'asleep', !tab.awake);
   setClass(el, 'kept', Boolean(tab.keepLoaded));
   setClass(el, 'crashed', Boolean(tab.crashed));
-  const tip = tab.keepLoaded ? `${tab.url}\nKept loaded` : tab.url;
+  const tip = `${tab.name ? `${tab.title}\n` : ''}${tab.url}${tab.keepLoaded ? '\nKept loaded' : ''}`;
   if (el.title !== tip) el.title = tip;
   setIconKey(el.querySelector('.icon-slot') as HTMLElement, iconKey(tab, true), () => makeIcon(tab, true));
-  setText(el.querySelector('.title') as HTMLElement, tab.title || hostOf(tab.url));
+  setText(el.querySelector('.title') as HTMLElement, tab.name || tab.title || hostOf(tab.url));
   const audio = el.querySelector('.audio') as HTMLButtonElement;
   const showAudio = Boolean(tab.audible || tab.muted || (tab.volume !== undefined && tab.volume < 1));
   if (audio.hidden === showAudio) audio.hidden = !showAudio;
@@ -1034,7 +1041,7 @@ function updateFavorite(el: HTMLElement, tab: Tab, space: Space): void {
   setClass(el, 'active', space.panes.includes(tab.id));
   setClass(el, 'asleep', !tab.awake);
   setClass(el, 'kept', Boolean(tab.keepLoaded));
-  const title = `${tab.title}\n${tab.url}${tab.keepLoaded ? '\nKept loaded' : ''}`;
+  const title = `${tab.name ? `${tab.name}\n` : ''}${tab.title}\n${tab.url}${tab.keepLoaded ? '\nKept loaded' : ''}`;
   if (el.title !== title) el.title = title;
   setIconKey(el.querySelector('.icon-slot') as HTMLElement, iconKey(tab, false), () => makeIcon(tab, false));
 }

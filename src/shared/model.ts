@@ -143,6 +143,8 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     if (sp.groups.length === 0) delete sp.groups;
   }
   for (const t of Object.values(s.tabs)) {
+    if (t.name !== undefined && (typeof t.name !== 'string' || !t.name.trim())) delete t.name;
+    if (t.icon !== undefined && (typeof t.icon !== 'string' || !t.icon.trim())) delete t.icon;
     t.awake = false;
     t.loading = false;
     t.audible = false;
@@ -538,6 +540,24 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       if (!sp) return prev;
       sp.curators = a.curators.length ? a.curators.map((c) => ({ ...c })) : undefined;
       if (!sp.curators) delete sp.curators;
+      return s;
+    }
+    case 'tab.rename': {
+      const tab = s.tabs[a.id];
+      if (!tab) return prev;
+      const name = (a.name ?? '').trim().slice(0, 80);
+      if ((tab.name ?? '') === name) return prev;
+      if (name) tab.name = name;
+      else delete tab.name;
+      return s;
+    }
+    case 'tab.icon': {
+      const tab = s.tabs[a.id];
+      if (!tab) return prev;
+      const icon = (a.icon ?? '').trim().slice(0, 8);
+      if ((tab.icon ?? '') === icon) return prev;
+      if (icon) tab.icon = icon;
+      else delete tab.icon;
       return s;
     }
     case 'tab.keepLoaded': {

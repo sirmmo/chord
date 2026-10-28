@@ -20,6 +20,9 @@ export interface ConfigTab {
   group?: string;
   /** always loaded, even in the background */
   keepLoaded?: boolean;
+  /** the user's own name and emoji for the tab */
+  name?: string;
+  icon?: string;
 }
 
 export interface ConfigSpace {
@@ -60,6 +63,8 @@ function tabToConfig(tab: Tab): ConfigTab {
   if (tab.title) out.title = tab.title;
   if (tab.favicon) out.favicon = tab.favicon;
   if (tab.keepLoaded) out.keepLoaded = true;
+  if (tab.name) out.name = tab.name;
+  if (tab.icon) out.icon = tab.icon;
   return out;
 }
 
@@ -121,6 +126,8 @@ function parseTabs(v: unknown, where: string): ConfigTab[] {
     if (typeof raw.favicon === 'string' && /^(https?|data):/i.test(raw.favicon)) tab.favicon = raw.favicon;
     if (typeof raw.group === 'string' && raw.group.trim()) tab.group = raw.group.trim().slice(0, 60);
     if (raw.keepLoaded === true) tab.keepLoaded = true;
+    if (typeof raw.name === 'string' && raw.name.trim()) tab.name = raw.name.trim().slice(0, 80);
+    if (typeof raw.icon === 'string' && raw.icon.trim()) tab.icon = raw.icon.trim().slice(0, 8);
     out.push(tab);
   });
   return out;
@@ -217,6 +224,8 @@ function addTab(s: State, ctx: Ctx, c: ConfigTab, spaceId: SpaceId | null, kind:
     lastActiveAt: ctx.now,
     awake: false,
     keepLoaded: c.keepLoaded || undefined,
+    name: c.name,
+    icon: c.icon,
   };
   return id;
 }

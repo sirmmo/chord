@@ -138,6 +138,10 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   (headings, lists, task boxes, code, quotes, tables, links), with a split editor and
   preview, autosave, and a button that inserts a link to the current page. Notes travel
   with the space in exports and in sync. "Notes of Every Space" shows them all.
+- **Tab names and icons**: double-click a pinned or favorite tab (or right-click → Rename…)
+  to give it a name of your own, and pick an emoji from the Icon submenu to replace its
+  favicon. Both travel with the space in exports and in sync; the page title stays in the
+  tooltip and the command bar.
 - **Easels** (`⌘⇧E`, page at `chord://easel`): every space has a freeform canvas, as
   many as you like. Double-click for a sticky note (five colours, Markdown-free text),
   paste or drop links, text and pictures, add the current page as a card or as a

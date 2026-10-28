@@ -377,7 +377,7 @@ function compute(raw: string): Item[] {
   const lockedSpaces = new Set(s.spaces.filter((sp) => isLocked(sp)).map((sp) => sp.id));
   const tabs = Object.values(s.tabs)
     .filter((t) => t.id !== current?.id && !(t.spaceId && lockedSpaces.has(t.spaceId)))
-    .map((t) => ({ t, score: score(query, t.title, t.url) }))
+    .map((t) => ({ t, score: score(query, `${t.name ? `${t.name} ` : ''}${t.title}`, t.url) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score || b.t.lastActiveAt - a.t.lastActiveAt)
     .slice(0, query ? 6 : 8);
@@ -385,8 +385,8 @@ function compute(raw: string): Item[] {
     out.push({
       group: 'Open tabs',
       icon: faviconOf(t),
-      title: t.title || hostOf(t.url),
-      subtitle: `${hostOf(t.url)} · ${kind(t)} · ${spaceName(t)}`,
+      title: t.name || t.title || hostOf(t.url),
+      subtitle: `${t.name ? `${t.title} · ` : ''}${hostOf(t.url)} · ${kind(t)} · ${spaceName(t)}`,
       hint: 'Switch',
       run: () => dispatch({ type: 'tab.activate', id: t.id }),
     });
