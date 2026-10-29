@@ -153,12 +153,13 @@ export function hydrate(raw: unknown, ctx: Ctx): State {
     for (const g of groups) {
       if (g.owner && !exists(g.owner)) delete g.owner;
       if (g.live !== undefined && !isLiveSource(g.live)) delete g.live;
+      if (g.folder !== undefined && g.folder !== true) delete g.folder;
     }
     for (const id of [...sp.pinned, ...sp.today]) {
       const t = s.tabs[id];
       if (t.groupId && !groups.some((g) => g.id === t.groupId)) delete t.groupId;
     }
-    sp.groups = groups.filter((g) => g.owner || g.live || membersOf(s, sp, g.id).length > 0);
+    sp.groups = groups.filter((g) => g.owner || g.live || g.folder || membersOf(s, sp, g.id).length > 0);
     if (sp.groups.length === 0) delete sp.groups;
   }
   for (const t of Object.values(s.tabs)) {
@@ -654,7 +655,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       sp.pinned = [...ordered, ...keep];
       if (sp.groups) {
         const used = new Set(sp.pinned.map((id) => s.tabs[id]?.groupId).concat(sp.today.map((id) => s.tabs[id]?.groupId)));
-        sp.groups = sp.groups.filter((g) => g.live || g.owner || used.has(g.id));
+        sp.groups = sp.groups.filter((g) => g.live || g.owner || g.folder || used.has(g.id));
         if (sp.groups.length === 0) delete sp.groups;
       }
       return s;
@@ -781,6 +782,7 @@ export function reduce(prev: State, a: Action, ctx: Ctx): State {
       const group: TabGroup = { id, name };
       if (a.owner && s.tabs[a.owner]?.spaceId === target.id) group.owner = a.owner;
       if (a.live && isLiveSource(a.live)) group.live = { kind: a.live.kind, query: a.live.query, limit: a.live.limit };
+      if (a.folder && !group.live && !group.owner) group.folder = true;
       target.groups = [...(target.groups ?? []), group];
       for (const t of a.tabIds ?? []) if (s.tabs[t]?.spaceId === target.id) setGroup(s, t, id);
       return s;

@@ -276,8 +276,8 @@ export function groupContextMenu(c: Controller, id: string): void {
           sep,
         ]
       : []),
-    { label: 'Dissolve Subspace (keep tabs)', click: d({ type: 'group.dissolve', id }) },
-    { label: 'Close Subspace', click: d({ type: 'group.close', id }) },
+    { label: group.folder ? 'Dissolve Folder (keep tabs)' : 'Dissolve Subspace (keep tabs)', click: d({ type: 'group.dissolve', id }) },
+    { label: group.folder ? 'Close Folder and Its Tabs' : 'Close Subspace', click: d({ type: 'group.close', id }) },
   ];
   Menu.buildFromTemplate(items).popup({ window: c.win });
 }
@@ -295,6 +295,7 @@ export function spaceContextMenu(c: Controller, id: SpaceId): void {
       ...(space.shared ? [{ label: 'Copy Share Link', click: d({ type: 'space.copyShareLink', id }) }] : []),
       ...(space.lock ? [] : [{ label: space.connected ? 'Disconnect Space…' : 'Connect Space (share live over MQTT)…', click: d({ type: 'space.connectToggle', id }) }]),
       ...(space.connected ? [{ label: 'Copy Join Link', click: d({ type: 'space.copyJoinLink', id }) }] : []),
+      { label: 'New Folder…', click: d({ type: 'group.newFolder', spaceId: id }) },
       { label: 'New Live Folder', submenu: (Object.keys(LIVE_KINDS) as LiveKind[]).map((kind) => ({ label: LIVE_KINDS[kind].label, click: d({ type: 'group.newLive', spaceId: id, kind }) })) },
       { label: 'Bookmarks of This Space', click: d({ type: 'bookmarks.openSpace', spaceId: id }) },
       { label: 'Feeds of This Space', click: d({ type: 'reader.openSpace', spaceId: id }) },

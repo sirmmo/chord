@@ -327,6 +327,12 @@ tabs onto the header or pick the subspace from the same submenu. The header's me
 renames, collapses, dissolves (tabs stay) or closes the subspace (tabs go). Subspaces
 export with the configuration as a `group` name on each tab.
 
+A **folder** is a subspace made by hand that stays even when empty: right-click a space →
+New Folder…, name it, and it appears at the end of the pinned list as a dashed header
+waiting for tabs to be dropped in. Removing its last tab leaves the folder in place,
+where a plain subspace would go away. Folders export by name (`folders` on the space),
+and Arc folders are imported as folders.
+
 Pages can manage a subspace of their own: see "Dynamic pages" below. A dashboard such as
 Stairway can keep one tab per running experiment and close it when the experiment ends.
 

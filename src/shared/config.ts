@@ -38,6 +38,8 @@ export interface ConfigSpace {
   notes?: string;
   /** live folders: subspaces Chord fills from a source */
   liveFolders?: ConfigLiveFolder[];
+  /** folders made by hand, by name; they exist even with no tab inside */
+  folders?: string[];
   pinned: ConfigTab[];
   today: ConfigTab[];
 }
@@ -103,6 +105,7 @@ export function exportConfig(s: State, now: number, spaceId?: SpaceId): ChordCon
       modes: sp.modes && sp.modes.length ? sp.modes : undefined,
       notes: sp.notes || undefined,
       liveFolders: (sp.groups ?? []).some((g) => g.live) ? (sp.groups ?? []).filter((g) => g.live).map((g) => ({ name: g.name, kind: g.live!.kind, query: g.live!.query })) : undefined,
+      folders: (sp.groups ?? []).some((g) => g.folder) ? (sp.groups ?? []).filter((g) => g.folder).map((g) => g.name) : undefined,
       curators: sp.curators && sp.curators.length ? sp.curators.map((c) => ({ name: c.name, input: c.input, feed: c.feed, kind: c.kind })) : undefined,
       profile: sp.profile,
       pinned: tabsToConfig(s, sp.pinned, sp),
@@ -304,15 +307,17 @@ export function importConfig(s: State, config: ChordConfig, mode: ImportMode, ct
       space.groups = [...(space.groups ?? []), { id: ctx.newId(), name: lf.name, live: { kind: lf.kind, query: lf.query } }];
     }
     const have = urlsIn(s, [...space.pinned, ...space.today]);
-    const groupFor = (name: string | undefined): string | undefined => {
+    const groupFor = (name: string | undefined, folder = false): string | undefined => {
       if (!name) return undefined;
       let g = space.groups?.find((x) => x.name.toLowerCase() === name.toLowerCase());
       if (!g) {
         g = { id: ctx.newId(), name };
         space.groups = [...(space.groups ?? []), g];
       }
+      if (folder && !g.live && !g.owner) g.folder = true;
       return g.id;
     };
+    for (const name of cs.folders ?? []) groupFor(name, true);
     for (const c of cs.pinned) {
       if (have.has(c.url)) continue;
       have.add(c.url);

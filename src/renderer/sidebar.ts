@@ -799,12 +799,13 @@ function render(): void {
   $('#favorites').dataset.count = String(Math.min(s.favorites.length, 3));
   setText($('#space-icon'), space.icon ?? '');
   renderSpaceName(space);
-  const rows = (ids: TabId[]) => listRows(s, space, ids);
+  const rows = (ids: TabId[], withEmpty: boolean) => listRows(s, space, ids, withEmpty);
   const makeRow = (r: Row) => (r.kind === 'tab' ? makeTab(r.tab) : makeGroupHeader(r.group));
   const updateRow = (el: HTMLElement, r: Row) => (r.kind === 'tab' ? updateTab(el, r.tab, space) : updateGroupHeader(el, r.group, r.count));
-  syncChildren($('#pinned'), rows(space.pinned), rowKey, makeRow, updateRow);
-  $('#pinned-divider').classList.toggle('hidden', space.pinned.length === 0);
-  syncChildren($('#today'), rows(space.today), rowKey, makeRow, updateRow);
+  const pinnedRows = rows(space.pinned, true);
+  syncChildren($('#pinned'), pinnedRows, rowKey, makeRow, updateRow);
+  $('#pinned-divider').classList.toggle('hidden', pinnedRows.length === 0);
+  syncChildren($('#today'), rows(space.today, false), rowKey, makeRow, updateRow);
 
   const spaceKey = s.spaces.map((sp) => `${sp.id}${sp.name}${sp.color}${sp.icon ?? ''}${sp.lock ? (isLocked(sp) ? 'L' : 'U') : ''}`).join('|') + s.activeSpaceId;
   if (spaceKey !== lastSpaceKey) {
@@ -910,7 +911,8 @@ function startRename(id: SpaceId): void {
 type Row = { kind: 'tab'; tab: Tab } | { kind: 'group'; group: TabGroup; count: number };
 const rowKey = (r: Row) => (r.kind === 'tab' ? r.tab.id : `g:${r.group.id}`);
 
-function listRows(s: State, space: Space, ids: TabId[]): Row[] {
+/** `withEmpty`: folders and live folders with no member yet get a header at the end (the pinned list). */
+function listRows(s: State, space: Space, ids: TabId[], withEmpty: boolean): Row[] {
   const out: Row[] = [];
   const done = new Set<string>();
   const tabs = ids.map((id) => s.tabs[id]).filter(Boolean);
@@ -925,6 +927,14 @@ function listRows(s: State, space: Space, ids: TabId[]): Row[] {
     const members = tabs.filter((t) => t.groupId === group.id);
     out.push({ kind: 'group', group, count: members.length });
     if (!group.collapsed) for (const m of members) out.push({ kind: 'tab', tab: m });
+  }
+  if (withEmpty) {
+    const all = Object.values(s.tabs);
+    for (const group of space.groups ?? []) {
+      if (done.has(group.id) || !(group.folder || group.live)) continue;
+      if (all.some((t) => t.spaceId === space.id && t.groupId === group.id)) continue;
+      out.push({ kind: 'group', group, count: 0 });
+    }
   }
   return out;
 }
@@ -975,7 +985,12 @@ function updateGroupHeader(el: HTMLElement, group: TabGroup, count: number): voi
   setClass(el, 'collapsed', Boolean(group.collapsed));
   setClass(el, 'managed', Boolean(group.owner));
   setClass(el, 'live', Boolean(group.live));
+  setClass(el, 'folder', Boolean(group.folder));
+  setClass(el, 'empty', count === 0);
   setClass(el, 'live-error', Boolean(group.live?.error));
+  const close = el.querySelector('.close') as HTMLButtonElement;
+  const closeTitle = group.folder ? (count ? 'Close folder and its tabs' : 'Delete folder') : 'Close subspace';
+  if (close.title !== closeTitle) close.title = closeTitle;
   const btn = el.querySelector('.live-btn') as HTMLButtonElement;
   if (btn.hidden === Boolean(group.live)) btn.hidden = !group.live;
   if (group.live) {

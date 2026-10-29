@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reduce, initialState, activeSpace, hydrate, isLocked, spaceById, visiblePanes, AUTO_LOCK_MS, MAX_PANES, type Ctx } from '../src/shared/model.ts';
-import { exportConfig } from '../src/shared/config.ts';
+import { reduce, initialState, activeSpace, hydrate, isLocked, spaceById, visiblePanes, membersOf, AUTO_LOCK_MS, MAX_PANES, type Ctx } from '../src/shared/model.ts';
+import { exportConfig, importConfig } from '../src/shared/config.ts';
 import type { Action, State } from '../src/shared/types.ts';
 import { toUrl, titleFor } from '../src/shared/url.ts';
 import { computeLayout } from '../src/shared/layout.ts';
@@ -563,4 +563,29 @@ test('sharing: spaces get a unique slug, private spaces never share, shared page
   assert.equal(reduce(s, { type: 'share.add', share: { id: 'bad id', url: 'https://e.com/', title: '', note: '', at: 1 } }, ctx()), s);
   s = reduce(s, { type: 'share.remove', id: 'abcd2345' }, ctx());
   assert.equal(s.shares, undefined);
+});
+
+test('folders stay when empty, show up in exports and are rebuilt on import', () => {
+  const ctx: Ctx = { now: 1, newId: (() => { let n = 0; return () => `f${++n}`; })() };
+  let s = initialState(ctx);
+  const space = activeSpace(s);
+  s = reduce(s, { type: 'group.create', spaceId: space.id, name: 'Reading', id: 'f', folder: true }, ctx);
+  assert.equal(activeSpace(s).groups?.[0].folder, true);
+  // a live folder or a managed group is never a folder
+  s = reduce(s, { type: 'group.create', spaceId: space.id, name: 'Feed', id: 'l', folder: true, live: { kind: 'feed', query: 'https://x.test/feed' } }, ctx);
+  assert.equal(activeSpace(s).groups?.find((g) => g.id === 'l')?.folder, undefined);
+  // reload: the empty folder survives, an emptied plain subspace does not
+  s = reduce(s, { type: 'tab.new', url: 'https://a.example/', id: 'a', spaceId: space.id }, ctx);
+  s = reduce(s, { type: 'group.create', spaceId: space.id, name: 'Plain', id: 'p', tabIds: ['a'] }, ctx);
+  s = reduce(s, { type: 'tab.setGroup', id: 'a', groupId: null }, ctx);
+  const again = hydrate(JSON.parse(JSON.stringify(s)), ctx);
+  assert.deepEqual(activeSpace(again).groups?.map((g) => g.id), ['f', 'l']);
+  // export carries the folder by name; import on a fresh state makes it again, empty
+  const cfg = exportConfig(again, ctx.now);
+  assert.deepEqual(cfg.spaces[0].folders, ['Reading']);
+  const fresh = initialState(ctx);
+  importConfig(fresh, cfg, 'replace', ctx);
+  const g = fresh.spaces[0].groups?.find((x) => x.name === 'Reading');
+  assert.equal(g?.folder, true);
+  assert.equal(membersOf(fresh, fresh.spaces[0], g!.id).length, 0);
 });

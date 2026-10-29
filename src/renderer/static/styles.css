@@ -434,6 +434,9 @@ body.space-locked .lists { display: none; }
 .group-header:hover .close { opacity: 1; }
 .group-header .close:hover { background: var(--active); color: var(--fg); }
 .group-header.managed .name::after { content: " ·"; opacity: .6; }
+.group-header.empty { border: 1px dashed var(--line); height: 28px; }
+.group-header.empty .count { display: none; }
+.group-header.empty .chev { visibility: hidden; }
 .tab.grouped { margin-left: 14px; }
 :root[data-skin="lcars"] .group-header { color: var(--lc-blue); border-left: 4px solid var(--lc-blue); border-radius: 0 10px 10px 0; }
 :root[data-skin="lcars"] .tab.grouped { margin-left: 10px; }

@@ -965,6 +965,9 @@ export class Controller {
       case 'group.newLive':
         void this.newLiveFolder(cmd.spaceId ?? this.state.activeSpaceId, cmd.kind, cmd.query);
         return;
+      case 'group.newFolder':
+        void this.newFolder(cmd.spaceId ?? this.state.activeSpaceId);
+        return;
       case 'group.refresh':
         void this.live.refresh(cmd.id);
         return;
@@ -1472,6 +1475,14 @@ export class Controller {
     const id = randomUUID();
     this.apply({ type: 'group.create', spaceId, id, name, live: { kind, query: q } });
     void this.live.refresh(id);
+  }
+
+  /** An empty folder in the pinned list of `spaceId`, named by the user, waiting for tabs. */
+  private async newFolder(spaceId: SpaceId): Promise<void> {
+    const name = await this.prompt('New folder', 'Folder name');
+    this.overlay?.hide();
+    if (!name || !name.trim()) return;
+    this.apply({ type: 'group.create', spaceId, name: name.trim(), folder: true });
   }
 
   private async renameGroup(id: string): Promise<void> {
