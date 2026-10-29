@@ -33,7 +33,7 @@ export async function installSpace(c: Controller, manifestUrl: string): Promise<
     `${config.spaces.length === 1 ? `Space “${name}”` : `${config.spaces.length} spaces`} with ${tabs} tab${tabs === 1 ? '' : 's'}${config.favorites.length ? ` and ${config.favorites.length} favorites` : ''}.`,
     existing ? `You already have a space named “${existing.name}”: missing tabs will be added to it.` : '',
     boosts.length ? `Includes ${boosts.length} boost${boosts.length === 1 ? '' : 's'} (CSS/JavaScript that runs on ${sourceHost} pages): ${boosts.map((b) => b.name).join(', ')}.` : '',
-    dynamic ? `The site asks to manage tabs of its own in the space (open and close them through navigator.chord). Installing allows that for ${sourceHost}; Settings → General can revoke it.` : '',
+    dynamic ? `The site asks to manage tabs of its own in the space (open and close them through navigator.chord). Installing allows that for ${sourceHost}; Settings → Tabs & windows → Advanced can revoke it.` : '',
     'Only sites you trust should install spaces.',
   ].filter(Boolean);
   const buttons = boosts.length ? ['Install', 'Install without Boosts', 'Cancel'] : ['Install', 'Cancel'];

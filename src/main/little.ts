@@ -17,7 +17,7 @@ interface Little {
 /**
  * Little windows: a page in a small window of its own, with a thin bar — back,
  * forward, the title, "Open in Chord" — instead of a tab in a space. Links
- * that arrive from other apps open this way (Settings → General), and any page
+ * that arrive from other apps open this way (Settings → Tabs & windows), and any page
  * can be sent to one from the command bar. "Open in Chord" moves the page into
  * the active space and closes the little window.
  */

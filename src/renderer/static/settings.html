@@ -13,69 +13,92 @@
     <nav class="tabs" id="s-tabs"><button data-v="general">General</button><button data-v="appearance">Appearance</button><button data-v="privacy">Privacy</button><button data-v="layouts">Layouts</button><button data-v="addins">Add-ins</button><button data-v="boosts">Boosts</button><button data-v="routes">Routes</button><button data-v="passwords">Passwords</button><button data-v="sync">Sync</button><button data-v="connected">Connected</button><button data-v="ai">AI</button><button data-v="about">About</button></nav>
     <section class="s-body">
 
+<body>
+  <main class="page settings">
+    <h1>Settings</h1>
+    <nav class="tabs" id="s-tabs">
+      <span class="grp">Browsing</span>
+      <button data-v="general">General</button>
+      <button data-v="tabs">Tabs &amp; windows</button>
+      <button data-v="downloads">Downloads</button>
+      <button data-v="appearance">Appearance</button>
+      <button data-v="layouts">Layouts</button>
+      <span class="grp">Privacy &amp; security</span>
+      <button data-v="privacy">Privacy</button>
+      <button data-v="addins">Shields &amp; extensions</button>
+      <button data-v="passwords">Passwords</button>
+      <span class="grp">Customise</span>
+      <button data-v="boosts">Boosts</button>
+      <button data-v="routes">Routes</button>
+      <span class="grp">Connections</span>
+      <button data-v="sync">Sync</button>
+      <button data-v="connected">Connected spaces</button>
+      <button data-v="ai">AI</button>
+      <button data-v="mcp">MCP server</button>
+      <span class="grp">System</span>
+      <button data-v="updates">Updates</button>
+      <button data-v="troubleshooting">Troubleshooting</button>
+      <button data-v="about">About</button>
+    </nav>
+    <section class="s-body">
+
       <div class="s-page" data-page="general">
         <div class="s-grid">
-          <label>Smart pages</label>
-          <label class="check"><input type="checkbox" id="s-smart"> Show player controls for pages with media (YouTube Music, Spotify…) in the sidebar, across spaces</label>
-
-          <label>Links from other apps</label>
-          <label class="check"><input type="checkbox" id="s-little"> Open them in a Little window (a small window of their own, with “Open in Chord” to move the page into a space)</label>
-
-          <label>Peek</label>
-          <label class="check"><input type="checkbox" id="s-peek"> Links that leave the site of a pinned or favorite tab open in a preview over the page (Esc closes it, ⌘⇧O makes it a tab)</label>
-
-          <label>Closing the window</label>
-          <label class="check"><input type="checkbox" id="s-tray"> Keep Chord running in the menu bar / tray, with player and call controls</label>
-
-          <label>Download folder</label>
-          <div class="row"><code id="s-dldir"></code><button class="btn" id="s-dldir-choose">Choose…</button><button class="btn" id="s-dldir-reset">Use system Downloads</button></div>
-
-          <label>Downloads</label>
-          <label class="check"><input type="checkbox" id="s-askdl"> Ask where to save each file (otherwise files go to the download folder)</label>
-
-          <label>Video</label>
-          <label class="check"><input type="checkbox" id="s-autopip"> Pop a playing video out (picture in picture) when switching away from its tab</label>
-
-          <label>Troubleshooting</label>
-          <div>
-            <p class="s-foot">Chromium switches for when a video stays black or pages draw wrong. Each one takes effect at the next launch; turn one on at a time, relaunch, and check the page again. Help → Copy Diagnostics reports which are active.</p>
-            <div id="s-flags"></div>
-            <div class="row"><button class="btn" id="s-relaunch">Relaunch Chord</button></div>
-
-          </div>
-
-          <label>Address bar</label>
-          <label class="check"><input type="checkbox" id="s-addressbar"> Show an editable address bar above the page <span class="kbd">⌘⇧L</span></label>
+          <label>Search engine</label>
+          <select id="s-engine"></select>
 
           <label>Archive tabs after</label>
           <select id="s-archive"><option value="12">12 hours</option><option value="24">24 hours</option><option value="168">7 days</option><option value="720">30 days</option><option value="0">Never</option></select>
 
-          <label>Search engine</label>
-          <select id="s-engine"></select>
-
-          <label>Google sign-in</label>
-          <div>
-            <select id="s-google"><option value="firefox">Present as Firefox on accounts.google.com (default)</option><option value="electron">Present as Electron on accounts.google.com</option><option value="off">No special treatment</option></select>
-            <p class="s-foot">Google rejects sign-ins from browsers it takes for embedded apps (“This browser or app may not be secure”). On its sign-in pages only, Chord can identify as Firefox or as Electron, which Google treats differently; every other site sees plain Chromium. If one choice fails, reload the sign-in page with the other.</p>
-          </div>
-
-          <label>Pages that manage tabs</label>
-          <div id="s-pagetabs" class="s-list"></div>
+          <label>Address bar</label>
+          <label class="check"><input type="checkbox" id="s-addressbar"> Show an editable address bar above the page <span class="kbd">⌘⇧L</span></label>
 
           <label>Default browser</label>
           <div><button class="btn" id="s-default">Set Chord as default browser</button></div>
 
-          <label>Updates</label>
-          <div>
-            <label class="check"><input type="checkbox" id="s-upd-check"> Check for new releases after launch and every few hours</label><br>
-            <label class="check"><input type="checkbox" id="s-upd-auto"> Download and install them automatically when this build can replace itself</label>
-            <div class="row" style="margin-top:8px"><button class="btn" id="s-upd-now">Check Now</button><span id="s-upd-status"></span><button class="btn" id="s-upd-action" hidden></button></div>
-            <p class="s-foot" id="s-upd-note"></p>
-          </div>
-
           <label>Configuration</label>
           <div class="row"><button class="btn" id="s-browser">Import from Arc, Chrome, Brave…</button><button class="btn" id="s-export">Export…</button><button class="btn" id="s-import">Import…</button></div>
         </div>
+      </div>
+
+      <div class="s-page" data-page="tabs">
+        <div class="s-grid">
+          <label>Smart pages</label>
+          <label class="check"><input type="checkbox" id="s-smart"> Show player controls for pages with media (YouTube Music, Spotify…) in the sidebar, across spaces</label>
+
+          <label>Peek</label>
+          <label class="check"><input type="checkbox" id="s-peek"> Links that leave the site of a pinned or favorite tab open in a preview over the page (Esc closes it, ⌘⇧O makes it a tab)</label>
+
+          <label>Links from other apps</label>
+          <label class="check"><input type="checkbox" id="s-little"> Open them in a Little window (a small window of their own, with “Open in Chord” to move the page into a space)</label>
+
+          <label>Closing the window</label>
+          <label class="check"><input type="checkbox" id="s-tray"> Keep Chord running in the menu bar / tray, with player and call controls</label>
+
+          <label>Video</label>
+          <label class="check"><input type="checkbox" id="s-autopip"> Pop a playing video out (picture in picture) when switching away from its tab</label>
+        </div>
+        <details class="s-adv">
+          <summary>Advanced</summary>
+          <div class="s-grid">
+            <label>Pages that manage tabs</label>
+            <div>
+              <div id="s-pagetabs" class="s-list"></div>
+              <p class="s-foot">Sites you allowed to open and close tabs of their own through <code>navigator.chord</code>, grouped under them as a subspace. Each site asks once.</p>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="s-page" data-page="downloads">
+        <div class="s-grid">
+          <label>Download folder</label>
+          <div class="row"><code id="s-dldir"></code><button class="btn" id="s-dldir-choose">Choose…</button><button class="btn" id="s-dldir-reset">Use system Downloads</button></div>
+
+          <label>Saving</label>
+          <label class="check"><input type="checkbox" id="s-askdl"> Ask where to save each file (otherwise files go to the download folder)</label>
+        </div>
+        <p class="s-foot">The downloads page (<span class="kbd">⌘⇧J</span>) lists every file with pause, resume, cancel, retry and open.</p>
       </div>
 
       <div class="s-page" data-page="appearance">
@@ -89,24 +112,28 @@
           <label>Colour of <span id="s-space-name">this space</span></label>
           <div class="row"><div class="swatches" id="s-swatches"></div><input type="color" id="s-space-color" title="Custom colour"></div>
 
-          <label>Tint strength</label>
-          <div class="row"><input type="range" min="0" max="100" id="s-tint"><span class="val" id="s-tint-val"></span></div>
-
           <label>Accent</label>
           <div class="row"><label class="check"><input type="checkbox" id="s-accent-follow"> Follow space colour</label><input type="color" id="s-accent"></div>
 
           <label>Icons</label>
           <div class="seg" id="s-icons"><button data-v="color">Colour</button><button data-v="mono">Monochrome</button></div>
 
-          <label>Tab icons</label>
-          <div class="seg" id="s-favicons"><button data-v="on">Favicons</button><button data-v="active">Favicons, grey when inactive</button><button data-v="off">Letters</button></div>
-
-          <label>Icon colour</label>
-          <div class="row"><label class="check"><input type="checkbox" id="s-icon-follow"> Follow text colour</label><input type="color" id="s-icon-color"></div>
-
           <label>Font</label>
           <select id="s-font"><option value="system">System</option><option value="rounded">Rounded</option><option value="mono">Monospace</option><option value="serif">Serif</option></select>
         </div>
+        <details class="s-adv">
+          <summary>Advanced</summary>
+          <div class="s-grid">
+            <label>Tint strength</label>
+            <div class="row"><input type="range" min="0" max="100" id="s-tint"><span class="val" id="s-tint-val"></span></div>
+
+            <label>Tab icons</label>
+            <div class="seg" id="s-favicons"><button data-v="on">Favicons</button><button data-v="active">Favicons, grey when inactive</button><button data-v="off">Letters</button></div>
+
+            <label>Icon colour</label>
+            <div class="row"><label class="check"><input type="checkbox" id="s-icon-follow"> Follow text colour</label><input type="color" id="s-icon-color"></div>
+          </div>
+        </details>
       </div>
 
       <div class="s-page" data-page="layouts">
@@ -119,26 +146,47 @@
         <h3>Built in</h3>
         <div id="s-layouts-builtin" class="layout-grid"></div>
       </div>
+
+      <div class="s-page" data-page="privacy">
+        <p class="s-foot" style="margin-top:0">Chord is private by default. These are on from the first launch; turn off what gets in your way. Shields (ads and trackers) have a page of their own.</p>
+        <div class="s-grid">
+          <label>Encrypted DNS</label>
+          <div>
+            <select id="s-dns"><option value="quad9">Quad9 (default)</option><option value="cloudflare">Cloudflare 1.1.1.1</option><option value="mullvad">Mullvad</option><option value="custom">Custom DNS-over-HTTPS server…</option><option value="system">System resolver (unencrypted)</option></select>
+            <input type="text" id="s-dns-custom" class="wide" placeholder="https://doh.example.net/dns-query" autocomplete="off" spellcheck="false" hidden>
+            <p class="s-foot" id="s-dns-note"></p>
+          </div>
+          <label>Global Privacy Control</label>
+          <div class="addin"><div class="addin-text"><span>Every request carries <code>Sec-GPC: 1</code> and <code>DNT: 1</code>, a legally meaningful “do not sell or share my data” under the CCPA and similar laws, and pages see <code>navigator.globalPrivacyControl</code>.</span></div><label class="switch"><input type="checkbox" id="s-gpc"><i></i></label></div>
+          <label>Third-party cookies</label>
+          <div class="addin"><div class="addin-text"><span>Cookies are neither sent to nor accepted from a domain other than the page's. Stops most cross-site tracking; a few embedded sign-ins and payment frames may need it off.</span></div><label class="switch"><input type="checkbox" id="s-3p"><i></i></label></div>
+          <label>HTTPS first</label>
+          <div class="addin"><div class="addin-text"><span>Plain <code>http://</code> page addresses are opened over HTTPS. When a site has none, Chord falls back to HTTP for the session and tells you.</span></div><label class="switch"><input type="checkbox" id="s-https"><i></i></label></div>
+          <label>Email aliases</label>
+          <div>
+            <div class="row"><select id="s-alias"><option value="none">Off</option><option value="simplelogin">SimpleLogin (Proton)</option><option value="relay">Firefox Relay</option></select><input type="password" id="s-alias-key" class="wide" placeholder="API key" autocomplete="off" hidden></div>
+            <p class="s-foot" id="s-alias-note">Right-click an e-mail field → “New Email Alias for this site”: Chord asks the service for a fresh address, types it in and copies it. The site never sees your real address.</p>
+          </div>
+          <label>Companions</label>
+          <div id="s-companions"></div>
+        </div>
+        <details class="s-adv">
+          <summary>Advanced</summary>
+          <div class="s-grid">
+            <label>Google sign-in</label>
+            <div>
+              <select id="s-google"><option value="firefox">Present as Firefox on accounts.google.com (default)</option><option value="electron">Present as Electron on accounts.google.com</option><option value="off">No special treatment</option></select>
+              <p class="s-foot">Google rejects sign-ins from browsers it takes for embedded apps (“This browser or app may not be secure”). On its sign-in pages only, Chord can identify as Firefox or as Electron, which Google treats differently; every other site sees plain Chromium. If one choice fails, reload the sign-in page with the other.</p>
+            </div>
+          </div>
+        </details>
+      </div>
+
       <div class="s-page" data-page="addins">
-        <h3>Built in</h3>
+        <h3>Shields</h3>
         <div class="addin">
           <div class="addin-text"><strong>Shields</strong><span>Blocks ads and trackers with EasyList and EasyPrivacy.</span></div>
           <label class="switch"><input type="checkbox" id="s-shields"><i></i></label>
-        </div>
-        <h3>MCP server</h3>
-        <div class="addin">
-          <div class="addin-text"><strong>Local MCP server</strong><span>Lets Claude Desktop and other MCP clients on this computer list spaces and tabs, read pages, open and navigate tabs, search history and call the tools pages expose. Bound to 127.0.0.1 and protected by a token.</span></div>
-          <label class="switch"><input type="checkbox" id="s-mcp"><i></i></label>
-        </div>
-        <div class="s-grid" style="margin-top:8px">
-          <label>Port</label>
-          <div class="row"><input type="number" id="s-mcp-port" min="1024" max="65535" style="width:90px"><span class="s-foot" style="margin:0" id="s-mcp-status"></span></div>
-          <label>Client setup</label>
-          <div>
-            <div class="row"><button class="btn" id="s-mcp-copy">Copy Claude Desktop config</button><button class="btn" id="s-mcp-regen">New token</button></div>
-            <p class="s-foot">Paste the copied JSON into Claude Desktop → Settings → Developer → Edit Config (<code>claude_desktop_config.json</code>), merging the <code>chord</code> entry into <code>mcpServers</code>, and restart Claude Desktop. It uses <code>npx mcp-remote</code>, so Node.js must be installed. Clients that speak Streamable HTTP directly can use the URL below with the token as a bearer header.</p>
-            <pre class="s-pre" id="s-mcp-url"></pre>
-          </div>
         </div>
         <h3>Chrome extensions</h3>
         <div id="s-extensions"></div>
@@ -148,32 +196,52 @@
             <div class="row"><input type="text" id="s-ext-store" placeholder="Web Store address or extension id" style="flex:1;min-width:260px"><button class="btn" id="s-ext-install">Install</button><button class="btn" id="s-ext-update">Check for updates</button></div>
             <p class="s-foot" id="s-ext-msg"></p>
           </div>
-          <label>Unpacked</label>
-          <div class="row"><button class="btn" id="s-ext-add">Add unpacked extension…</button></div>
         </div>
-        <p class="s-foot">Paste a <code>chromewebstore.google.com</code> address (or open the store and press the install button in the sidebar) and Chord fetches the package and unpacks it into its profile folder. Unpacked extensions are a folder with a <code>manifest.json</code>. Content scripts, storage and most page-level APIs work; toolbar popups are not shown, and extensions that need Chrome's own services will not.</p>
+        <p class="s-foot">Paste a <code>chromewebstore.google.com</code> address (or open the store and press the install button in the sidebar) and Chord fetches the package and unpacks it into its profile folder. Content scripts, storage and most page-level APIs work; toolbar popups are not shown, and extensions that need Chrome's own services will not.</p>
+        <details class="s-adv">
+          <summary>Advanced</summary>
+          <div class="s-grid">
+            <label>Unpacked</label>
+            <div>
+              <div class="row"><button class="btn" id="s-ext-add">Add unpacked extension…</button></div>
+              <p class="s-foot">A folder with a <code>manifest.json</code>, for extensions you build yourself.</p>
+            </div>
+          </div>
+        </details>
       </div>
+
+      <div class="s-page" data-page="passwords">
+        <p class="s-foot" style="margin-top:0" id="s-pw-note"></p>
+        <label class="check"><input type="checkbox" id="s-autofill"> Fill saved passwords automatically when a sign-in form appears (off: only when you click into it)</label><br>
+        <label class="check"><input type="checkbox" id="s-pwlock"> <span id="s-pwlock-label">Ask for Touch ID before revealing or filling a password</span></label>
+        <p class="s-foot" id="s-pwlock-note"></p>
+        <h3>Saved passwords</h3>
+        <div id="s-passwords" class="pw-list"></div>
+        <h3>Never save for</h3>
+        <div id="s-pw-never" class="pw-list"></div>
+        <h3>Passkeys</h3>
+        <div id="s-passkeys-list" class="pw-list"></div>
+        <details class="s-adv">
+          <summary>Advanced</summary>
+          <h3>Sync as a KeePass file</h3>
+          <p class="s-foot">With GitHub sync on, your passwords can travel in the private repository as <code>passwords.kdbx</code>, a KeePass file (KDBX 4, Argon2) encrypted with a master password of its own. Other computers running Chord with the same master password merge it; KeePassXC and friends open it too. Nothing leaves this computer until a master password is set.</p>
+          <div class="s-grid">
+            <label>Master password</label>
+            <div>
+              <div class="row"><input type="password" id="s-kp-master" class="wide" placeholder="Choose a master password for the KeePass file" autocomplete="new-password"><button class="btn primary" id="s-kp-set">Set and sync</button><button class="btn danger" id="s-kp-clear" hidden>Stop syncing</button></div>
+              <p class="s-foot" id="s-kp-state"></p>
+            </div>
+            <label>Passkey storage</label>
+            <div>
+              <select id="s-passkeys"><option value="chord">Stored in Chord (default)</option><option value="system">System: Windows Hello and security keys</option></select>
+              <p class="s-foot" id="s-pk-note"></p>
+            </div>
+          </div>
+        </details>
+      </div>
+
       <div class="s-page" data-page="boosts">
         <p class="s-foot" style="margin-top:0">A boost is CSS and JavaScript of yours that runs on the sites you name. Sites: comma separated, <code>example.com</code> covers its subdomains, <code>*.example.com</code> only subdomains, <code>*</code> everything. CSS applies live; JavaScript runs at page load, so a change needs a reload.</p>
-        <details class="s-help">
-          <summary>Make a page Chord-integrated: the API boosts can use</summary>
-          <p class="s-foot">On a site you wrote a boost for, <code>navigator.chord</code> is unlocked without a prompt. It runs in the page, so it can read anything the page shows and turn it into Chord's own things:</p>
-          <ul class="s-foot">
-            <li><code>chord.card.set({ title, subtitle, state, badge, actions })</code> — a card in the sidebar, shown from every space; <code>state</code> is <code>ok</code>, <code>warn</code>, <code>err</code> or <code>busy</code> (busy also shows a chip in the title bar); up to four <code>actions: [{ id, label }]</code> become buttons, answered with <code>chord.card.onAction(id => …)</code>; <code>chord.card.clear()</code> removes it.</li>
-            <li><code>chord.setUnread(n)</code> — the badge on the tab and the space dot (<code>null</code> goes back to reading the title). <code>chord.notify(title, body)</code> — counted like a web notification.</li>
-            <li><code>chord.bookmark({ url, title, note, tags, public })</code>, <code>chord.addNote(markdown)</code> (appended to the space's notes), <code>chord.subscribe(feedUrl?)</code> (the reader, tagged with the space), <code>chord.open(url, { background })</code>, <code>chord.openLittle(url)</code>.</li>
-            <li><code>chord.openTab/closeTab/focusTab/navigateTab/listTabs/setSubspaceName</code> — the page's own subspace of tabs (see the page API docs).</li>
-            <li><code>await chord.theme()</code> → <code>{ space: { id, name, color, icon }, accent, dark, font }</code>; the same arrives as CSS variables <code>--chord-space</code>, <code>--chord-accent</code> and <code>data-chord-theme="dark|light"</code> on <code>&lt;html&gt;</code> for your CSS, and as a <code>theme</code> event when it changes.</li>
-            <li>Players: set <code>navigator.mediaSession.metadata</code> and action handlers and the page gets a now-playing card. Tools for the AI mode and the MCP server: <code>navigator.modelContext.registerTool(…)</code>.</li>
-          </ul>
-          <p class="s-foot">Example — a site's inbox count on the tab and a card with one button:</p>
-<pre class="s-foot">const chord = navigator.chord;
-const count = () =&gt; document.querySelectorAll('.inbox .unread').length;
-const update = () =&gt; { chord.setUnread(count()); chord.card.set({ title: 'Inbox', subtitle: `${count()} unread`, state: count() ? 'warn' : 'ok', actions: [{ id: 'compose', label: 'Compose' }] }); };
-chord.card.onAction(id =&gt; { if (id === 'compose') document.querySelector('.compose-button').click(); });
-new MutationObserver(update).observe(document.body, { childList: true, subtree: true });
-update();</pre>
-        </details>
         <h3>Your boosts</h3>
         <div id="s-boosts" class="boost-list"></div>
         <h3 id="s-boost-form-title">New boost</h3>
@@ -183,7 +251,27 @@ update();</pre>
           <textarea id="s-boost-js" rows="6" placeholder="// JavaScript, runs at page load&#10;document.title = '🚀 ' + document.title;" spellcheck="false"></textarea>
           <div class="row"><button class="btn" id="s-boost-save">Save boost</button><button class="btn" id="s-boost-cancel" hidden>Cancel</button></div>
         </div>
+        <details class="s-adv">
+          <summary>Advanced: the API boosts can use</summary>
+          <p class="s-foot">On a site you wrote a boost for, <code>navigator.chord</code> is unlocked without a prompt. It runs in the page, so it can read anything the page shows and turn it into Chord's own things:</p>
+          <ul class="s-foot">
+            <li><code>chord.card.set({ title, subtitle, state, badge, actions })</code>: a card in the sidebar, shown from every space; <code>state</code> is <code>ok</code>, <code>warn</code>, <code>err</code> or <code>busy</code> (busy also shows a chip in the title bar); up to four <code>actions: [{ id, label }]</code> become buttons, answered with <code>chord.card.onAction(id => …)</code>; <code>chord.card.clear()</code> removes it.</li>
+            <li><code>chord.setUnread(n)</code>: the badge on the tab and the space dot (<code>null</code> goes back to reading the title). <code>chord.notify(title, body)</code>: counted like a web notification.</li>
+            <li><code>chord.bookmark({ url, title, note, tags, public })</code>, <code>chord.addNote(markdown)</code> (appended to the space's notes), <code>chord.subscribe(feedUrl?)</code> (the reader, tagged with the space), <code>chord.open(url, { background })</code>, <code>chord.openLittle(url)</code>.</li>
+            <li><code>chord.openTab/closeTab/focusTab/navigateTab/listTabs/setSubspaceName</code>: the page's own subspace of tabs (see the page API docs).</li>
+            <li><code>await chord.theme()</code> → <code>{ space: { id, name, color, icon }, accent, dark, font }</code>; the same arrives as CSS variables <code>--chord-space</code>, <code>--chord-accent</code> and <code>data-chord-theme="dark|light"</code> on <code>&lt;html&gt;</code> for your CSS, and as a <code>theme</code> event when it changes.</li>
+            <li>Players: set <code>navigator.mediaSession.metadata</code> and action handlers and the page gets a now-playing card. Tools for the AI mode and the MCP server: <code>navigator.modelContext.registerTool(…)</code>.</li>
+          </ul>
+          <p class="s-foot">Example: a site's inbox count on the tab and a card with one button.</p>
+<pre class="s-foot">const chord = navigator.chord;
+const count = () =&gt; document.querySelectorAll('.inbox .unread').length;
+const update = () =&gt; { chord.setUnread(count()); chord.card.set({ title: 'Inbox', subtitle: `${count()} unread`, state: count() ? 'warn' : 'ok', actions: [{ id: 'compose', label: 'Compose' }] }); };
+chord.card.onAction(id =&gt; { if (id === 'compose') document.querySelector('.compose-button').click(); });
+new MutationObserver(update).observe(document.body, { childList: true, subtree: true });
+update();</pre>
+        </details>
       </div>
+
       <div class="s-page" data-page="routes">
         <p class="s-foot" style="margin-top:0">Air Traffic Control: links from the sites you name land in the space you choose, whichever space you are in. A rule applies to links that arrive from other apps and to pages a site opens in a new tab; what you click or type stays where you are. Patterns as for boosts (<code>example.com</code>, <code>*.example.com</code>, <code>*</code>), with an optional path: <code>github.com/myorg</code>. The first matching rule wins.</p>
         <h3>Your routes</h3>
@@ -193,54 +281,7 @@ update();</pre>
           <div class="row"><input type="text" id="s-route-pattern" placeholder="Sites, e.g. github.com/myorg, *.atlassian.net" style="flex:1"><select id="s-route-space"></select><button class="btn" id="s-route-save">Add route</button></div>
         </div>
       </div>
-      <div class="s-page" data-page="passwords">
-        <p class="s-foot" style="margin-top:0" id="s-pw-note"></p>
-        <label class="check"><input type="checkbox" id="s-autofill"> Fill saved passwords automatically when a sign-in form appears (off: only when you click into it)</label><br>
-        <label class="check"><input type="checkbox" id="s-pwlock"> <span id="s-pwlock-label">Ask for Touch ID before revealing or filling a password</span></label>
-        <p class="s-foot" id="s-pwlock-note"></p>
-        <h3>Sync as a KeePass file</h3>
-        <p class="s-foot">With GitHub sync on, your passwords can travel in the private repository as <code>passwords.kdbx</code>, a KeePass file (KDBX 4, Argon2) encrypted with a master password of its own. Other computers running Chord with the same master password merge it; KeePassXC and friends open it too. Nothing leaves this computer until a master password is set.</p>
-        <div class="s-grid">
-          <label>Master password</label>
-          <div>
-            <div class="row"><input type="password" id="s-kp-master" class="wide" placeholder="Choose a master password for the KeePass file" autocomplete="new-password"><button class="btn primary" id="s-kp-set">Set and sync</button><button class="btn danger" id="s-kp-clear" hidden>Stop syncing</button></div>
-            <p class="s-foot" id="s-kp-state"></p>
-          </div>
-        </div>
-        <h3>Saved passwords</h3>
-        <div id="s-passwords" class="pw-list"></div>
-        <h3>Never save for</h3>
-        <div id="s-pw-never" class="pw-list"></div>
-        <h3>Passkeys</h3>
-        <div class="s-grid">
-          <label>Passkeys</label>
-          <div>
-            <select id="s-passkeys"><option value="chord">Stored in Chord (default)</option><option value="system">System: Windows Hello and security keys</option></select>
-            <p class="s-foot" id="s-pk-note"></p>
-          </div>
-        </div>
-        <div id="s-passkeys-list" class="pw-list"></div>
-      </div>
-      <div class="s-page" data-page="ai">
-        <p class="s-foot" style="margin-top:0">The AI mode of a space talks to the model you configure here. It can list and read the space’s tabs, open and navigate them, fetch URLs, and call tools that pages expose through WebMCP. Nothing is sent anywhere until you write in the panel.</p>
-        <div class="s-grid">
-          <label>Provider</label>
-          <select id="s-ai-provider"><option value="openai">OpenAI-compatible (Ollama, LM Studio, OpenRouter, OpenAI…)</option><option value="anthropic">Anthropic (Claude)</option></select>
 
-          <label>Base URL</label>
-          <input type="text" id="s-ai-base" placeholder="http://localhost:11434/v1" class="wide">
-
-          <label>Model</label>
-          <input type="text" id="s-ai-model" placeholder="llama3.1 · gpt-4o · claude-opus-5-5" class="wide">
-
-          <label>API key</label>
-          <div class="row"><input type="password" id="s-ai-key" placeholder="Stored encrypted with the OS keychain" class="wide"><button class="btn" id="s-ai-key-save">Save key</button><button class="btn" id="s-ai-key-clear">Remove</button></div>
-
-          <label></label>
-          <div class="row"><button class="btn" id="s-ai-test">Test connection</button><span class="s-foot" style="margin:0" id="s-ai-state"></span></div>
-        </div>
-        <p class="s-foot">Local models need no key: run Ollama (<code>ollama run llama3.1</code>) and keep the default base URL. For Anthropic the model defaults to <code>claude-opus-5-5</code>; requests opt into Anthropic’s server-side fallback so a safety decline is retried on another Claude model. Pages can offer tools to the assistant with <code>navigator.modelContext.registerTool(...)</code> (WebMCP); Chord provides that API when Chromium does not.</p>
-      </div>
       <div class="s-page" data-page="sync">
         <p class="s-foot" style="margin-top:0">Chord keeps your spaces and bookmarks in two GitHub repositories it creates for you: a private one (<code>chord-private</code>: spaces, favorites, appearance, every bookmark) and a public one (<code>chord-bookmarks</code>: your public bookmarks as a page on GitHub Pages, with an RSS feed others can follow in a curated space). Private, password-locked spaces never leave this computer. Changes are pushed about half a minute after you make them and pulled at launch and every 15 minutes; pulls only add, never remove.</p>
         <div id="s-sync-off">
@@ -255,17 +296,22 @@ update();</pre>
               </div>
               <p class="s-foot" id="s-sync-login-note"></p>
             </div>
-            <label>Or a token</label>
-            <div>
-              <div class="row"><input type="password" id="s-sync-token" class="wide" placeholder="ghp_… or github_pat_…" autocomplete="off" spellcheck="false"><button class="btn" id="s-sync-connect">Connect</button></div>
-              <p class="s-foot">A personal access token with the <code>repo</code> scope (classic) or, fine-grained, with Administration, Contents and Pages write access on all repositories. <a href="https://github.com/settings/tokens/new?scopes=repo&description=Chord%20sync" id="s-sync-token-link">Create one on GitHub</a>. Stored encrypted with your operating system's keychain, like the sign-in above.</p>
-            </div>
-            <label>OAuth App</label>
-            <div>
-              <input type="text" id="s-sync-clientid" class="wide" placeholder="Client ID of your own GitHub OAuth App (optional)" autocomplete="off" spellcheck="false">
-              <p class="s-foot">"Sign in with GitHub" uses GitHub's device flow through an OAuth App with Device Flow enabled; no secret is involved. Chord ships with its own; put yours here to use it instead (<a href="https://github.com/settings/applications/new" id="s-sync-app-link">register one</a>).</p>
-            </div>
           </div>
+          <details class="s-adv">
+            <summary>Advanced</summary>
+            <div class="s-grid">
+              <label>A token instead</label>
+              <div>
+                <div class="row"><input type="password" id="s-sync-token" class="wide" placeholder="ghp_… or github_pat_…" autocomplete="off" spellcheck="false"><button class="btn" id="s-sync-connect">Connect</button></div>
+                <p class="s-foot">A personal access token with the <code>repo</code> scope (classic) or, fine-grained, with Administration, Contents and Pages write access on all repositories. <a href="https://github.com/settings/tokens/new?scopes=repo&description=Chord%20sync" id="s-sync-token-link">Create one on GitHub</a>. Stored encrypted with your operating system's keychain, like the sign-in above.</p>
+              </div>
+              <label>OAuth App</label>
+              <div>
+                <input type="text" id="s-sync-clientid" class="wide" placeholder="Client ID of your own GitHub OAuth App (optional)" autocomplete="off" spellcheck="false">
+                <p class="s-foot">"Sign in with GitHub" uses GitHub's device flow through an OAuth App with Device Flow enabled; no secret is involved. Chord ships with its own; put yours here to use it instead (<a href="https://github.com/settings/applications/new" id="s-sync-app-link">register one</a>).</p>
+              </div>
+            </div>
+          </details>
         </div>
         <div id="s-sync-on" hidden>
           <div class="s-grid">
@@ -290,42 +336,10 @@ update();</pre>
         </div>
         <p class="s-foot" id="s-sync-error"></p>
       </div>
-      <div class="s-page" data-page="privacy">
-        <p class="s-foot" style="margin-top:0">Chord is private by default. These are on from the first launch; turn off what gets in your way. Shields (ads and trackers) live under Add-ins.</p>
-        <div class="s-grid">
-          <label>Encrypted DNS</label>
-          <div>
-            <select id="s-dns"><option value="quad9">Quad9 (default)</option><option value="cloudflare">Cloudflare 1.1.1.1</option><option value="mullvad">Mullvad</option><option value="custom">Custom DNS-over-HTTPS server…</option><option value="system">System resolver (unencrypted)</option></select>
-            <input type="text" id="s-dns-custom" class="wide" placeholder="https://doh.example.net/dns-query" autocomplete="off" spellcheck="false" hidden>
-            <p class="s-foot" id="s-dns-note"></p>
-          </div>
-          <label>Global Privacy Control</label>
-          <div class="addin"><div class="addin-text"><span>Every request carries <code>Sec-GPC: 1</code> and <code>DNT: 1</code>, a legally meaningful “do not sell or share my data” under the CCPA and similar laws, and pages see <code>navigator.globalPrivacyControl</code>.</span></div><label class="switch"><input type="checkbox" id="s-gpc"><i></i></label></div>
-          <label>Third-party cookies</label>
-          <div class="addin"><div class="addin-text"><span>Cookies are neither sent to nor accepted from a domain other than the page's. Stops most cross-site tracking; a few embedded sign-ins and payment frames may need it off.</span></div><label class="switch"><input type="checkbox" id="s-3p"><i></i></label></div>
-          <label>HTTPS first</label>
-          <div class="addin"><div class="addin-text"><span>Plain <code>http://</code> page addresses are opened over HTTPS. When a site has none, Chord falls back to HTTP for the session and tells you.</span></div><label class="switch"><input type="checkbox" id="s-https"><i></i></label></div>
-          <label>Email aliases</label>
-          <div>
-            <div class="row"><select id="s-alias"><option value="none">Off</option><option value="simplelogin">SimpleLogin (Proton)</option><option value="relay">Firefox Relay</option></select><input type="password" id="s-alias-key" class="wide" placeholder="API key" autocomplete="off" hidden></div>
-            <p class="s-foot" id="s-alias-note">Right-click an e-mail field → “New Email Alias for this site”: Chord asks the service for a fresh address, types it in and copies it. Your real address stays yours.</p>
-          </div>
-          <label>Companions</label>
-          <div id="s-companions"></div>
-        </div>
-      </div>
+
       <div class="s-page" data-page="connected">
         <p class="s-foot" style="margin-top:0">A connected space is kept together by several people: everyone with its join link gets the space, and whatever anyone pins, removes, renames or writes in its notes reaches the others within seconds. Chord talks to an MQTT broker over TLS only, and the space itself travels sealed with a key that lives in the join link, so the broker never sees it. Today tabs, live folders and what is open on screen stay personal.</p>
         <div class="s-grid">
-          <label>Broker</label>
-          <div>
-            <input type="text" id="s-mqtt-broker" class="wide" placeholder="mqtts://broker.hivemq.com:8883" autocomplete="off" spellcheck="false">
-            <p class="s-foot">All connected spaces you create go through this broker; the join link carries it, so people you invite reach the same one. HiveMQ's public broker by default: anyone can use it, which is fine because the content is sealed. Only <code>mqtts://</code> and <code>wss://</code> are accepted. <span id="s-mqtt-problem" class="s-err"></span></p>
-          </div>
-          <label>Login</label>
-          <div>
-            <div class="row"><input type="text" id="s-mqtt-user" placeholder="Username (if the broker needs one)" autocomplete="off" spellcheck="false"><input type="password" id="s-mqtt-pass" placeholder="Password" autocomplete="off"></div>
-          </div>
           <label>Your spaces</label>
           <div>
             <div id="s-connected-list"></div>
@@ -335,10 +349,98 @@ update();</pre>
           <div>
             <div class="row"><input type="text" id="s-join-link" class="wide" placeholder="chord://join/?id=…&amp;k=…&amp;b=…" autocomplete="off" spellcheck="false"><button class="btn" id="s-join">Join</button></div>
           </div>
+        </div>
+        <details class="s-adv">
+          <summary>Advanced</summary>
+          <div class="s-grid">
+            <label>Broker</label>
+            <div>
+              <input type="text" id="s-mqtt-broker" class="wide" placeholder="mqtts://broker.hivemq.com:8883" autocomplete="off" spellcheck="false">
+              <p class="s-foot">All connected spaces you create go through this broker; the join link carries it, so people you invite reach the same one. HiveMQ's public broker by default: anyone can use it, which is fine because the content is sealed. Only <code>mqtts://</code> and <code>wss://</code> are accepted. <span id="s-mqtt-problem" class="s-err"></span></p>
+            </div>
+            <label>Login</label>
+            <div>
+              <div class="row"><input type="text" id="s-mqtt-user" placeholder="Username (if the broker needs one)" autocomplete="off" spellcheck="false"><input type="password" id="s-mqtt-pass" placeholder="Password" autocomplete="off"></div>
+            </div>
+            <label></label>
+            <div class="row"><button class="btn" id="s-mqtt-reconnect">Reconnect</button></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="s-page" data-page="ai">
+        <p class="s-foot" style="margin-top:0">The AI mode of a space talks to the model you configure here. It can list and read the space's tabs, open and navigate them, fetch URLs, and call tools that pages expose through WebMCP. Nothing is sent anywhere until you write in the panel.</p>
+        <div class="s-grid">
+          <label>Provider</label>
+          <select id="s-ai-provider"><option value="openai">OpenAI-compatible (Ollama, LM Studio, OpenRouter, OpenAI…)</option><option value="anthropic">Anthropic (Claude)</option></select>
+
+          <label>Model</label>
+          <input type="text" id="s-ai-model" placeholder="llama3.1 · gpt-4o · claude-opus-5-5" class="wide">
+
+          <label>API key</label>
+          <div class="row"><input type="password" id="s-ai-key" placeholder="Stored encrypted with the OS keychain" class="wide"><button class="btn" id="s-ai-key-save">Save key</button><button class="btn" id="s-ai-key-clear">Remove</button></div>
+
           <label></label>
-          <div class="row"><button class="btn" id="s-mqtt-reconnect">Reconnect</button></div>
+          <div class="row"><button class="btn" id="s-ai-test">Test connection</button><span class="s-foot" style="margin:0" id="s-ai-state"></span></div>
+        </div>
+        <p class="s-foot">Local models need no key: run Ollama (<code>ollama run llama3.1</code>) and keep the default base URL. For Anthropic the model defaults to <code>claude-opus-5-5</code>; requests opt into Anthropic's server-side fallback so a safety decline is retried on another Claude model. Pages can offer tools to the assistant with <code>navigator.modelContext.registerTool(...)</code> (WebMCP); Chord provides that API when Chromium does not.</p>
+        <details class="s-adv">
+          <summary>Advanced</summary>
+          <div class="s-grid">
+            <label>Base URL</label>
+            <div>
+              <input type="text" id="s-ai-base" placeholder="http://localhost:11434/v1" class="wide">
+              <p class="s-foot">Where the OpenAI-compatible API answers. Ollama listens on port 11434, LM Studio on 1234; OpenRouter and OpenAI have their own addresses.</p>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="s-page" data-page="mcp">
+        <div class="addin">
+          <div class="addin-text"><strong>Local MCP server</strong><span>Lets Claude Desktop and other MCP clients on this computer list spaces and tabs, read pages, open and navigate tabs, search history and call the tools pages expose. Bound to 127.0.0.1 and protected by a token.</span></div>
+          <label class="switch"><input type="checkbox" id="s-mcp"><i></i></label>
+        </div>
+        <div class="s-grid" style="margin-top:8px">
+          <label>Client setup</label>
+          <div>
+            <div class="row"><button class="btn" id="s-mcp-copy">Copy Claude Desktop config</button></div>
+            <p class="s-foot">Paste the copied JSON into Claude Desktop → Settings → Developer → Edit Config (<code>claude_desktop_config.json</code>), merging the <code>chord</code> entry into <code>mcpServers</code>, and restart Claude Desktop. It uses <code>npx mcp-remote</code>, so Node.js must be installed.</p>
+          </div>
+        </div>
+        <details class="s-adv">
+          <summary>Advanced</summary>
+          <div class="s-grid">
+            <label>Port</label>
+            <div class="row"><input type="number" id="s-mcp-port" min="1024" max="65535" style="width:90px"><span class="s-foot" style="margin:0" id="s-mcp-status"></span></div>
+            <label>Token</label>
+            <div>
+              <div class="row"><button class="btn" id="s-mcp-regen">New token</button></div>
+              <p class="s-foot">Clients that speak Streamable HTTP directly use the URL below with the token as a bearer header. A new token invalidates the old configuration.</p>
+              <pre class="s-pre" id="s-mcp-url"></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="s-page" data-page="updates">
+        <div class="s-grid">
+          <label>New releases</label>
+          <div>
+            <label class="check"><input type="checkbox" id="s-upd-check"> Check for new releases after launch and every few hours</label><br>
+            <label class="check"><input type="checkbox" id="s-upd-auto"> Download and install them automatically when this build can replace itself</label>
+            <div class="row" style="margin-top:8px"><button class="btn" id="s-upd-now">Check Now</button><span id="s-upd-status"></span><button class="btn" id="s-upd-action" hidden></button></div>
+            <p class="s-foot" id="s-upd-note"></p>
+          </div>
         </div>
       </div>
+
+      <div class="s-page" data-page="troubleshooting">
+        <p class="s-foot" style="margin-top:0">Chromium switches for when a video stays black or pages draw wrong. Each one takes effect at the next launch; turn one on at a time, relaunch, and check the page again. Help → Copy Diagnostics reports which are active.</p>
+        <div id="s-flags"></div>
+        <div class="row"><button class="btn" id="s-relaunch">Relaunch Chord</button><button class="btn" id="s-diag">Copy Diagnostics</button></div>
+      </div>
+
       <div class="s-page" data-page="about">
         <div class="about-head">
           <div class="about-logo"><svg viewBox="0 0 16 16"><rect x="2" y="9" width="3" height="5" rx="0.8"/><rect x="6" y="5" width="3" height="9" rx="0.8"/><rect x="10" y="2" width="3" height="12" rx="0.8"/></svg></div>

@@ -9,7 +9,7 @@ import { boostsFor } from '../shared/boosts.ts';
  * The page API: `navigator.chord` lets a page open and close tabs of its own in
  * the space it lives in. Those tabs form a subspace owned by the page, so a
  * dashboard such as Stairway can keep one tab per experiment and tidy up after
- * itself. Each origin asks once; the answer is kept in Settings → General.
+ * itself. Each origin asks once; the answer is kept in Settings → Tabs & windows → Advanced.
  */
 
 const MAX_MEMBERS = 24;
@@ -164,7 +164,7 @@ export class PageTabsManager {
         defaultId: 0,
         cancelId: 1,
         message: `${origin} wants to manage tabs in “${space?.name ?? 'this space'}”`,
-        detail: 'The page could open tabs of its own in this space, grouped under it as a subspace, and close them again. It cannot touch your other tabs. Allowed sites are listed in Settings → General.',
+        detail: 'The page could open tabs of its own in this space, grouped under it as a subspace, and close them again. It cannot touch your other tabs. Allowed sites are listed in Settings → Tabs & windows → Advanced.',
       });
       const allowed = response === 0;
       if (allowed) this.c.apply({ type: 'settings.update', patch: { pageTabs: [...this.c.state.settings.pageTabs, origin] } });

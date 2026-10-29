@@ -57,7 +57,7 @@ const sExtensions = $('#s-extensions');
 let settingsPage = 'general';
 let extStatus: ExtensionsStatus = { paths: {}, install: { busy: false, message: '', error: false } };
 
-const PAGES = ['general', 'appearance', 'privacy', 'layouts', 'addins', 'boosts', 'routes', 'passwords', 'sync', 'connected', 'ai', 'about'];
+const PAGES = ['general', 'tabs', 'downloads', 'appearance', 'layouts', 'privacy', 'addins', 'passwords', 'boosts', 'routes', 'sync', 'connected', 'ai', 'mcp', 'updates', 'troubleshooting', 'about'];
 const showPage = (raw: string) => {
   const [page, arg] = raw.split(':');
   if (page === 'boosts' && arg) prefillBoost(decodeURIComponent(arg));
@@ -70,6 +70,22 @@ const showPage = (raw: string) => {
 $('#s-tabs').querySelectorAll('button').forEach((b) => (b.onclick = () => showPage(b.dataset.v ?? 'general')));
 window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 showPage(location.hash.slice(1));
+// the Advanced fold of each page remembers whether it was open
+document.querySelectorAll<HTMLDetailsElement>('details.s-adv').forEach((d) => {
+  const key = `chord.settings.adv.${d.closest<HTMLElement>('.s-page')?.dataset.page ?? ''}`;
+  try {
+    d.open = localStorage.getItem(key) === '1';
+  } catch {
+    /* no storage */
+  }
+  d.addEventListener('toggle', () => {
+    try {
+      localStorage.setItem(key, d.open ? '1' : '0');
+    } catch {
+      /* no storage */
+    }
+  });
+});
 sAddressBar.onchange = () => dispatch({ type: 'settings.update', patch: { addressBar: sAddressBar.checked } });
 sSmart.onchange = () => dispatch({ type: 'settings.update', patch: { smartPages: sSmart.checked } });
 sAskDl.onchange = () => dispatch({ type: 'settings.update', patch: { askDownloadPath: sAskDl.checked } });
@@ -451,6 +467,7 @@ $('#a-guide').onclick = () => dispatch({ type: 'guide.open' });
 $('#a-github').onclick = () => openExternal('https://github.com/sirmmo/chord');
 $('#a-releases').onclick = () => openExternal('https://github.com/sirmmo/chord/releases');
 $('#a-diag').onclick = () => dispatch({ type: 'diagnostics.copy' });
+$('#s-diag').onclick = () => dispatch({ type: 'diagnostics.copy' });
 
 function creditRow(c: Credit, label = ''): HTMLElement {
   return h(

@@ -64,7 +64,7 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   site…" or Settings → Boosts. Site lists like `youtube.com, *.google.com`; CSS applies
   live, JavaScript at page load. Part of the exported configuration.
 - **Picture in picture** (`⌘⌥P`, the page's context menu, or the button on a player
-  card) pops the page's largest video out. With Settings → General → Video, a playing
+  card) pops the page's largest video out. With Settings → Tabs & windows → Video, a playing
   video follows you when you switch tabs and comes back when you return.
 - **Passwords**: Chord offers to save a password after you sign in on an https site and
   fills it in when you return. Secrets are encrypted with the OS keychain through
@@ -109,14 +109,14 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
     branch, errors and warnings, running tasks and debug sessions, the remote it is
     attached to; buttons open the Problems panel and the notifications or stop the
     debugger.
-  Toggle in Settings → General.
+  Toggle in Settings → Tabs & windows → Smart pages.
 - **Keep running in the menu bar / tray**: with Settings → "Closing the window", the
   window hides instead of closing, music and calls go on, and the tray menu offers
   show, play/pause, next, mute, a volume submenu per player, leave, downloads and quit.
 - **History** (`⌘Y`) at `chord://history`: every page you visit, grouped by day, with
   search, per-entry removal and clear all. Kept locally in `history.json` (last 5000).
 - **Downloads** (`⌘⇧J`): files go straight to your download folder, the system one
-  unless you choose another in Settings → General (or ask every time). The title bar shows a progress ring and a count while anything is in
+  unless you choose another in Settings → Downloads (or ask every time). The title bar shows a progress ring and a count while anything is in
   flight, a row above the player shows the current file, and the `chord://downloads`
   page lists everything with pause, resume, cancel, retry, open and show-in-folder.
 - **Shields**: ad and tracker blocking (EasyList and EasyPrivacy through the Ghostery
@@ -127,7 +127,7 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
 - **Little windows**: links that arrive from other apps open in a small window of their
   own, with back, forward, the title and an "Open in Chord" button (`⌘⇧O`) that moves the
   page into the current space; `Esc` closes it. Any page can be sent to one from the
-  command bar. Settings → General turns it off to get tabs instead.
+  command bar. Settings → Tabs & windows turns it off to get tabs instead.
 - **Peek**: with the sidebar collapsed, hovering the left edge (the gutter, or the first
   pixel of the page) shows the sidebar until the pointer leaves it.
 - **Reader** (`⌘⇧R`): both a space and a page. `⌘⇧R` opens the Reader space, a space of
@@ -148,7 +148,7 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
 - **Peek**: a link that leaves the site of a pinned or favorite tab opens in a floating
   preview over the page instead of taking the tab away. The bar has back, forward, the
   title, "Little window" and "Open as Tab" (`⌘⇧O`); Esc or a click outside closes it.
-  Settings → General turns it off.
+  Settings → Tabs & windows turns it off.
 - **Sharing** (needs GitHub sync): right-click a space → "Share Space" publishes it on
   your public page as an installable space with a landing page listing its tabs and an
   "Open in Chord" button; the link is copied, and the space updates with every push until
@@ -262,7 +262,7 @@ or Brave. It is young: usable daily, still unpolished in places. See the roadmap
   toggled with `⌘⇧L`, from Settings, or from the View menu. Type a URL or a search
   and press Enter.
 - **Add-ins**: built-in Shields, plus Chrome extensions. Install one from the Chrome
-  Web Store (paste its address or id in Settings → Add-ins, or open its store page and
+  Web Store (paste its address or id in Settings → Shields & extensions, or open its store page and
   press the puzzle button in the sidebar): Chord fetches the package and unpacks it into
   its profile folder, and "Check for updates" refreshes them. Unpacked extensions load
   from a folder with a `manifest.json`. Each one can be switched on and off or removed.
@@ -394,7 +394,7 @@ and nowhere else.
 
 ## MCP server for Claude Desktop and friends
 
-Settings → Add-ins → Local MCP server starts an MCP endpoint on `http://127.0.0.1:23120/mcp`
+Settings → MCP server starts an MCP endpoint on `http://127.0.0.1:23120/mcp`
 (Streamable HTTP, JSON responses) protected by a bearer token kept in the profile folder.
 "Copy Claude Desktop config" puts a ready `mcpServers` entry on the clipboard that goes
 through `npx mcp-remote`; merge it into `claude_desktop_config.json` and restart Claude
@@ -409,7 +409,7 @@ off by default and only ever listens on the loopback interface.
 ## Updates
 
 Chord checks for new releases about half a minute after launch and every six hours
-(Settings → General → Updates; Help → Check for Updates… at any time). What happens
+(Settings → Updates; Help → Check for Updates… at any time). What happens
 next depends on the build:
 
 | Build | On a new release |
@@ -485,8 +485,8 @@ the prompt, with an "Install without Boosts" choice.
 
 Inside Chord, https pages (and `http://localhost`) get `navigator.chord`. A page may open
 and close tabs **of its own**, grouped under it as a subspace; it never sees or touches
-the user's other tabs. The first call asks the user once per origin (Settings → General
-lists and revokes grants); a manifest with `"dynamic": true` grants it on install.
+the user's other tabs. The first call asks the user once per origin (Settings → Tabs & windows →
+Advanced lists and revokes grants); a manifest with `"dynamic": true` grants it on install.
 
 ```js
 if ('chord' in navigator && (await navigator.chord.requestTabs())) {
@@ -542,7 +542,7 @@ A connected space is shared live between people rather than published. Right-cli
 space → "Connect Space (share live over MQTT)…" (or "Connect This Space" in the command
 bar): Chord gives the space a random id and a random key, copies a join link of the form
 `chord://join/?id=…&k=…&b=…` and starts talking to the broker. Anyone who opens that
-link in Chord (paste it in the command bar, in Settings → Connected → Join, or click it on
+link in Chord (paste it in the command bar, in Settings → Connected spaces → Join, or click it on
 a page) gets the space and becomes a member. The link is the key: send it privately.
 
 What travels: the space's name, icon, colour and notes, and its pinned tabs with their
@@ -554,7 +554,7 @@ timestamps, metadata is last-writer-wins), so it merges rather than overwrites. 
 sidebar shows a LIVE pill in the space header with how many others are online; click it
 to copy the join link again. "Disconnect Space…" keeps your copy and leaves the group.
 
-How it travels: everything goes through the MQTT broker set in Settings → Connected,
+How it travels: everything goes through the MQTT broker set in Settings → Connected spaces,
 HiveMQ's public broker (`mqtts://broker.hivemq.com:8883`) by default. Only TLS brokers
 are accepted (`mqtts://` or `wss://`), so the wire is always encrypted, and the space
 itself is sealed with AES-256-GCM using the key from the join link before it leaves
@@ -570,7 +570,7 @@ data folder remembers the last document so removals survive restarts.
 Google refuses sign-ins from what it takes for embedded browsers ("This browser or app
 may not be secure"). On `accounts.google.com` only, Chord therefore presents itself as
 Firefox (User-Agent, no Client Hints, matching `navigator.userAgent`); every other site
-sees plain Chromium. Settings → General → Google sign-in can switch that to Electron's
+sees plain Chromium. Settings → Privacy → Advanced → Google sign-in can switch that to Electron's
 own identity, which Google handles through a lighter flow, or turn it off. If one choice
 fails, reload the sign-in page with the other.
 
@@ -580,7 +580,7 @@ Help → Copy Diagnostics puts a text report on the clipboard (and in `diagnosti
 the profile folder): versions, whether the build is signed or translated by Rosetta, GPU
 status, main-process event-loop stalls, recent page-load timings, the focused page's
 navigation timing, its media elements and codec support, and its last console errors.
-Paste it into a GitHub issue. Settings → General → Troubleshooting has Chromium switches
+Paste it into a GitHub issue. Settings → Troubleshooting has Chromium switches
 (hardware video decoding, macOS video overlays, Skia Graphite, GPU compositing, GPU) to
 turn off one at a time with a relaunch when a video stays black or pages draw wrong.
 

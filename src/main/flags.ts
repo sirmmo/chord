@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { TroubleFlags } from '../shared/types.ts';
 
 /**
- * Troubleshooting switches from Settings → General. Chromium reads most of its
+ * Troubleshooting switches from Settings → Troubleshooting. Chromium reads most of its
  * command-line switches before the app is ready, long before the state store is
  * loaded, so the flags are read straight from state.json at process start.
  */

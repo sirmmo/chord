@@ -1403,7 +1403,7 @@ export class Controller {
     const broker = this.state.settings.mqtt.broker;
     const problem = brokerProblem(broker);
     if (problem) {
-      this.sendSidebar({ kind: 'toast', text: 'Check the broker in Settings → Connected', detail: problem });
+      this.sendSidebar({ kind: 'toast', text: 'Check the broker in Settings → Connected spaces', detail: problem });
       this.openInternal('chord://settings/', 'connected');
       return;
     }

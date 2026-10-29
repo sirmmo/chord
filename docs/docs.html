@@ -252,7 +252,7 @@
           </ul>
           <div class="note">Builds are not signed or notarised yet. On macOS, if the app refuses to open, run <code>xattr -cr /Applications/Chord.app</code> once. On Windows, choose "More info → Run anyway" in SmartScreen.</div>
           <h3>Staying up to date</h3>
-          <p>Chord looks for new releases a short while after launch and every few hours (Settings → General → Updates, or Help → Check for Updates…). The Windows installer and the Linux AppImage download the new version and install it when Chord restarts. The macOS build is not notarised and cannot replace itself, so Chord offers the new dmg and you drag it over the old copy; the portable zip and the deb work the same way.</p>
+          <p>Chord looks for new releases a short while after launch and every few hours (Settings → Updates, or Help → Check for Updates…). The Windows installer and the Linux AppImage download the new version and install it when Chord restarts. The macOS build is not notarised and cannot replace itself, so Chord offers the new dmg and you drag it over the old copy; the portable zip and the deb work the same way.</p>
         </div>
         <div>
           <h3>From source</h3>
@@ -277,7 +277,7 @@ npm run dist:mac   # .dmg in release/</code></pre>
           <h3>Installable spaces</h3>
           <p>Publish a <code>chord-space</code> manifest over https and declare it with <code>&lt;link rel="chord-space" href="…"&gt;</code> or an <code>&lt;a href="chord://install/?url=…"&gt;Add to Chord&lt;/a&gt;</code> link. Chord shows what it contains and asks before installing. Boosts in a manifest may only target the publishing domain. Add <code>"dynamic": true</code> to grant the page API below on install.</p>
           <h3>Dynamic pages</h3>
-          <p>Inside Chord, https pages get <code>navigator.chord</code>. A page may open and close tabs <em>of its own</em>, grouped under it as a subspace, and is told when the user closes one. It never sees the user's other tabs. The first call asks once per origin; Settings → General lists and revokes grants. Closing the page closes its subspace. <a href="chord-page-api.d.ts">Type declarations</a>.</p>
+          <p>Inside Chord, https pages get <code>navigator.chord</code>. A page may open and close tabs <em>of its own</em>, grouped under it as a subspace, and is told when the user closes one. It never sees the user's other tabs. The first call asks once per origin; Settings → Tabs &amp; windows → Advanced lists and revokes grants. Closing the page closes its subspace. <a href="chord-page-api.d.ts">Type declarations</a>.</p>
         </div>
 <pre><code>{
   "format": "chord-space", "version": 1,
@@ -304,7 +304,7 @@ if ('chord' in navigator &amp;&amp; await navigator.chord.requestTabs()) {
       <p class="sub">Let Claude Desktop, or any MCP client on your computer, work in your browser.</p>
       <div class="two">
         <div>
-          <p>Settings → Add-ins → Local MCP server starts a Streamable HTTP endpoint on <code>127.0.0.1:23120/mcp</code>, protected by a token Chord keeps in its profile folder. One button copies a ready Claude Desktop configuration; paste it into <code>claude_desktop_config.json</code> and restart Claude Desktop.</p>
+          <p>Settings → MCP server starts a Streamable HTTP endpoint on <code>127.0.0.1:23120/mcp</code>, protected by a token Chord keeps in its profile folder. One button copies a ready Claude Desktop configuration; paste it into <code>claude_desktop_config.json</code> and restart Claude Desktop.</p>
           <p>Tools: list spaces and tabs, read a page's text, open, navigate, focus and close tabs, fetch a URL, search history, list downloads, and whatever the focused page exposes through WebMCP. Locked private spaces stay closed. Off by default, loopback only.</p>
         </div>
 <pre><code>{
